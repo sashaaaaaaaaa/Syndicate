@@ -12,6 +12,7 @@
         "DateTime::Format",
         "OO::Monitors",
         "HTTP::Tiny",
+        "IO::Socket::SSL",
         "URI"
     ],
     "provides": {

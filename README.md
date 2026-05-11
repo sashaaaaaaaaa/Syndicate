@@ -1,6 +1,20 @@
 # Syndicate
 
-Syndication feed parser and generator supporting **RSS 2.0**, **RSS 0.91**, **RSS 1.0**, **Atom 1.0**, and **JSON Feed 1.1**.
+Syndication feed parser and generator supporting **RSS 2.0**, **RSS
+0.91**, **RSS 1.0**, **Atom 1.0**, and **JSON Feed 1.1**.
+
+## Dependencies
+
+| Module | Used by | Purpose |
+|--------|---------|---------|
+| `XML` | Core | XML parsing and generation (RSS, Atom) |
+| `JSON::Fast` | JSONFeed | JSON parsing and generation |
+| `DateTime::Grammar` | All parsers | W3C/ISO 8601 date parsing |
+| `DateTime::Format` | RSS | RFC 2822 date formatting |
+| `HTTP::Tiny` | Discovery | Feed fetching via HTTP/HTTPS |
+| `IO::Socket::SSL` | Discovery | HTTPS support (required by HTTP::Tiny) |
+| `URI` | Discovery | URL resolution |
+| `OO::Monitors` | Config | Thread-safe stats counters |
 
 ## Installation
 
@@ -347,7 +361,7 @@ Each format also exposes its own attributes:
 
 **RSS 1.0 Item:** `about`, `dc-subjects`
 
-**Atom Feed:** `id`, `subtitle`, `author-detail`, `categories`, `updated`, `rights`, `icon`, `logo`, `contributors`, `link-self`, `link-alternate`
+**Atom Feed:** `id`, `subtitle`, `author`, `author-detail`, `categories`, `updated`, `rights`, `icon`, `logo`, `contributors`, `link-self`, `link-alternate`
 
 **Atom Item:** `author-detail`, `categories`, `published`, `content-type`, `rights`, `source-feed`, `contributors`
 
@@ -364,21 +378,6 @@ say "Items parsed: {Syndicate::Stats.items-parsed}";
 
 Syndicate::Stats.record-feed;
 Syndicate::Stats.record-item;
-```
-
-## Testing
-
-```bash
-zef test .
-```
-
-Or run individual test files:
-
-```bash
-raku -I lib t/00-basic.rakutest
-raku -I lib t/01-roundtrip.rakutest
-raku -I lib t/02-parse.rakutest
-raku -I lib t/08-builder.rakutest
 ```
 
 # AUTHOR
