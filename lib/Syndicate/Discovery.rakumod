@@ -86,3 +86,44 @@ method resolve-url(Str $url, Str $base --> Str) {
 
     $b ~ $url
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Discovery - Feed URL discovery and fetching
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+use Syndicate::Discovery;
+
+my $disc = Syndicate::Discovery.new;
+my $feed = $disc.fetch("https://example.com/feed.xml");
+my $feed = $disc.discover("https://example.com");
+my @urls = $disc.find-feeds($html, $base-url);
+=end code
+
+=head1 DESCRIPTION
+
+Fetches feeds from URLs and discovers feed URLs from HTML pages.
+Parses C<E<lt>linkE<gt>> tags with C<rel="alternate"> for
+RSS, Atom, and JSON Feed content types.
+
+=head1 METHODS
+
+=head2 C<fetch(Str $url, Int :$max-redirects = 5, Int :$timeout = 30)>
+
+Fetches a URL and parses the feed. Dies on HTTP errors.
+
+=head2 C<discover(Str $url, Int :$max-redirects = 5, Int :$timeout = 30)>
+
+Fetches a URL, tries to parse as a feed. If that fails, searches the HTML
+for C<E<lt>linkE<gt>> feed tags and fetches the first discovered feed URL.
+
+=head2 C<find-feeds(Str $html, Str $base-url --> Array)>
+
+Returns an array of feed URLs found in HTML by scanning C<E<lt>linkE<gt>>
+tags with C<rel="alternate"> and appropriate type attributes.
+
+=end pod

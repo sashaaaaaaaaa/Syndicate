@@ -147,3 +147,74 @@ method rss091-str  { ~$.rss091-feed  }
 method atom-str    { ~$.atom-feed    }
 
 method json-str    { $.json-feed.to-json }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Builder::Feed - Format-agnostic feed builder
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+use Syndicate::Builder::Feed;
+
+my $fb = Syndicate::Builder::Feed.new;
+$fb.title("My Feed");
+$fb.link("https://example.com");
+$fb.description("A test feed");
+$fb.language("en");
+
+my $e = $fb.add-entry;
+$e.title("Article 1");
+$e.link("https://example.com/1");
+
+say $fb.rss-str;    # RSS 2.0 XML
+say $fb.atom-str;   # Atom 1.0 XML
+say $fb.json-str;   # JSON Feed
+=end code
+
+=head1 DESCRIPTION
+
+Accumulates feed and entry data through a uniform API, then generates
+output in any supported format. Eliminates the need to learn each
+format's constructor signatures.
+
+=head1 METHODS
+
+=head2 Feed-level
+
+=item C<title(Str $v?)> - get/set title
+=item C<link(Str $v?)> - get/set link
+=item C<description(Str $v?)> - get/set description
+=item C<id(Str $v?)> - get/set feed ID
+=item C<language(Str $v?)> - get/set language
+=item C<rights(Str $v?)> - get/set copyright/rights
+=item C<generator(Str $v?)> - get/set generator (default: "Syndicate")
+=item C<updated(DateTime $v?)> - get/set last updated time
+=item C<icon(Str $v?)> - get/set feed icon URL
+=item C<logo(Str $v?)> - get/set feed logo URL
+=item C<author(:$name, :$email, :$uri)> - get/set author details
+=item C<category(Str $v?)> - add/get categories
+=item C<itunes-author(Str $v?)> - get/set iTunes author
+=item C<itunes-summary(Str $v?)> - get/set iTunes summary
+
+=head2 Entry management
+
+=item C<add-entry> - create and return a new L<C<Syndicate::Builder::Entry>|rakudoc:Syndicate::Builder::Entry>
+=item C<entries> - return all entries
+
+=head2 Output generation
+
+=item C<rss-feed> - returns L<C<Syndicate::RSS>|rakudoc:Syndicate::RSS>
+=item C<atom-feed> - returns L<C<Syndicate::Atom>|rakudoc:Syndicate::Atom>
+=item C<rss091-feed> - returns L<C<Syndicate::RSS::V0_91>|rakudoc:Syndicate::RSS::V0_91>
+=item C<rss1-feed> - returns L<C<Syndicate::RSS::V1_0>|rakudoc:Syndicate::RSS::V1_0>
+=item C<json-feed> - returns L<C<Syndicate::JSONFeed>|rakudoc:Syndicate::JSONFeed>
+=item C<rss-str> - RSS 2.0 XML string
+=item C<atom-str> - Atom 1.0 XML string
+=item C<rss091-str> - RSS 0.91 XML string
+=item C<rss1-str> - RSS 1.0 XML string
+=item C<json-str> - JSON Feed string
+
+=end pod

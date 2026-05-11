@@ -34,3 +34,53 @@ sub parse-rss(Str $xml) is export {
 sub parse-atom(Str $xml) is export {
     Syndicate::Atom.new($xml)
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate - Syndication feed parser and generator
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+use Syndicate;
+
+# Parse any feed (auto-detected)
+my $feed = parse($xml-or-json);
+
+# Parse explicit formats
+my $rss   = parse-rss($xml);
+my $atom  = parse-atom($xml);
+
+# Export all format classes
+use Syndicate::Builder::Feed;
+my $fb = Syndicate::Builder::Feed.new;
+$fb.title("My Feed");
+$fb.add-entry.title("Article 1");
+say $fb.rss-str;
+say $fb.atom-str;
+=end code
+
+=head1 DESCRIPTION
+
+Syndicate supports parsing and generation of RSS 2.0, RSS 0.91, RSS 1.0,
+Atom 1.0, and JSON Feed 1.1. Provides a uniform API via L<C<Syndicate::Feed>|rakudoc:Syndicate::Feed>
+and L<C<Syndicate::Item>|rakudoc:Syndicate::Item> roles, a format-agnostic builder, feed discovery,
+and extension support (Dublin Core, Media RSS, iTunes).
+
+=head1 EXPORTED SUBS
+
+=head2 C<parse(Str $input)>
+
+Auto-detect format and parse, returning a C<Syndicate::Feed>-compatible object.
+
+=head2 C<parse-rss(Str $xml)>
+
+Parse RSS 2.0 XML, returning C<Syndicate::RSS>.
+
+=head2 C<parse-atom(Str $xml)>
+
+Parse Atom 1.0 XML, returning C<Syndicate::Atom>.
+
+=end pod

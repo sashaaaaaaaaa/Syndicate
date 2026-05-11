@@ -123,3 +123,44 @@ method build-atom-item {
     my @cats = @!categories;
     Syndicate::Atom::Item.new(|%bless, :categories(@cats))
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Builder::Entry - Entry builder used by L<C<Syndicate::Builder::Feed>|rakudoc:Syndicate::Builder::Feed>
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+my $fb = Syndicate::Builder::Feed.new;
+my $e = $fb.add-entry;
+$e.title("Article");
+$e.link("https://example.com/1");
+$e.summary("Description");
+$e.id("urn:uuid:abc-123");
+$e.author(:name("Jane"), :email("jane@example.com"));
+$e.updated(DateTime.now);
+$e.published(DateTime.now);
+$e.category("Tech");
+$e.content("<p>Hello</p>", :type("xhtml"));
+=end code
+
+=head1 DESCRIPTION
+
+Created via C<add-entry> on L<C<Syndicate::Builder::Feed>|rakudoc:Syndicate::Builder::Feed>.
+Accumulates entry-level data used by all output format generators.
+
+=head1 METHODS
+
+=item C<title(Str $v?)> - get/set title
+=item C<link(Str $v?)> - get/set link
+=item C<summary(Str $v?)> - get/set summary/description
+=item C<id(Str $v?)> - get/set entry ID (maps to guid/atom:id/id)
+=item C<rights(Str $v?)> - get/set rights
+=item C<updated(DateTime $v?)> - get/set updated/modified date
+=item C<published(DateTime $v?)> - get/set published date
+=item C<content(Str $v?, :$type)> - get/set content body with optional MIME type
+=item C<author(:$name, :$email, :$uri)> - get/set author details
+=item C<category(Str $v?)> - add/get categories
+=end pod

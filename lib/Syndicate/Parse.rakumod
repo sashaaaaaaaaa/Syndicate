@@ -76,3 +76,46 @@ sub root-element(Str $input) {
         return %(:$name, :$ver, :rest($rest))
     }
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Parse - Feed format detection and parsing dispatcher
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+use Syndicate::Parse;
+
+my $format = feed-format($input);       # Detect format
+my $feed   = parse-feed($input);        # Parse any format
+=end code
+
+=head1 DESCRIPTION
+
+Provides auto-detection of feed format from raw input and dispatching
+to the appropriate parser class.
+
+=head1 ENUM C<FeedFormat>
+
+=item C<Atom> - Atom 1.0
+=item C<RSS2> - RSS 2.0
+=item C<RSS091> - RSS 0.91
+=item C<RSS1> - RSS 1.0
+=item C<JSONFeed> - JSON Feed
+
+=head1 EXPORTED SUBS
+
+=head2 C<feed-format(Str $input --> FeedFormat)>
+
+Detects feed format by inspecting the raw input:
+JSON feeds starting with C<{>, XML feeds by root element name and version attribute.
+
+=head2 C<parse-feed(Str $input)>
+
+Detects format and returns an object of the appropriate class
+(C<Syndicate::Atom>, C<Syndicate::RSS>, C<Syndicate::RSS::V0_91>,
+C<Syndicate::RSS::V1_0>, or C<Syndicate::JSONFeed>).
+
+=end pod
