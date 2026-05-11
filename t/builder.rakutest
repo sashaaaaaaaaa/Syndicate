@@ -1,0 +1,152 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Builder::Feed;
+use Syndicate::Builder::Entry;
+
+plan 60;
+
+# ===== Feed builder fields =====
+my $fb = Syndicate::Builder::Feed.new;
+isa-ok $fb, Syndicate::Builder::Feed, "Feed builder created";
+
+$fb.title("Test Builder Feed");
+$fb.link("http://example.com");
+$fb.description("A feed built with the builder API");
+$fb.id("http://example.com/feed");
+$fb.language("en");
+$fb.rights("Copyright 2026");
+$fb.generator("Syndicate Test");
+$fb.icon("http://example.com/icon.png");
+$fb.logo("http://example.com/logo.png");
+
+is $fb.title, "Test Builder Feed", "feed title get/set";
+is $fb.link, "http://example.com", "feed link get/set";
+is $fb.description, "A feed built with the builder API", "feed description get/set";
+is $fb.id, "http://example.com/feed", "feed id get/set";
+is $fb.language, "en", "feed language get/set";
+is $fb.rights, "Copyright 2026", "feed rights get/set";
+is $fb.generator, "Syndicate Test", "feed generator get/set";
+is $fb.icon, "http://example.com/icon.png", "feed icon get/set";
+is $fb.logo, "http://example.com/logo.png", "feed logo get/set";
+
+# Author
+$fb.author(:name("Jane Doe"), :email("jane@example.com"));
+my %author = $fb.author;
+is %author<name>, "Jane Doe", "feed author name";
+is %author<email>, "jane@example.com", "feed author email";
+
+# Categories
+$fb.category("Tech");
+$fb.category("News");
+is $fb.category.elems, 2, "feed has 2 categories";
+
+# Default generator
+my $fb-default = Syndicate::Builder::Feed.new;
+is $fb-default.generator, "Syndicate", "default generator value";
+
+# ===== Entries =====
+my $e1 = $fb.add-entry;
+isa-ok $e1, Syndicate::Builder::Entry, "entry created via add-entry";
+$e1.title("Entry One");
+$e1.link("http://example.com/1");
+$e1.summary("First entry summary");
+$e1.id("urn:uuid:1111-1111");
+$e1.author(:name("Jane"), :email("jane@example.com"));
+$e1.updated(DateTime.new("2026-01-15T10:00:00Z"));
+$e1.published(DateTime.new("2026-01-14T08:00:00Z"));
+$e1.category("atom");
+$e1.rights("Copyright Entry");
+
+is $e1.title, "Entry One", "entry title get/set";
+is $e1.link, "http://example.com/1", "entry link get/set";
+is $e1.summary, "First entry summary", "entry summary get/set";
+is $e1.id, "urn:uuid:1111-1111", "entry id get/set";
+ok $e1.updated.defined, "entry updated is defined";
+
+my $e2 = $fb.add-entry;
+$e2.title("Entry Two");
+$e2.link("http://example.com/2");
+$e2.summary("Second entry");
+$e2.id("urn:uuid:2222-2222");
+
+is $fb.entries.elems, 2, "feed has 2 entries";
+
+# Content with type
+my $fb3 = Syndicate::Builder::Feed.new;
+$fb3.title("Content Test");
+$fb3.link("http://example.com/content");
+$fb3.description("Content test");
+$fb3.id("http://example.com/content");
+
+my $e3 = $fb3.add-entry;
+$e3.title("Content Entry");
+$e3.link("http://example.com/content/1");
+$e3.id("http://example.com/content/1");
+$e3.content("<p>Hello <em>world</em></p>", :type("xhtml"));
+is $e3.content, "<p>Hello <em>world</em></p>", "entry content get/set";
+
+# ===== RSS XML output =====
+my $rss-str = $fb.rss-str;
+ok $rss-str.chars > 0, "rss-str generates output";
+like $rss-str, /'<rss version="2.0">'/, "RSS output has rss root";
+like $rss-str, /'<channel>'/, "RSS output has channel";
+like $rss-str, /"Test Builder Feed"/, "RSS output has feed title";
+like $rss-str, /"en"/, "RSS output has language";
+like $rss-str, /"Copyright 2026"/, "RSS output has copyright";
+like $rss-str, /"Jane Doe"/, "RSS output has managingEditor";
+like $rss-str, /"Syndicate Test"/, "RSS output has generator";
+like $rss-str, /'<item>'/, "RSS output has items";
+
+# ===== Atom XML output =====
+my $atom-str = $fb.atom-str;
+ok $atom-str.chars > 0, "atom-str generates output";
+like $atom-str, /'<feed xmlns="http://www.w3.org/2005/Atom">'/, "Atom output has feed root";
+like $atom-str, /'<title>Test Builder Feed</title>'/, "Atom output has feed title";
+like $atom-str, /'<id>http://example.com/feed</id>'/, "Atom output has feed id";
+like $atom-str, /'<subtitle>'/, "Atom output has subtitle";
+like $atom-str, /"jane\@example.com"/, "Atom output has author email (from entry)";
+like $atom-str, /'<entry>'/, "Atom output has entries";
+
+# ===== RSS roundtrip =====
+my $rss-parsed = Syndicate::RSS.new($rss-str);
+isa-ok $rss-parsed, Syndicate::RSS, "RSS roundtrip parsed";
+is $rss-parsed.title, "Test Builder Feed", "RSS roundtrip title";
+is $rss-parsed.link, "http://example.com", "RSS roundtrip link";
+is $rss-parsed.description, "A feed built with the builder API", "RSS roundtrip description";
+is $rss-parsed.language, "en", "RSS roundtrip language";
+is $rss-parsed.copyright, "Copyright 2026", "RSS roundtrip copyright";
+is $rss-parsed.items.elems, 2, "RSS roundtrip item count";
+is $rss-parsed.items[0].title, "Entry One", "RSS roundtrip first item title";
+is $rss-parsed.items[1].title, "Entry Two", "RSS roundtrip second item title";
+isa-ok $rss-parsed.pubDate, DateTime, "RSS roundtrip pubDate is DateTime";
+
+# ===== Atom roundtrip =====
+my $atom-parsed = Syndicate::Atom.new($atom-str);
+isa-ok $atom-parsed, Syndicate::Atom, "Atom roundtrip parsed";
+is $atom-parsed.title, "Test Builder Feed", "Atom roundtrip title";
+is $atom-parsed.id, "http://example.com/feed", "Atom roundtrip id";
+is $atom-parsed.subtitle, "A feed built with the builder API", "Atom roundtrip subtitle";
+is $atom-parsed.items.elems, 2, "Atom roundtrip entry count";
+is $atom-parsed.items[0].title, "Entry One", "Atom roundtrip first entry title";
+is $atom-parsed.items[1].title, "Entry Two", "Atom roundtrip second entry title";
+isa-ok $atom-parsed.updated, DateTime, "Atom roundtrip updated is DateTime";
+
+# ===== Empty feed =====
+my $fb-empty = Syndicate::Builder::Feed.new;
+$fb-empty.title("Empty Feed");
+$fb-empty.link("http://example.com/empty");
+$fb-empty.description("Empty feed test");
+$fb-empty.id("http://example.com/empty");
+$fb-empty.updated(DateTime.new("2026-06-15T12:00:00Z"));
+
+my $rss-empty = $fb-empty.rss-str;
+like $rss-empty, /'<rss version="2.0">'/, "empty RSS has root";
+like $rss-empty, /"Empty Feed"/, "empty RSS has title";
+
+my $atom-empty = $fb-empty.atom-str;
+like $atom-empty, /'<feed xmlns="http://www.w3.org/2005/Atom">'/, "empty Atom has root";
+like $atom-empty, /"Empty Feed"/, "empty Atom has title";
+
+done-testing;

@@ -8,6 +8,8 @@ use Syndicate::RSS::Item;
 use Syndicate::Atom;
 use Syndicate::Atom::Item;
 use Syndicate::Utils;
+use Syndicate::Builder::Feed;
+use Syndicate::Builder::Entry;
 
 unit class Syndicate:ver<0.0.1>:auth<zef:sasha>;
 
