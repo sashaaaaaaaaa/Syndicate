@@ -25,4 +25,4 @@ jobs:
       - name: Install dependencies
         run: zef install --deps-only .
       - name: Run tests
-        run: prove6 -l t/
+        run: zef test -v .
