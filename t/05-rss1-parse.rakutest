@@ -16,10 +16,10 @@ is $feed.link, "http://example.com", "channel link";
 is $feed.description, "A test RSS 1.0 feed for Syndicate", "channel description";
 is $feed.about, "http://example.com/rss1", "channel about";
 
-is $feed.image-url, "http://example.com/image.png", "image url";
-is $feed.image-title, "Example Logo", "image title";
-is $feed.image-link, "http://example.com", "image link";
-is $feed.image-about, "http://example.com/image.png", "image about";
+is $feed.image<url>, "http://example.com/image.png", "image url";
+is $feed.image<title>, "Example Logo", "image title";
+is $feed.image<link>, "http://example.com", "image link";
+is $feed.image<about>, "http://example.com/image.png", "image about";
 
 is $feed.items.elems, 2, "two items";
 isa-ok $feed.items[0], Syndicate::RSS::V1_0::Item, "item is correct type";

@@ -8,10 +8,7 @@ use Syndicate::Extension::DublinCore;
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 
 has Str $.about;
-has Str $.image-url;
-has Str $.image-title;
-has Str $.image-link;
-has Str $.image-about;
+has %.image;
 
 multi method new(Str $xml) {
     my $doc = XML::Document.new($xml);
@@ -25,15 +22,12 @@ multi method new(Str $xml) {
     my $link  = get-text($channel, "link");
     my $desc  = get-text($channel, "description");
 
-    my $image-about = Str;
-    my $image-url   = Str;
-    my $image-title = Str;
-    my $image-link  = Str;
+    my %image;
     with $root.elements(:TAG<image>)[0] -> $img {
-        $image-about = $img.attribs{'rdf:about'} // $img.attribs<about> // Str;
-        $image-url   = get-text($img, "url");
-        $image-title = get-text($img, "title");
-        $image-link  = get-text($img, "link");
+        %image<url>   = get-text($img, "url");
+        %image<title> = get-text($img, "title");
+        %image<link>  = get-text($img, "link");
+        %image<about> = $img.attribs{'rdf:about'} // $img.attribs<about> // Str;
     }
 
     my @items;
@@ -42,7 +36,7 @@ multi method new(Str $xml) {
     }
 
     self.bless(:$about, :$title, :$link, :description($desc),
-               :$image-url, :$image-title, :$image-link, :$image-about,
+               :image(%image),
                :@items)
 }
 
@@ -72,12 +66,12 @@ method XML {
         $seq.append: $li;
     }
 
-    if $.image-url.defined || $.image-title.defined {
+    if %.image<url>.defined || %.image<title>.defined {
         my $img = XML::Element.new(:name<image>);
-        $img.attribs{'rdf:about'} = $.image-about if $.image-about.defined;
-        $img.append: XML::Element.new(:name<title>, :nodes([$.image-title])) if $.image-title.defined;
-        $img.append: XML::Element.new(:name<url>, :nodes([$.image-url])) if $.image-url.defined;
-        $img.append: XML::Element.new(:name<link>, :nodes([$.image-link])) if $.image-link.defined;
+        $img.attribs{'rdf:about'} = %.image<about> if %.image<about>.defined;
+        $img.append: XML::Element.new(:name<title>, :nodes([%.image<title>])) if %.image<title>.defined;
+        $img.append: XML::Element.new(:name<url>, :nodes([%.image<url>])) if %.image<url>.defined;
+        $img.append: XML::Element.new(:name<link>, :nodes([%.image<link>])) if %.image<link>.defined;
         $root.append: $img;
     }
 

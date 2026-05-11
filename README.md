@@ -343,7 +343,7 @@ Each format also exposes its own attributes:
 
 **RSS 0.91 Feed:** `copyright`, `managingEditor`, `webMaster`, `rating`, `docs`, `pubDate`, `lastBuildDate`, `image`, `textInput`, `skipHours`, `skipDays`
 
-**RSS 1.0 Feed:** `about`, `image-url`, `image-title`, `image-link`, `image-about`
+**RSS 1.0 Feed:** `about`, `image` (hash with url/title/link/about)
 
 **RSS 1.0 Item:** `about`, `dc-subjects`
 

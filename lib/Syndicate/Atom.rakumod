@@ -8,6 +8,7 @@ unit class Syndicate::Atom:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 
 has Str $.id;
 has Str $.subtitle;
+has Str $.author;
 has %.author-detail;
 has @.categories;
 has DateTime $.updated;
@@ -129,10 +130,11 @@ method XML {
         $xml.append: $c;
     }
 
-    my $upd = $.updated;
+    my $upd = $!updated;
     unless $upd.defined {
         my @dates = @.items.map({$_.updated}).grep(*.defined);
-        $upd = @dates ?? @dates.max !! DateTime.now;
+        $!updated = @dates ?? @dates.max !! DateTime.now;
+        $upd = $!updated;
     }
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
 
