@@ -4,16 +4,14 @@ use DateTime::Grammar;
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
-my $entity-handler = XML::Entity.new;
-
 sub decode-entities(Str $text) is export {
     return $text unless $text.defined && $text.chars;
-    $entity-handler.decode($text)
+    XML::Entity.new.decode($text)
 }
 
 sub encode-entities(Str $text) is export {
     return $text unless $text.defined && $text.chars;
-    $entity-handler.encode($text)
+    XML::Entity.new.encode($text)
 }
 
 sub get-text($parent, $tag) is export {

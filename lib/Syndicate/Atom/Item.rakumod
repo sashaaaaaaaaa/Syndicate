@@ -84,10 +84,10 @@ multi method new-from-xml(XML::Element $entry-elem) {
 
 method XML {
     my $xml = XML::Element.new(:name<entry>);
-    $xml.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
+    $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
     $xml.append: XML::Element.new(:name<link>, :attribs({:href($.link // ""), :rel<alternate>})) if $.link.defined;
-    $xml.append: XML::Element.new(:name<id>, :nodes([$.id // $.link // ""])) if $.id.defined || $.link.defined;
-    $xml.append: XML::Element.new(:name<summary>, :nodes([$.summary])) if $.summary.defined;
+    $xml.append: XML::Element.new(:name<id>, :nodes([encode-entities($.id // $.link // "")])) if $.id.defined || $.link.defined;
+    $xml.append: XML::Element.new(:name<summary>, :nodes([encode-entities($.summary)])) if $.summary.defined;
 
     if $.content.defined {
         my %attribs = :type($.content-type // "text");
@@ -102,9 +102,9 @@ method XML {
     }
     if $.author.defined || %!author-detail {
         my $author = XML::Element.new(:name<author>);
-        $author.append: XML::Element.new(:name<name>, :nodes([%!author-detail<name>])) if %!author-detail<name>.defined;
-        $author.append: XML::Element.new(:name<email>, :nodes([%!author-detail<email>])) if %!author-detail<email>.defined;
-        $author.append: XML::Element.new(:name<uri>, :nodes([%!author-detail<uri>])) if %!author-detail<uri>.defined;
+        $author.append: XML::Element.new(:name<name>, :nodes([encode-entities(%!author-detail<name>)])) if %!author-detail<name>.defined;
+        $author.append: XML::Element.new(:name<email>, :nodes([encode-entities(%!author-detail<email>)])) if %!author-detail<email>.defined;
+        $author.append: XML::Element.new(:name<uri>, :nodes([encode-entities(%!author-detail<uri>)])) if %!author-detail<uri>.defined;
         $xml.append: $author;
     }
 
@@ -114,16 +114,16 @@ method XML {
 
     for @.contributors -> %c {
         my $c = XML::Element.new(:name<contributor>);
-        $c.append: XML::Element.new(:name<name>, :nodes([%c<name>])) if %c<name>.defined;
-        $c.append: XML::Element.new(:name<email>, :nodes([%c<email>])) if %c<email>.defined;
-        $c.append: XML::Element.new(:name<uri>, :nodes([%c<uri>])) if %c<uri>.defined;
+        $c.append: XML::Element.new(:name<name>, :nodes([encode-entities(%c<name>)])) if %c<name>.defined;
+        $c.append: XML::Element.new(:name<email>, :nodes([encode-entities(%c<email>)])) if %c<email>.defined;
+        $c.append: XML::Element.new(:name<uri>, :nodes([encode-entities(%c<uri>)])) if %c<uri>.defined;
         $xml.append: $c;
     }
 
     if %!source-feed {
         my $s = XML::Element.new(:name<source>);
-        $s.append: XML::Element.new(:name<title>, :nodes([%!source-feed<title>])) if %!source-feed<title>.defined;
-        $s.append: XML::Element.new(:name<id>, :nodes([%!source-feed<id>])) if %!source-feed<id>.defined;
+        $s.append: XML::Element.new(:name<title>, :nodes([encode-entities(%!source-feed<title>)])) if %!source-feed<title>.defined;
+        $s.append: XML::Element.new(:name<id>, :nodes([encode-entities(%!source-feed<id>)])) if %!source-feed<id>.defined;
         $s.append: XML::Element.new(:name<link>, :attribs({:href(%!source-feed<link> // ""), :rel<alternate>})) if %!source-feed<link>.defined;
         if %!source-feed<updated>.defined {
             $s.append: XML::Element.new(:name<updated>, :nodes([%!source-feed<updated>.Str]));
@@ -131,11 +131,11 @@ method XML {
         $xml.append: $s;
     }
 
-    $xml.append: XML::Element.new(:name<rights>, :nodes([$.rights])) if $.rights.defined;
+    $xml.append: XML::Element.new(:name<rights>, :nodes([encode-entities($.rights)])) if $.rights.defined;
     return $xml;
 }
 
-method Str(Bool :$pretty = True) { ~self.XML }
+method Str { ~self.XML }
 
 =begin pod
 

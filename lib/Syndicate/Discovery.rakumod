@@ -2,6 +2,9 @@ use v6.d;
 use HTTP::Tiny;
 use Syndicate::Parse;
 
+my constant $link-tag = rx/ '<link' [.|\n]*? ['/>' | '>'] /;
+my constant $base-tag = rx/ '<base' [.|\n]*? ['/>' | '>'] /;
+
 unit class Syndicate::Discovery:ver<0.0.1>:auth<zef:sasha>;
 
 method fetch(Str $url, Int :$max-redirects = 5, Int :$timeout = 30) {
@@ -31,8 +34,7 @@ method find-feeds(Str $html, Str $base-url --> Array) {
     my @feeds;
     my $base = self.base-url($html) // $base-url;
 
-    my token link-tag { '<link' [.|\n]*? ['/>' | '>'] }
-    for $html.comb(/<link-tag>/) -> $tag {
+    for $html.comb($link-tag) -> $tag {
         my %attr = self!parse-attrs($tag);
         next unless %attr<rel> && %attr<rel>.lc eq 'alternate';
         my $tv = %attr<type>.lc // "";
@@ -62,8 +64,7 @@ method !parse-attrs(Str $tag --> Map) {
 }
 
 method base-url(Str $html --> Str) {
-    my token base-tag { '<base' [.|\n]*? ['/>' | '>'] }
-    with $html.comb(/<base-tag>/)[0] -> $tag {
+    with $html.comb($base-tag)[0] -> $tag {
         my %attr = self!parse-attrs($tag);
         return %attr<href> if %attr<href>.defined;
     }
@@ -72,7 +73,8 @@ method base-url(Str $html --> Str) {
 
 method resolve-url(Str $url, Str $base --> Str) {
     return $url if $url ~~ /^https?\:\/\//;
-    return $url if $url ~~ /^\/\//;
+    my $scheme = $base ~~ /^(https?)/ ?? ~$0 !! 'https';
+    return $scheme ~ ':' ~ $url if $url ~~ /^\/\//;
 
     if $url.starts-with('/') {
         my $b = $base ~~ /^ (https?\:\/\/ [<-[\/]>+] ) /;
@@ -81,7 +83,11 @@ method resolve-url(Str $url, Str $base --> Str) {
 
     my $b = $base;
     if $b !~~ /\/$/ {
-        $b ~~ s/\/<-[\/]>*$/\//;
+        if $b ~~ /^ (https?\:\/\/ <-[\/]>+ ) \/ .+ $/ {
+            $b = ~$0 ~ '/';
+        } else {
+            $b ~= '/';
+        }
     }
 
     $b ~ $url

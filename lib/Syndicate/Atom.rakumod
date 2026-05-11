@@ -130,7 +130,8 @@ method XML {
 
     my $upd = $.updated;
     unless $upd.defined {
-        $upd = @.items ?? @.items.map({$_.updated}).grep(*.defined).max // DateTime.now !! DateTime.now;
+        my @dates = @.items.map({$_.updated}).grep(*.defined);
+        $upd = @dates ?? @dates.max !! DateTime.now;
     }
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
 
@@ -139,7 +140,7 @@ method XML {
     return $xml;
 }
 
-method Str(Bool :$pretty = True) { '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML }
+method Str { '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML }
 
 =begin pod
 

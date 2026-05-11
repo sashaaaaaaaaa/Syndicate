@@ -86,7 +86,7 @@ method XML {
     return $root;
 }
 
-method Str(Bool :$pretty = True) { '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML }
+method Str { '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML }
 
 =begin pod
 

@@ -84,7 +84,7 @@ method to-json {
     to-json $.to-hash
 }
 
-method Str(Bool :$pretty = True) { $.to-json }
+method Str { $.to-json }
 
 =begin pod
 

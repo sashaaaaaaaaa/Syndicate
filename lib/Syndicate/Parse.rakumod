@@ -13,7 +13,7 @@ sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
     die "Empty input" unless $clean.chars;
 
-    return JSONFeed if $clean.starts-with('{') || $clean.starts-with('[');
+    return JSONFeed if $clean.starts-with('{');
 
     my $root = root-element($clean);
     die "Unknown feed format: cannot find root element" unless $root.defined;
@@ -46,6 +46,12 @@ sub root-element(Str $input) {
         my $start = index($s, '<', $pos);
         return Nil unless $start.defined;
 
+        # Scan past XML comments properly: find the first '-->' after '<!--'
+        if $s.substr($start) ~~ /^ \<\!\- \- .+? \-\- \> / {
+            $pos = $start + $/.chars;
+            next;
+        }
+
         my $close = index($s, '>', $start);
         return Nil unless $close.defined;
 
@@ -54,9 +60,6 @@ sub root-element(Str $input) {
 
         # Skip XML declaration <?xml ...?>
         next if $tag.starts-with('<?');
-
-        # Skip comments <!--...-->
-        next if $tag.starts-with('<!--');
 
         # Skip DOCTYPE <!DOCTYPE ...>
         next if $tag.starts-with('<!');

@@ -27,7 +27,7 @@ is $d.resolve-url("https://other.com/feed.xml", "http://example.com/"),
     "https://other.com/feed.xml", "different origin https URL";
 
 is $d.resolve-url("//other.com/feed.xml", "http://example.com/"),
-    "//other.com/feed.xml", "protocol-relative URL";
+    "http://other.com/feed.xml", "protocol-relative URL";
 
 # ===== Base URL extraction =====
 my $html-with-base = q:to/END/;

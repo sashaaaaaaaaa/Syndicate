@@ -103,7 +103,7 @@ method build-v0_91-item {
 method build-json-item {
     my %author-detail;
     %author-detail<name> = $!author-name if $!author-name.defined;
-    %author-detail<url>  = $!author-email if $!author-email.defined;
+    # JSON Feed author object has no 'email' field, so skip it
 
     my $item-id = $!id // $!link // Str;
     my $content-html = $!content.defined ?? $!content !! Str;
