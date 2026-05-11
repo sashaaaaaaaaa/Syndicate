@@ -74,14 +74,13 @@ method category(Str $v?) {
 }
 
 method build-rss-item {
-    my $guid = $!id // $!link // Str;
     my $item-id = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :summary($!summary // Str),
         :author($!author-name // Str),
         :id($item-id),
         :content($!content // Str),
-        :$guid,
+        :guid($item-id),
         :media-title($!media-title // Str),
         :media-description($!media-description // Str);
     %bless<updated> = $!updated if $!updated ~~ DateTime;
@@ -97,6 +96,8 @@ method build-v0_91-item {
         :summary($!summary // Str),
         :id($item-id),
         :content($!content // Str);
+    # id and content are passed for role-interface consistency
+    # but V0_91::Item ignores them (format has no guid/content element)
     Syndicate::RSS::V0_91::Item.new(|%bless)
 }
 
@@ -110,9 +111,12 @@ method build-json-item {
     my %bless = :title($!title // Str), :link($!link // Str),
         :id($item-id),
         :summary($!summary // Str),
-        :content($c),
-        :content_html($c),
-        :content_text($c);
+        :content($c);
+    if ($!content-type // "") eq 'text' {
+        %bless<content_text> = $c;
+    } else {
+        %bless<content_html> = $c;
+    }
     %bless<date_published> = $!published if $!published ~~ DateTime;
     %bless<date_modified>  = $!updated   if $!updated ~~ DateTime;
     my @tags = @!categories;
