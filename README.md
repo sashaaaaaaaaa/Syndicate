@@ -22,6 +22,15 @@ Syndication feed parser and generator supporting **RSS 2.0**, **RSS
 zef install Syndicate
 ```
 
+### Installing from source
+
+To install from a local folder:
+
+```bash
+cd /path/to/Syndicate
+zef install .
+```
+
 Requires Raku 6.d or later.
 
 ## Supported Formats
