@@ -1,0 +1,85 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+
+plan 33;
+
+my $xml = slurp "t/data/rss2-itunes.xml";
+my $feed = Syndicate::RSS.new($xml);
+
+isa-ok $feed, Syndicate::RSS, "Parsed iTunes podcast feed";
+
+# ===== Channel-level iTunes fields =====
+is $feed.itunes-author, "John Podcaster", "channel itunes:author";
+is $feed.itunes-summary, "Weekly conversations about syndication technology", "channel itunes:summary";
+
+# ===== Item 0 =====
+my $i0 = $feed.items[0];
+is $i0.title, "Episode 1: RSS Explained", "item 0 title";
+is $i0.link, "http://example.com/ep1", "item 0 link";
+is $i0.itunes-author, "John Podcaster", "item 0 itunes:author";
+is $i0.itunes-summary, "John explains how RSS syndication works under the hood", "item 0 itunes:summary";
+is $i0.itunes-duration, "45:30", "item 0 itunes:duration";
+
+# ===== Item 1 =====
+my $i1 = $feed.items[1];
+is $i1.title, "Episode 2: Atom Feeds", "item 1 title";
+is $i1.link, "http://example.com/ep2", "item 1 link";
+is $i1.itunes-author, "Jane Coder", "item 1 itunes:author";
+is $i1.itunes-summary, "Jane compares Atom and RSS feed formats", "item 1 itunes:summary";
+is $i1.itunes-duration, "1:02:15", "item 1 itunes:duration";
+
+# ===== Item 2 (trailer, seconds duration) =====
+my $i2 = $feed.items[2];
+is $i2.title, "Trailer", "item 2 title";
+is $i2.itunes-duration, "180", "item 2 itunes:duration (seconds)";
+
+# ===== Item without itunes fields =====
+ok $i2.itunes-author eqv Str, "item 2 itunes:author is undefined";
+ok $i2.itunes-summary eqv Str, "item 2 itunes:summary is undefined";
+
+# ===== Str roundtrip =====
+my $str = ~$feed;
+my $rt = Syndicate::RSS.new($str);
+
+isa-ok $rt, Syndicate::RSS, "Roundtripped feed parsed";
+
+is $rt.itunes-author, "John Podcaster", "roundtrip channel itunes:author";
+is $rt.itunes-summary, "Weekly conversations about syndication technology", "roundtrip channel itunes:summary";
+
+is $rt.items.elems, 3, "roundtrip item count";
+is $rt.items[0].itunes-author, "John Podcaster", "roundtrip item 0 itunes:author";
+is $rt.items[0].itunes-summary, "John explains how RSS syndication works under the hood", "roundtrip item 0 itunes:summary";
+is $rt.items[0].itunes-duration, "45:30", "roundtrip item 0 itunes:duration";
+
+is $rt.items[1].itunes-author, "Jane Coder", "roundtrip item 1 itunes:author";
+is $rt.items[1].itunes-duration, "1:02:15", "roundtrip item 1 itunes:duration";
+
+is $rt.items[2].itunes-duration, "180", "roundtrip item 2 itunes:duration (seconds)";
+
+# ===== XML output contains itunes namespace =====
+ok $str ~~ /'xmlns:itunes'/, "XML output contains xmlns:itunes";
+
+# ===== XML output contains itunes elements =====
+ok $str ~~ /'itunes:author'/, "XML output contains itunes:author";
+ok $str ~~ /'itunes:summary'/, "XML output contains itunes:summary";
+ok $str ~~ /'itunes:duration'/, "XML output contains itunes:duration";
+
+# ===== Builder test =====
+my $b = Syndicate::Builder::Feed.new;
+$b.title("Builder Podcast");
+$b.link("http://example.com/builder");
+$b.description("Built podcast");
+$b.itunes-author("Builder Host");
+$b.itunes-summary("A builder test podcast");
+my $e = $b.add-entry;
+$e.title("Builder Episode");
+$e.link("http://example.com/bep1");
+$e.summary("First episode");
+my $rss-str = $b.rss-str;
+my $b-feed = Syndicate::RSS.new($rss-str);
+is $b-feed.itunes-author, "Builder Host", "builder channel itunes:author";
+is $b-feed.items[0].title, "Builder Episode", "builder item title";
+
+done-testing;

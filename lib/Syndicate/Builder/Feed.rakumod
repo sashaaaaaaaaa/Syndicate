@@ -23,6 +23,8 @@ has Str $!author-email;
 has Str $!author-uri;
 has @!categories;
 has @!entries;
+has Str $!itunes-author;
+has Str $!itunes-summary;
 
 method title(Str $v?)       { $!title = $v if $v.defined; $!title }
 method link(Str $v?)        { $!link = $v if $v.defined; $!link }
@@ -41,6 +43,9 @@ method author(Str :$name, Str :$email, Str :$uri) {
     $!author-uri   = $uri   if $uri.defined;
     %(:name($!author-name), :email($!author-email), :uri($!author-uri))
 }
+
+method itunes-author(Str $v?)  { $!itunes-author = $v if $v.defined; $!itunes-author }
+method itunes-summary(Str $v?) { $!itunes-summary = $v if $v.defined; $!itunes-summary }
 
 method category(Str $v?) {
     @!categories.push: $v if $v.defined;
@@ -64,7 +69,9 @@ method rss-feed {
         :copyright($!rights // Str),
         :managingEditor($!author-name // Str),
         :generator($!generator // Str),
-        :category($cat);
+        :category($cat),
+        :itunes-author($!itunes-author // Str),
+        :itunes-summary($!itunes-summary // Str);
     %bless<pubDate> = $!updated if $!updated ~~ DateTime;
     Syndicate::RSS.new(|%bless, :@items)
 }

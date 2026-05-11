@@ -5,6 +5,7 @@ use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
+use Syndicate::Extension::iTunes;
 
 unit class Syndicate::RSS::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -18,6 +19,9 @@ has @.media-contents;
 has @.media-thumbnails;
 has Str $.media-title;
 has Str $.media-description;
+has Str $.itunes-author;
+has Str $.itunes-summary;
+has Str $.itunes-duration;
 
 multi method new(Str $xml) {
     my $doc = XML::Document.new($xml);
@@ -39,6 +43,9 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $comment = get-text-optional($item-elem, "comments");
     my $pubdate = parse-date-optional(get-text($item-elem, "pubDate"));
     my $source  = get-text-optional($item-elem, "source");
+    my $it-author  = get-itunes-text($item-elem, "author");
+    my $it-summary = get-itunes-text($item-elem, "summary");
+    my $it-dur     = get-itunes-duration($item-elem);
 
     my $guid-elem = $item-elem.elements(:TAG<guid>)[0];
     my $guid = Str;
@@ -65,7 +72,9 @@ multi method new-from-xml(XML::Element $item-elem) {
         :$guid, :guid-is-permalink($guid-is-permalink),
         :category($cat), :comments($comment),
         :enclosure(%enclosure), :source($source),
-        :media-title($media-title), :media-description($media-desc);
+        :media-title($media-title), :media-description($media-desc),
+        :itunes-author($it-author), :itunes-summary($it-summary),
+        :itunes-duration($it-dur);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
     self.bless(|%bless, :@media-contents, :@media-thumbnails)
 }
@@ -96,6 +105,10 @@ method XML {
         $xml.append: $enc;
     }
     $xml.append: XML::Element.new(:name<source>, :nodes([$.source])) if $.source.defined;
+
+    add-itunes-element($xml, "author", $.itunes-author) if $.itunes-author.defined;
+    add-itunes-element($xml, "summary", $.itunes-summary) if $.itunes-summary.defined;
+    add-itunes-element($xml, "duration", $.itunes-duration) if $.itunes-duration.defined;
 
     add-media-content-element($xml, $_) for @.media-contents;
     add-media-thumbnail-element($xml, $_) for @.media-thumbnails;

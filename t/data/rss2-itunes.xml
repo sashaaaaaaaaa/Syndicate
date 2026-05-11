@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Test Podcast</title>
+    <link>http://example.com/podcast</link>
+    <description>A test podcast feed</description>
+    <language>en-us</language>
+    <itunes:author>John Podcaster</itunes:author>
+    <itunes:summary>Weekly conversations about syndication technology</itunes:summary>
+    <itunes:image href="http://example.com/artwork.jpg"/>
+    <itunes:category text="Technology"/>
+    <itunes:explicit>no</itunes:explicit>
+    <item>
+      <title>Episode 1: RSS Explained</title>
+      <link>http://example.com/ep1</link>
+      <description>A deep dive into RSS 2.0</description>
+      <itunes:author>John Podcaster</itunes:author>
+      <itunes:summary>John explains how RSS syndication works under the hood</itunes:summary>
+      <itunes:duration>45:30</itunes:duration>
+      <itunes:subtitle>Understanding RSS</itunes:subtitle>
+      <itunes:episodeType>full</itunes:episodeType>
+      <itunes:episode>1</itunes:episode>
+      <enclosure url="http://example.com/ep1.mp3" length="50000000" type="audio/mpeg"/>
+    </item>
+    <item>
+      <title>Episode 2: Atom Feeds</title>
+      <link>http://example.com/ep2</link>
+      <description>Comparing Atom to RSS</description>
+      <itunes:author>Jane Coder</itunes:author>
+      <itunes:summary>Jane compares Atom and RSS feed formats</itunes:summary>
+      <itunes:duration>1:02:15</itunes:duration>
+      <itunes:episodeType>full</itunes:episodeType>
+      <itunes:episode>2</itunes:episode>
+      <enclosure url="http://example.com/ep2.mp3" length="62000000" type="audio/mpeg"/>
+    </item>
+    <item>
+      <title>Trailer</title>
+      <link>http://example.com/trailer</link>
+      <description>Coming soon preview</description>
+      <itunes:duration>180</itunes:duration>
+      <itunes:episodeType>trailer</itunes:episodeType>
+    </item>
+  </channel>
+</rss>
