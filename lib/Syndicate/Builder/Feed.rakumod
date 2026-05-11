@@ -104,7 +104,8 @@ method rss091-feed {
         :description($!description // Str),
         :language($!language // Str),
         :copyright($!rights // Str),
-        :managingEditor($!author-name // Str);
+        :managingEditor($!author-name // Str),
+        :generator($!generator // Str);
     %bless<pubDate> = $!updated if $!updated ~~ DateTime;
     Syndicate::RSS::V0_91.new(|%bless, :@items)
 }
@@ -119,6 +120,7 @@ method json-feed {
         :description($!description // Str),
         :feed_url($feed-id),
         :language($!language // Str),
+        :generator($!generator // Str),
         :icon($!icon // Str),
         :favicon($!logo // Str),
         :author(%author);
@@ -130,7 +132,9 @@ method rss1-feed {
     my $about = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :description($!description // Str),
-        :$about;
+        :$about,
+        :generator($!generator // Str),
+        :language($!language // Str);
     Syndicate::RSS::V1_0.new(|%bless, :@items)
 }
 

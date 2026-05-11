@@ -4,7 +4,6 @@ use Syndicate::Utils;
 
 unit class Syndicate::JSONFeed::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
-has Str $.id;
 has Str $.external_url;
 has Str $.content_html;
 has Str $.content_text;

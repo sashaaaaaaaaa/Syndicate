@@ -8,7 +8,6 @@ use Syndicate::Utils;
 
 unit class Syndicate::RSS::V0_91:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
-has Str $.language;
 has Str $.copyright;
 has Str $.managingEditor;
 has Str $.webMaster;

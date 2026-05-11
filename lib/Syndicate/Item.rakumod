@@ -7,3 +7,5 @@ has Str $.link;
 has Str $.summary;
 has Str $.author;
 has DateTime $.updated;
+has Str $.id;
+has Str $.content;

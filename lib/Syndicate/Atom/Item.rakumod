@@ -5,11 +5,9 @@ use Syndicate::Utils;
 
 unit class Syndicate::Atom::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
-has Str $.id;
 has %.author-detail;
 has @.categories;
 has DateTime $.published;
-has Str $.content;
 has Str $.content-type;
 has Str $.rights;
 has %.source-feed;

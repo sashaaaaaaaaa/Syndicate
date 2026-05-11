@@ -12,7 +12,6 @@ has %.author-detail;
 has @.categories;
 has DateTime $.updated;
 has Str $.rights;
-has Str $.generator;
 has Str $.icon;
 has Str $.logo;
 has @.contributors;

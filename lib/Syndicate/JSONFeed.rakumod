@@ -13,7 +13,6 @@ has Str $.next_url;
 has Str $.icon;
 has Str $.favicon;
 has %.author;
-has Str $.language;
 has Bool $.expired;
 
 multi method new(Str $json) {

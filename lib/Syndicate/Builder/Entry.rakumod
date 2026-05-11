@@ -49,9 +49,12 @@ method category(Str $v?) {
 
 method build-rss-item {
     my $guid = $!id // $!link // Str;
+    my $item-id = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :summary($!summary // Str),
         :author($!author-name // Str),
+        :id($item-id),
+        :content($!content // Str),
         :$guid;
     %bless<updated> = $!updated if $!updated ~~ DateTime;
     %bless<category> = @!categories[0] if @!categories;
@@ -59,8 +62,11 @@ method build-rss-item {
 }
 
 method build-v0_91-item {
+    my $item-id = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
-        :summary($!summary // Str);
+        :summary($!summary // Str),
+        :id($item-id),
+        :content($!content // Str);
     Syndicate::RSS::V0_91::Item.new(|%bless)
 }
 
@@ -74,6 +80,7 @@ method build-json-item {
     my %bless = :title($!title // Str), :link($!link // Str),
         :id($item-id),
         :summary($!summary // Str),
+        :content($!content // Str),
         :content_html($content-html);
     %bless<date_published> = $!published if $!published ~~ DateTime;
     %bless<date_modified>  = $!updated   if $!updated ~~ DateTime;
@@ -84,8 +91,11 @@ method build-json-item {
 
 method build-v1_0-item {
     my $about = $!id // $!link // Str;
+    my $item-id = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :summary($!summary // Str),
+        :id($item-id),
+        :content($!content // Str),
         :$about,
         :author($!author-name // Str);
     %bless<updated> = $!updated if $!updated ~~ DateTime;

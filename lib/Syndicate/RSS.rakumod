@@ -11,14 +11,12 @@ use Syndicate::Extension::ITunes;
 
 unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
-has Str $.language;
 has Str $.copyright;
 has Str $.managingEditor;
 has Str $.webMaster;
 has DateTime $.pubDate;
 has DateTime $.lastBuildDate;
 has Str $.category;
-has Str $.generator;
 has Str $.docs;
 has Int $.ttl;
 has %.image;
