@@ -1,5 +1,6 @@
 use v6.d;
 use Syndicate::RSS;
+use Syndicate::RSS::V0_91;
 use Syndicate::Atom;
 use Syndicate::Builder::Entry;
 
@@ -88,6 +89,19 @@ method atom-feed {
     Syndicate::Atom.new(|%bless, :@items, :categories(@cats))
 }
 
-method rss-str  { ~$.rss-feed  }
+method rss091-feed {
+    my @items = @!entries.map(*.build-v0_91-item);
+    my %bless = :title($!title // Str), :link($!link // Str),
+        :description($!description // Str),
+        :language($!language // Str),
+        :copyright($!rights // Str),
+        :managingEditor($!author-name // Str);
+    %bless<pubDate> = $!updated if $!updated ~~ DateTime;
+    Syndicate::RSS::V0_91.new(|%bless, :@items)
+}
 
-method atom-str { ~$.atom-feed }
+method rss-str    { ~$.rss-feed    }
+
+method rss091-str { ~$.rss091-feed }
+
+method atom-str   { ~$.atom-feed   }

@@ -3,7 +3,7 @@ use Test;
 use lib 'lib';
 use Syndicate;
 
-plan 14;
+plan 55;
 
 my $xml = slurp "t/data/atom-full.xml";
 my $feed = Syndicate::Atom.new($xml);
@@ -22,10 +22,59 @@ is $feed.logo, "http://example.com/logo.png", "feed logo";
 isa-ok $feed.updated, DateTime, "updated is DateTime";
 is $feed.updated.year, 2025, "updated year";
 
+is $feed.link, "http://example.com", "feed link (alternate)";
+is $feed.link-self<href>, "http://example.com/atom.xml", "feed link-self href";
+is $feed.link-alternate<href>, "http://example.com", "feed link-alternate href";
+
+ok $feed.author-detail<name>.defined, "feed author-detail name defined";
+is $feed.author-detail<name>, "Test Author", "feed author-detail name";
+is $feed.author-detail<email>, "author@example.com", "feed author-detail email";
+is $feed.author-detail<uri>, "http://example.com/about", "feed author-detail uri";
+
+is $feed.categories.elems, 2, "two categories";
+is $feed.categories[0], "Technology", "first category";
+is $feed.categories[1], "Open Source", "second category";
+
 is $feed.items.elems, 2, "two entries";
 
+# ---- Entry 1 ----
 my $entry = $feed.items[0];
 isa-ok $entry, Syndicate::Atom::Item, "entry is Atom::Item";
 is $entry.title, "First Entry", "entry title";
+is $entry.link, "http://example.com/entry1", "entry link";
+is $entry.id, "http://example.com/entry1", "entry id";
+is $entry.summary, "Summary of the first entry", "entry summary";
+is $entry.content, "<p>Full content of entry 1</p>", "entry content";
+is $entry.content-type, "html", "entry content-type";
+isa-ok $entry.published, DateTime, "entry published is DateTime";
+isa-ok $entry.updated, DateTime, "entry updated is DateTime";
+is $entry.rights, "Copyright 2025", "entry rights";
+is $entry.author-detail<name>, "Entry Author", "entry author name";
+is $entry.author-detail<email>, "entry@example.com", "entry author email";
+is $entry.categories.elems, 1, "entry has one category";
+is $entry.categories[0], "News", "entry category term";
+is $entry.contributors.elems, 1, "entry has one contributor";
+is $entry.contributors[0]<name>, "Contributor One", "entry contributor name";
+ok $entry.source-feed<title>.defined, "entry source-feed title defined";
+is $entry.source-feed<title>, "Source Feed", "entry source-feed title";
+is $entry.source-feed<link>, "http://source.example.com/feed", "entry source-feed link";
+isa-ok $entry.source-feed<updated>, DateTime, "entry source-feed updated is DateTime";
+
+# ---- Roundtrip through XML() ----
+my $xml-out = ~$feed;
+my $feed2 = Syndicate::Atom.new($xml-out);
+is $feed2.title, "Test Atom Feed", "roundtrip title";
+is $feed2.rights, "Copyright 2025 Example Corp", "roundtrip rights";
+is $feed2.generator, "Syndicate", "roundtrip generator";
+is $feed2.icon, "http://example.com/favicon.ico", "roundtrip icon";
+is $feed2.logo, "http://example.com/logo.png", "roundtrip logo";
+is $feed2.author-detail<name>, "Test Author", "roundtrip author name";
+is $feed2.categories.elems, 2, "roundtrip 2 categories";
+is $feed2.items.elems, 2, "roundtrip 2 entries";
+is $feed2.items[0].title, "First Entry", "roundtrip entry title";
+is $feed2.items[0].content, "<p>Full content of entry 1</p>", "roundtrip entry content";
+is $feed2.items[0].content-type, "html", "roundtrip entry content-type";
+is $feed2.items[0].categories.elems, 1, "roundtrip entry 1 category";
+is $feed2.items[0].contributors.elems, 1, "roundtrip entry 1 contributor";
 
 done-testing;

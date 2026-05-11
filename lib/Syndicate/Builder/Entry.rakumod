@@ -1,6 +1,7 @@
 use v6.d;
 use Syndicate::RSS::Item;
 use Syndicate::Atom::Item;
+use Syndicate::RSS::V0_91::Item;
 
 unit class Syndicate::Builder::Entry:ver<0.0.1>:auth<zef:sasha>;
 
@@ -53,6 +54,12 @@ method build-rss-item {
     %bless<updated> = $!updated if $!updated ~~ DateTime;
     %bless<category> = @!categories[0] if @!categories;
     Syndicate::RSS::Item.new(|%bless)
+}
+
+method build-v0_91-item {
+    my %bless = :title($!title // Str), :link($!link // Str),
+        :summary($!summary // Str);
+    Syndicate::RSS::V0_91::Item.new(|%bless)
 }
 
 method build-atom-item {

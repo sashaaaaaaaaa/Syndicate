@@ -5,7 +5,7 @@ use Syndicate;
 use Syndicate::Builder::Feed;
 use Syndicate::Builder::Entry;
 
-plan 60;
+plan 98;
 
 # ===== Feed builder fields =====
 my $fb = Syndicate::Builder::Feed.new;
@@ -108,6 +108,12 @@ like $atom-str, /'<id>http://example.com/feed</id>'/, "Atom output has feed id";
 like $atom-str, /'<subtitle>'/, "Atom output has subtitle";
 like $atom-str, /"jane\@example.com"/, "Atom output has author email (from entry)";
 like $atom-str, /'<entry>'/, "Atom output has entries";
+like $atom-str, /'<rights>'/, "Atom output has rights";
+like $atom-str, /'<generator>'/, "Atom output has generator";
+like $atom-str, /'<icon>'/, "Atom output has icon";
+like $atom-str, /'<logo>'/, "Atom output has logo";
+like $atom-str, /'<category term="Tech"'/, "Atom output has category";
+like $atom-str, /'<category term="News"'/, "Atom output has second category";
 
 # ===== RSS roundtrip =====
 my $rss-parsed = Syndicate::RSS.new($rss-str);
@@ -128,10 +134,26 @@ isa-ok $atom-parsed, Syndicate::Atom, "Atom roundtrip parsed";
 is $atom-parsed.title, "Test Builder Feed", "Atom roundtrip title";
 is $atom-parsed.id, "http://example.com/feed", "Atom roundtrip id";
 is $atom-parsed.subtitle, "A feed built with the builder API", "Atom roundtrip subtitle";
+is $atom-parsed.rights, "Copyright 2026", "Atom roundtrip rights";
+is $atom-parsed.generator, "Syndicate Test", "Atom roundtrip generator";
+is $atom-parsed.icon, "http://example.com/icon.png", "Atom roundtrip icon";
+is $atom-parsed.logo, "http://example.com/logo.png", "Atom roundtrip logo";
+is $atom-parsed.author-detail<name>, "Jane Doe", "Atom roundtrip author name";
+is $atom-parsed.author-detail<email>, "jane@example.com", "Atom roundtrip author email";
+is $atom-parsed.categories.elems, 2, "Atom roundtrip 2 categories";
 is $atom-parsed.items.elems, 2, "Atom roundtrip entry count";
 is $atom-parsed.items[0].title, "Entry One", "Atom roundtrip first entry title";
 is $atom-parsed.items[1].title, "Entry Two", "Atom roundtrip second entry title";
 isa-ok $atom-parsed.updated, DateTime, "Atom roundtrip updated is DateTime";
+
+# ===== Content roundtrip in Atom =====
+my $atom-content-str = $fb3.atom-str;
+like $atom-content-str, /'<content type="xhtml">'/, "Atom output has content with type";
+like $atom-content-str, /"Hello &lt;em&gt;world&lt;\/em&gt;"/, "Atom output has content body";
+
+my $atom-content-parsed = Syndicate::Atom.new($atom-content-str);
+is $atom-content-parsed.items[0].content, "<p>Hello <em>world</em></p>", "content roundtrip body";
+is $atom-content-parsed.items[0].content-type, "xhtml", "content roundtrip type";
 
 # ===== Empty feed =====
 my $fb-empty = Syndicate::Builder::Feed.new;
@@ -148,5 +170,42 @@ like $rss-empty, /"Empty Feed"/, "empty RSS has title";
 my $atom-empty = $fb-empty.atom-str;
 like $atom-empty, /'<feed xmlns="http://www.w3.org/2005/Atom">'/, "empty Atom has root";
 like $atom-empty, /"Empty Feed"/, "empty Atom has title";
+
+# ===== RSS 0.91 builder output =====
+my $rss091-str = $fb.rss091-str;
+ok $rss091-str.chars > 0, "rss091-str generates output";
+like $rss091-str, /'<rss version="0.91">'/, "RSS 0.91 output has version 0.91";
+like $rss091-str, /'<channel>'/, "RSS 0.91 output has channel";
+like $rss091-str, /"Test Builder Feed"/, "RSS 0.91 output has feed title";
+like $rss091-str, /"en"/, "RSS 0.91 output has language";
+like $rss091-str, /"Copyright 2026"/, "RSS 0.91 output has copyright";
+like $rss091-str, /"Jane Doe"/, "RSS 0.91 output has managingEditor";
+like $rss091-str, /'<item>'/, "RSS 0.91 output has items";
+
+my $rss091-feed = $fb.rss091-feed;
+isa-ok $rss091-feed, Syndicate::RSS::V0_91, "rss091-feed returns V0_91";
+
+# RSS 0.91 roundtrip
+my $rss091-parsed = Syndicate::RSS::V0_91.new($rss091-str);
+isa-ok $rss091-parsed, Syndicate::RSS::V0_91, "RSS 0.91 roundtrip parsed";
+is $rss091-parsed.title, "Test Builder Feed", "RSS 0.91 roundtrip title";
+is $rss091-parsed.link, "http://example.com", "RSS 0.91 roundtrip link";
+is $rss091-parsed.description, "A feed built with the builder API", "RSS 0.91 roundtrip description";
+is $rss091-parsed.language, "en", "RSS 0.91 roundtrip language";
+is $rss091-parsed.copyright, "Copyright 2026", "RSS 0.91 roundtrip copyright";
+is $rss091-parsed.items.elems, 2, "RSS 0.91 roundtrip item count";
+is $rss091-parsed.items[0].title, "Entry One", "RSS 0.91 roundtrip first item title";
+is $rss091-parsed.items[0].link, "http://example.com/1", "RSS 0.91 roundtrip first item link";
+is $rss091-parsed.items[0].summary, "First entry summary", "RSS 0.91 roundtrip first item description";
+
+# Empty RSS 0.91
+my $fb-rss091-empty = Syndicate::Builder::Feed.new;
+$fb-rss091-empty.title("Empty 0.91");
+$fb-rss091-empty.link("http://example.com/empty91");
+$fb-rss091-empty.description("Empty 0.91 test");
+
+my $rss091-empty-str = $fb-rss091-empty.rss091-str;
+like $rss091-empty-str, /'<rss version="0.91">'/, "empty RSS 0.91 has root";
+like $rss091-empty-str, /"Empty 0.91"/, "empty RSS 0.91 has title";
 
 done-testing;

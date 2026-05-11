@@ -4,10 +4,22 @@ use DateTime::Grammar;
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
+my $entity-handler = XML::Entity.new;
+
+sub decode-entities(Str $text) is export {
+    return $text unless $text.defined && $text.chars;
+    $entity-handler.decode($text)
+}
+
+sub encode-entities(Str $text) is export {
+    return $text unless $text.defined && $text.chars;
+    $entity-handler.encode($text)
+}
+
 sub get-text($parent, $tag) is export {
     with $parent.elements(:TAG($tag))[0] -> $e {
         with $e.contents[0] -> $t {
-            return $t.text // "";
+            return decode-entities($t.text // "");
         }
     }
     ""
@@ -17,7 +29,7 @@ sub get-text-optional($parent, $tag) is export {
     with $parent.elements(:TAG($tag))[0] -> $e {
         with $e.contents[0] -> $t {
             my $text = $t.text;
-            return $text.chars ?? $text !! Str;
+            return $text.chars ?? decode-entities($text) !! Str;
         }
     }
     Str

@@ -104,6 +104,31 @@ method XML {
         $xml.append: XML::Element.new(:name<link>, :attribs({:href(%!link-self<href>), :rel<self>}));
     }
 
+    if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
+        my $author = XML::Element.new(:name<author>);
+        $author.append: XML::Element.new(:name<name>, :nodes([%!author-detail<name>])) if %!author-detail<name>.defined;
+        $author.append: XML::Element.new(:name<email>, :nodes([%!author-detail<email>])) if %!author-detail<email>.defined;
+        $author.append: XML::Element.new(:name<uri>, :nodes([%!author-detail<uri>])) if %!author-detail<uri>.defined;
+        $xml.append: $author;
+    }
+
+    $xml.append: XML::Element.new(:name<rights>, :nodes([$.rights])) if $.rights.defined;
+    $xml.append: XML::Element.new(:name<generator>, :nodes([$.generator])) if $.generator.defined;
+    $xml.append: XML::Element.new(:name<icon>, :nodes([$.icon])) if $.icon.defined;
+    $xml.append: XML::Element.new(:name<logo>, :nodes([$.logo])) if $.logo.defined;
+
+    for @.categories -> $cat {
+        $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
+    }
+
+    for @.contributors -> %c {
+        my $c = XML::Element.new(:name<contributor>);
+        $c.append: XML::Element.new(:name<name>, :nodes([%c<name>])) if %c<name>.defined;
+        $c.append: XML::Element.new(:name<email>, :nodes([%c<email>])) if %c<email>.defined;
+        $c.append: XML::Element.new(:name<uri>, :nodes([%c<uri>])) if %c<uri>.defined;
+        $xml.append: $c;
+    }
+
     my $upd = $.updated;
     unless $upd.defined {
         $upd = @.items ?? @.items.map({$_.updated}).grep(*.defined).max // DateTime.now !! DateTime.now;
