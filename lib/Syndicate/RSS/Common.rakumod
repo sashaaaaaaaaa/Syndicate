@@ -55,6 +55,8 @@ method parse-skip-days($channel --> Array) {
 method build-xml-image($channel, %image) {
     return unless %image;
     my $img = XML::Element.new(:name<image>);
+    # url/title/link come from get-text (returns "" on miss) so guard .chars too.
+    # width/height/description come from get-text-optional (returns Str) so .defined suffices.
     $img.append: XML::Element.new(:name<url>, :nodes([%image<url>])) if %image<url>.defined && %image<url>.chars;
     $img.append: XML::Element.new(:name<title>, :nodes([%image<title>])) if %image<title>.defined && %image<title>.chars;
     $img.append: XML::Element.new(:name<link>, :nodes([%image<link>])) if %image<link>.defined && %image<link>.chars;

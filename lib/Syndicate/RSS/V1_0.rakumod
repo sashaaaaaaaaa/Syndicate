@@ -104,9 +104,6 @@ Parses and generates RSS 1.0 (RDF-based) feeds. Does L<C<Syndicate::Feed>|rakudo
 =item C<$.title>, C<$.link>, C<$.description> - from Feed role
 =item C<$.generator>, C<$.language> - from Feed role
 =item C<$.about> - RDF about URL
-=item C<$.image-url> - Image URL
-=item C<$.image-title> - Image title
-=item C<$.image-link> - Image link
-=item C<$.image-about> - Image RDF about
+=item C<%.image> - Image hash (url, title, link, about)
 
 =end pod

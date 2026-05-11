@@ -10,7 +10,7 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $title = get-text($item-elem, "title");
     my $link  = get-text($item-elem, "link");
     my $desc  = get-text-optional($item-elem, "description");
-    self.bless(:$title, :$link, :summary($desc))
+    self.bless(:$title, :$link, :summary($desc), :id($link // Str), :content($desc // Str))
 }
 
 method XML {
