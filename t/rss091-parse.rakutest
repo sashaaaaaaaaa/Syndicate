@@ -1,0 +1,111 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::RSS::V0_91;
+use Syndicate::RSS::V0_91::Item;
+
+plan 57;
+
+# ===== Parse RSS 0.91 =====
+my $xml = slurp "t/data/rss091-full.xml";
+my $feed = Syndicate::RSS::V0_91.new($xml);
+
+isa-ok $feed, Syndicate::RSS::V0_91, "Parsed RSS 0.91 feed";
+isa-ok $feed, Syndicate::Feed, "Does Syndicate::Feed role";
+
+is $feed.title, "Test RSS 0.91 Feed", "channel title";
+is $feed.link, "http://example.com", "channel link";
+is $feed.description, "A test RSS 0.91 feed for Syndicate", "channel description";
+is $feed.language, "en-us", "channel language";
+is $feed.rating, '(PICS-1.1 "http://www.classify.org/safe/")', "channel rating";
+is $feed.copyright, "Copyright 2025 Example Corp", "channel copyright";
+is $feed.managingEditor, "editor@example.com", "channel managingEditor";
+is $feed.webMaster, "webmaster@example.com", "channel webMaster";
+is $feed.docs, "http://www.rssboard.org/rss-0.91-specification", "channel docs";
+
+isa-ok $feed.pubDate, DateTime, "pubDate is DateTime";
+is $feed.pubDate.year, 2025, "pubDate year";
+is $feed.pubDate.month, 1, "pubDate month";
+is $feed.pubDate.day, 1, "pubDate day";
+
+isa-ok $feed.lastBuildDate, DateTime, "lastBuildDate is DateTime";
+is $feed.lastBuildDate.year, 2025, "lastBuildDate year";
+
+# Image
+ok $feed.image, "image exists";
+is $feed.image<title>, "Example Logo", "image title";
+is $feed.image<url>, "http://example.com/logo.gif", "image url";
+is $feed.image<link>, "http://example.com", "image link";
+is $feed.image<width>, "88", "image width";
+is $feed.image<height>, "31", "image height";
+is $feed.image<description>, "Example logo description", "image description";
+
+# TextInput
+ok $feed.textInput, "textInput exists";
+is $feed.textInput<title>, "Search", "textInput title";
+is $feed.textInput<description>, "Search this site", "textInput description";
+is $feed.textInput<name>, "q", "textInput name";
+is $feed.textInput<link>, "http://example.com/search", "textInput link";
+
+# SkipHours
+is $feed.skipHours.elems, 4, "skipHours count";
+is $feed.skipHours[0], 0, "skipHours first hour";
+is $feed.skipHours[1], 6, "skipHours second hour";
+
+# SkipDays
+is $feed.skipDays.elems, 2, "skipDays count";
+is $feed.skipDays[0], "Saturday", "skipDays first day";
+is $feed.skipDays[1], "Sunday", "skipDays second day";
+
+# Items
+is $feed.items.elems, 3, "item count";
+isa-ok $feed.items[0], Syndicate::RSS::V0_91::Item, "first item is V0_91::Item";
+
+is $feed.items[0].title, "First Item", "first item title";
+is $feed.items[0].link, "http://example.com/first", "first item link";
+is $feed.items[0].summary, "First item description", "first item description";
+
+is $feed.items[1].title, "Second Item", "second item title";
+is $feed.items[1].link, "http://example.com/second", "second item link";
+nok $feed.items[1].summary.defined, "second item has no description";
+
+is $feed.items[2].title, "Third Item", "third item title";
+is $feed.items[2].summary, "Third item has a description too", "third item description";
+
+# ===== Roundtrip =====
+my $roundtrip = Syndicate::RSS::V0_91.new(
+    :title("Roundtrip 0.91"),
+    :link("http://example.com/rt"),
+    :description("RT desc"),
+    :language("en"),
+    :pubDate(DateTime.new("2025-06-15T10:00:00Z")),
+    :items([
+        Syndicate::RSS::V0_91::Item.new(
+            :title("RT Item"),
+            :link("http://example.com/rt/1"),
+            :summary("RT item desc"),
+        ),
+    ]),
+);
+
+my $rt-xml = ~$roundtrip;
+my $rt-parsed = Syndicate::RSS::V0_91.new($rt-xml);
+
+is $rt-parsed.title, "Roundtrip 0.91", "roundtrip title";
+is $rt-parsed.link, "http://example.com/rt", "roundtrip link";
+is $rt-parsed.description, "RT desc", "roundtrip description";
+is $rt-parsed.items.elems, 1, "roundtrip item count";
+is $rt-parsed.items[0].title, "RT Item", "roundtrip item title";
+isa-ok $rt-parsed.pubDate, DateTime, "roundtrip pubDate is DateTime";
+
+# ===== XML string output =====
+my $xml-str = ~$feed;
+like $xml-str, /'<rss version="0.91">'/, "XML has rss root";
+like $xml-str, /'<channel>'/, "XML has channel";
+like $xml-str, /'<skipHours>'/, "XML has skipHours";
+like $xml-str, /'<textinput>'/, "XML has textinput";
+like $xml-str, /'<image>'/, "XML has image";
+like $xml-str, /'<item>'/, "XML has items";
+
+done-testing;

@@ -5,6 +5,8 @@ use Syndicate::Feed;
 use Syndicate::Config;
 use Syndicate::RSS;
 use Syndicate::RSS::Item;
+use Syndicate::RSS::V0_91;
+use Syndicate::RSS::V0_91::Item;
 use Syndicate::Atom;
 use Syndicate::Atom::Item;
 use Syndicate::Utils;

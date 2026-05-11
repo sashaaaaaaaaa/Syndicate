@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="0.91">
+  <channel>
+    <title>Test RSS 0.91 Feed</title>
+    <link>http://example.com</link>
+    <description>A test RSS 0.91 feed for Syndicate</description>
+    <language>en-us</language>
+    <rating>(PICS-1.1 "http://www.classify.org/safe/")</rating>
+    <copyright>Copyright 2025 Example Corp</copyright>
+    <pubDate>Wed, 01 Jan 2025 00:00:00 GMT</pubDate>
+    <lastBuildDate>Wed, 01 Jan 2025 12:00:00 GMT</lastBuildDate>
+    <docs>http://www.rssboard.org/rss-0.91-specification</docs>
+    <managingEditor>editor@example.com</managingEditor>
+    <webMaster>webmaster@example.com</webMaster>
+    <image>
+      <title>Example Logo</title>
+      <url>http://example.com/logo.gif</url>
+      <link>http://example.com</link>
+      <width>88</width>
+      <height>31</height>
+      <description>Example logo description</description>
+    </image>
+    <item>
+      <title>First Item</title>
+      <link>http://example.com/first</link>
+      <description>First item description</description>
+    </item>
+    <item>
+      <title>Second Item</title>
+      <link>http://example.com/second</link>
+    </item>
+    <item>
+      <title>Third Item</title>
+      <link>http://example.com/third</link>
+      <description>Third item has a description too</description>
+    </item>
+    <textinput>
+      <title>Search</title>
+      <description>Search this site</description>
+      <name>q</name>
+      <link>http://example.com/search</link>
+    </textinput>
+    <skipHours>
+      <hour>0</hour>
+      <hour>6</hour>
+      <hour>12</hour>
+      <hour>18</hour>
+    </skipHours>
+    <skipDays>
+      <day>Saturday</day>
+      <day>Sunday</day>
+    </skipDays>
+  </channel>
+</rss>
