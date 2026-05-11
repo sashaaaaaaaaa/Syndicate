@@ -3,7 +3,7 @@ use Test;
 use lib 'lib';
 use Syndicate;
 
-plan 17;
+plan 20;
 
 my $xml = slurp "t/data/rss2-full.xml";
 my $feed = Syndicate::RSS.new($xml);
@@ -27,5 +27,19 @@ isa-ok $feed.pubDate, DateTime, "pubDate is DateTime";
 is $feed.pubDate.year, 2025, "pubDate year";
 is $feed.pubDate.month, 1, "pubDate month";
 is $feed.pubDate.day, 1, "pubDate day";
+
+# RSS item dc:creator fallback
+my $dc-item-xml = q:to/END/;
+<rss version="2.0"><channel><title>T</title><item>
+  <title>DC Test</title>
+  <link>http://x.com/1</link>
+  <description>D</description>
+  <dc:creator>Jane Writer</dc:creator>
+</item></channel></rss>
+END
+my $dc-feed = Syndicate::RSS.new($dc-item-xml);
+is $dc-feed.items.elems, 1, "dc:creator feed has 1 item";
+is $dc-feed.items[0].author, "Jane Writer", "dc:creator maps to author";
+is $dc-feed.items[0].title, "DC Test", "dc:creator item title preserved";
 
 done-testing;

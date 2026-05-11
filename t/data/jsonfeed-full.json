@@ -1,0 +1,48 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Test JSON Feed",
+  "home_page_url": "http://example.com",
+  "feed_url": "http://example.com/feed.json",
+  "description": "A test JSON Feed 1.1 feed",
+  "user_comment": "This is a test feed for the Syndicate module",
+  "next_url": "http://example.com/feed-next.json",
+  "icon": "http://example.com/icon.png",
+  "favicon": "http://example.com/favicon.ico",
+  "author": {
+    "name": "Test Author",
+    "url": "http://example.com/about",
+    "avatar": "http://example.com/avatar.png"
+  },
+  "language": "en",
+  "expired": false,
+  "items": [
+    {
+      "id": "http://example.com/entry1",
+      "url": "http://example.com/entry1",
+      "external_url": "http://external.example.com/article1",
+      "title": "First Entry",
+      "content_html": "<p>Full content of entry 1</p>",
+      "content_text": "Full content of entry 1",
+      "summary": "Summary of the first entry",
+      "image": "http://example.com/image1.png",
+      "banner_image": "http://example.com/banner1.png",
+      "date_published": "2025-01-01T10:00:00Z",
+      "date_modified": "2025-01-01T12:00:00Z",
+      "authors": [
+        {
+          "name": "Entry Author",
+          "url": "http://entry.example.com",
+          "avatar": "http://entry.example.com/avatar.png"
+        }
+      ],
+      "tags": ["News", "Tech"]
+    },
+    {
+      "id": "http://example.com/entry2",
+      "url": "http://example.com/entry2",
+      "title": "Second Entry",
+      "summary": "Minimal entry with required fields only",
+      "date_modified": "2025-01-02T00:00:00Z"
+    }
+  ]
+}

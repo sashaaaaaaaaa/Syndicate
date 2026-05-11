@@ -4,7 +4,7 @@ use lib 'lib';
 use Syndicate;
 use Syndicate::Parse;
 
-plan 23;
+plan 33;
 
 # ===== feed-format detection =====
 
@@ -32,7 +32,15 @@ is feed-format('<rss version="0.91"><channel><title>t</title></channel></rss>'),
 # Atom bare
 is feed-format('<feed xmlns="http://www.w3.org/2005/Atom"><id>i</id></feed>'), Atom, "bare Atom -> Atom";
 
+# JSON Feed from file
+my $json-str = slurp "t/data/jsonfeed-full.json";
+is feed-format($json-str), JSONFeed, "jsonfeed-full.json detected as JSONFeed";
+
+# JSON bare
+is feed-format('{"version":"https://jsonfeed.org/version/1","title":"t","items":[]}'), JSONFeed, "bare JSON -> JSONFeed";
+
 # ===== parse-feed returns correct types =====
+isa-ok parse-feed($json-str), Syndicate::JSONFeed, "parse-feed json returns JSONFeed";
 isa-ok parse-feed($atom-xml), Syndicate::Atom, "parse-feed atom returns Atom";
 isa-ok parse-feed($rss-xml), Syndicate::RSS, "parse-feed rss2 returns RSS";
 isa-ok parse-feed($rss091-xml), Syndicate::RSS::V0_91, "parse-feed rss091 returns V0_91";
@@ -41,11 +49,29 @@ isa-ok parse-feed($rss091-xml), Syndicate::RSS::V0_91, "parse-feed rss091 return
 isa-ok parse($atom-xml), Syndicate::Atom, "parse() atom returns Atom";
 isa-ok parse($rss-xml), Syndicate::RSS, "parse() rss2 returns RSS";
 isa-ok parse($rss091-xml), Syndicate::RSS::V0_91, "parse() rss091 returns V0_91";
+isa-ok parse($json-str), Syndicate::JSONFeed, "parse() json returns JSONFeed";
 
 # ===== parse() returns correct feed data =====
 is parse($atom-xml).title, "Test Atom Feed", "parse() atom title";
 is parse($rss-xml).title, "Test RSS Feed", "parse() rss2 title";
 is parse($rss091-xml).title, "Test RSS 0.91 Feed", "parse() rss091 title";
+is parse($json-str).title, "Test JSON Feed", "parse() json title";
+
+# RSS 1.0 from file
+my $rss1-xml = slurp "t/data/rss1-full.xml";
+is feed-format($rss1-xml), RSS1, "rss1-full.xml detected as RSS1";
+
+# RSS 1.0 bare
+is feed-format('<rdf:RDF xmlns="http://purl.org/rss/1.0/"><channel><title>t</title></channel></rdf:RDF>'), RSS1, "bare RSS1 -> RSS1";
+
+# parse-feed returns correct type
+isa-ok parse-feed($rss1-xml), Syndicate::RSS::V1_0, "parse-feed rss1 returns V1_0";
+
+# parse() returns correct type
+isa-ok parse($rss1-xml), Syndicate::RSS::V1_0, "parse() rss1 returns V1_0";
+
+# parse() returns correct data
+is parse($rss1-xml).title, "Test RSS 1.0 Feed", "parse() rss1 title";
 
 # ===== Error cases =====
 dies-ok { feed-format("") }, "empty string dies";

@@ -3,6 +3,8 @@ use XML;
 use DateTime::Format::RFC2822;
 use Syndicate::Item;
 use Syndicate::Utils;
+use Syndicate::Extension::DublinCore;
+use Syndicate::Extension::MediaRSS;
 
 unit class Syndicate::RSS::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -12,6 +14,10 @@ has Str $.category;
 has Str $.comments;
 has %.enclosure;
 has Str $.source;
+has @.media-contents;
+has @.media-thumbnails;
+has Str $.media-title;
+has Str $.media-description;
 
 multi method new(Str $xml) {
     my $doc = XML::Document.new($xml);
@@ -28,6 +34,7 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $link    = get-text($item-elem, "link");
     my $desc    = get-text($item-elem, "description");
     my $author  = get-text-optional($item-elem, "author");
+    $author //= get-dc-text($item-elem, "creator");
     my $cat     = get-text-optional($item-elem, "category");
     my $comment = get-text-optional($item-elem, "comments");
     my $pubdate = parse-date-optional(get-text($item-elem, "pubDate"));
@@ -48,13 +55,19 @@ multi method new-from-xml(XML::Element $item-elem) {
         %enclosure<type>   = .attribs<type>   // Str;
     }
 
+    my @media-contents  = get-media-contents($item-elem);
+    my @media-thumbnails = get-media-thumbnails($item-elem);
+    my $media-title     = get-media-text($item-elem, "title");
+    my $media-desc      = get-media-text($item-elem, "description");
+
     my %bless = :$title, :$link, :summary($desc),
         :$author,
         :$guid, :guid-is-permalink($guid-is-permalink),
         :category($cat), :comments($comment),
-        :enclosure(%enclosure), :source($source);
+        :enclosure(%enclosure), :source($source),
+        :media-title($media-title), :media-description($media-desc);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
-    self.bless(|%bless)
+    self.bless(|%bless, :@media-contents, :@media-thumbnails)
 }
 
 method XML {
@@ -72,6 +85,7 @@ method XML {
         $xml.append: XML::Element.new(:name<pubDate>, :nodes([$f.to-string($.updated)]));
     }
     $xml.append: XML::Element.new(:name<author>, :nodes([$.author])) if $.author.defined;
+    add-dc-element($xml, "creator", $.author) if $.author.defined;
     $xml.append: XML::Element.new(:name<category>, :nodes([$.category])) if $.category.defined;
     $xml.append: XML::Element.new(:name<comments>, :nodes([$.comments])) if $.comments.defined;
     if %.enclosure {
@@ -82,6 +96,12 @@ method XML {
         $xml.append: $enc;
     }
     $xml.append: XML::Element.new(:name<source>, :nodes([$.source])) if $.source.defined;
+
+    add-media-content-element($xml, $_) for @.media-contents;
+    add-media-thumbnail-element($xml, $_) for @.media-thumbnails;
+    $xml.append: XML::Element.new(:name<media:title>, :nodes([$.media-title])) if $.media-title.defined;
+    $xml.append: XML::Element.new(:name<media:description>, :nodes([$.media-description])) if $.media-description.defined;
+
     return $xml;
 }
 

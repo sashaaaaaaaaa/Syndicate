@@ -1,0 +1,59 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+
+plan 31;
+
+my $xml = slurp "t/data/rss2-media.xml";
+my $feed = Syndicate::RSS.new($xml);
+
+isa-ok $feed, Syndicate::RSS, "Parsed Media RSS feed";
+
+is $feed.items.elems, 2, "two items";
+
+# ===== Item 0 - Video =====
+my $i0 = $feed.items[0];
+is $i0.title, "Video Post", "item 0 title";
+is $i0.link, "http://example.com/video1", "item 0 link";
+is $i0.summary, "A cool video about syndication", "item 0 description";
+
+is $i0.media-contents.elems, 1, "item 0 has 1 media:content";
+is $i0.media-contents[0]<url>, "http://example.com/video.mp4", "media:content url";
+is $i0.media-contents[0]<type>, "video/mp4", "media:content type";
+is $i0.media-contents[0]<medium>, "video", "media:content medium";
+is $i0.media-contents[0]<duration>, "120", "media:content duration";
+is $i0.media-contents[0]<fileSize>, "1024000", "media:content fileSize";
+is $i0.media-contents[0]<width>, "640", "media:content width";
+is $i0.media-contents[0]<height>, "480", "media:content height";
+
+is $i0.media-thumbnails.elems, 1, "item 0 has 1 media:thumbnail";
+is $i0.media-thumbnails[0]<url>, "http://example.com/thumb1.jpg", "media:thumbnail url";
+is $i0.media-thumbnails[0]<width>, "320", "media:thumbnail width";
+is $i0.media-thumbnails[0]<height>, "240", "media:thumbnail height";
+
+is $i0.media-title, "Video: Syndication Explained", "media:title";
+is $i0.media-description, "An in-depth look at feed syndication formats", "media:description";
+
+# ===== Item 1 - Audio =====
+my $i1 = $feed.items[1];
+is $i1.title, "Audio Podcast", "item 1 title";
+is $i1.link, "http://example.com/audio1", "item 1 link";
+
+is $i1.media-contents.elems, 1, "item 1 has 1 media:content";
+is $i1.media-contents[0]<url>, "http://example.com/audio.mp3", "item 1 media:content url";
+is $i1.media-contents[0]<type>, "audio/mpeg", "item 1 media:content type";
+is $i1.media-contents[0]<medium>, "audio", "item 1 media:content medium";
+is $i1.media-contents[0]<duration>, "1800", "item 1 media:content duration";
+
+is $i1.media-thumbnails.elems, 1, "item 1 has 1 media:thumbnail";
+is $i1.media-thumbnails[0]<url>, "http://example.com/thumb2.jpg", "item 1 thumbnail url";
+
+# Str roundtrip
+my $str = ~$feed;
+my $rt = Syndicate::RSS.new($str);
+is $rt.items[0].media-contents.elems, 1, "roundtrip media:content count";
+is $rt.items[0].media-contents[0]<url>, "http://example.com/video.mp4", "roundtrip media:content url";
+is $rt.items[0].media-title, "Video: Syndication Explained", "roundtrip media:title";
+
+done-testing;

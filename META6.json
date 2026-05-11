@@ -2,14 +2,16 @@
     "name": "Syndicate",
     "auth": "zef:sasha",
     "version": "0.0.1",
-    "description": "Syndication feed parser/generator (RSS / Atom)",
+    "description": "Syndication feed parser/generator (RSS / Atom / JSON Feed)",
     "raku": "6.d",
     "license": "Artistic-2.0",
     "depends": [
         "XML",
+        "JSON::Fast",
         "DateTime::Grammar",
         "DateTime::Format",
-        "OO::Monitors"
+        "OO::Monitors",
+        "HTTP::Tiny"
     ],
     "provides": {
         "Syndicate": "lib/Syndicate.rakumod",
@@ -17,10 +19,22 @@
         "Syndicate::Feed": "lib/Syndicate/Feed.rakumod",
         "Syndicate::Config": "lib/Syndicate/Config.rakumod",
         "Syndicate::Utils": "lib/Syndicate/Utils.rakumod",
+        "Syndicate::Parse": "lib/Syndicate/Parse.rakumod",
         "Syndicate::RSS": "lib/Syndicate/RSS.rakumod",
         "Syndicate::RSS::Item": "lib/Syndicate/RSS/Item.rakumod",
+        "Syndicate::RSS::V0_91": "lib/Syndicate/RSS/V0_91.rakumod",
+        "Syndicate::RSS::V0_91::Item": "lib/Syndicate/RSS/V0_91/Item.rakumod",
+        "Syndicate::RSS::V1_0": "lib/Syndicate/RSS/V1_0.rakumod",
+        "Syndicate::RSS::V1_0::Item": "lib/Syndicate/RSS/V1_0/Item.rakumod",
         "Syndicate::Atom": "lib/Syndicate/Atom.rakumod",
-        "Syndicate::Atom::Item": "lib/Syndicate/Atom/Item.rakumod"
+        "Syndicate::Atom::Item": "lib/Syndicate/Atom/Item.rakumod",
+        "Syndicate::JSONFeed": "lib/Syndicate/JSONFeed.rakumod",
+        "Syndicate::JSONFeed::Item": "lib/Syndicate/JSONFeed/Item.rakumod",
+        "Syndicate::Builder::Feed": "lib/Syndicate/Builder/Feed.rakumod",
+        "Syndicate::Builder::Entry": "lib/Syndicate/Builder/Entry.rakumod",
+        "Syndicate::Extension::DublinCore": "lib/Syndicate/Extension/DublinCore.rakumod",
+        "Syndicate::Extension::MediaRSS": "lib/Syndicate/Extension/MediaRSS.rakumod",
+        "Syndicate::Discovery": "lib/Syndicate/Discovery.rakumod"
     },
     "source-url": "https://github.com/sashaaaaaaaaa/Syndicate.git",
     "authors": [
@@ -29,6 +43,7 @@
     "tags": [
         "RSS",
         "Atom",
+        "JSON Feed",
         "syndication",
         "feed"
     ]

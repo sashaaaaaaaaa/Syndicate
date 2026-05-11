@@ -1,0 +1,163 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate::Discovery;
+
+plan 25;
+
+my $d = Syndicate::Discovery.new;
+
+# ===== URL resolution =====
+is $d.resolve-url("http://example.com/feed.xml", "http://example.com/"),
+    "http://example.com/feed.xml", "absolute URL unchanged";
+
+is $d.resolve-url("/feed.xml", "http://example.com/"),
+    "http://example.com/feed.xml", "root-relative URL";
+
+is $d.resolve-url("feed.xml", "http://example.com/blog/"),
+    "http://example.com/blog/feed.xml", "relative URL with trailing slash";
+
+is $d.resolve-url("feed.xml", "http://example.com/blog"),
+    "http://example.com/feed.xml", "relative URL without trailing slash";
+
+is $d.resolve-url("/rss/", "http://example.com/blog/page"),
+    "http://example.com/rss/", "root-relative URL with path base";
+
+is $d.resolve-url("https://other.com/feed.xml", "http://example.com/"),
+    "https://other.com/feed.xml", "different origin https URL";
+
+is $d.resolve-url("//other.com/feed.xml", "http://example.com/"),
+    "//other.com/feed.xml", "protocol-relative URL";
+
+# ===== Base URL extraction =====
+my $html-with-base = q:to/END/;
+<html><head><base href="http://example.com/blog/"></head><body>Hello</body></html>
+END
+is $d.base-url($html-with-base), "http://example.com/blog/", "extract <base href>";
+
+my $html-no-base = "<html><head></head><body>No base</body></html>";
+is $d.base-url($html-no-base), Str, "no <base> tag returns Str";
+
+my $html-base-singlequote = qq|<html><head><base href='http://example.com/'></head></html>|;
+is $d.base-url($html-base-singlequote), "http://example.com/", "single-quoted base href";
+
+# ===== Feed discovery from HTML =====
+my $html-rss = q:to/END/;
+<html>
+<head>
+  <link rel="alternate" type="application/rss+xml" title="RSS" href="/feed.xml" />
+  <link rel="alternate" type="application/atom+xml" title="Atom" href="/atom.xml" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body><p>Test</p></body>
+</html>
+END
+
+my @feeds = $d.find-feeds($html-rss, "http://example.com/blog");
+is @feeds.elems, 2, "found 2 feed links";
+is @feeds[0], "http://example.com/feed.xml", "first feed is RSS";
+is @feeds[1], "http://example.com/atom.xml", "second feed is Atom";
+
+# ===== No feeds =====
+my $html-no-feeds = q:to/END/;
+<html>
+<head>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="icon" href="/favicon.ico" />
+</head>
+<body><p>No feeds here</p></body>
+</html>
+END
+
+my @empty = $d.find-feeds($html-no-feeds, "http://example.com/");
+is @empty.elems, 0, "no feeds found when none present";
+
+# ===== JSON Feed discovery =====
+my $html-json = q:to/END/;
+<html>
+<head>
+  <link rel="alternate" type="application/feed+json" title="JSON Feed" href="/feed.json" />
+</head>
+<body></body>
+</html>
+END
+
+my @json-feeds = $d.find-feeds($html-json, "http://example.com/");
+is @json-feeds.elems, 1, "found JSON feed link";
+is @json-feeds[0], "http://example.com/feed.json", "JSON feed URL";
+
+# ===== Multi-line HTML =====
+my $html-multiline = q:to/END/;
+<html>
+<head>
+  <link rel="alternate"
+        type="application/rss+xml"
+        title="RSS"
+        href="/blog/feed.xml" />
+</head>
+<body></body>
+</html>
+END
+
+my @ml-feeds = $d.find-feeds($html-multiline, "http://example.com/");
+is @ml-feeds.elems, 1, "found feed in multi-line HTML";
+is @ml-feeds[0], "http://example.com/blog/feed.xml", "multi-line feed URL";
+
+# ===== <base href> affects feed URLs =====
+my $html-with-base-and-feeds = q:to/END/;
+<html>
+<head>
+  <base href="http://other.com/sub/">
+  <link rel="alternate" type="application/rss+xml" href="feed.xml" />
+</head>
+<body></body>
+</html>
+END
+
+my @base-feeds = $d.find-feeds($html-with-base-and-feeds, "http://example.com/");
+is @base-feeds.elems, 1, "found feed with base href";
+is @base-feeds[0], "http://other.com/sub/feed.xml", "base href affects URL resolution";
+
+# ===== Explicit HTTPS feed link =====
+my $html-https = q:to/END/;
+<html>
+<head>
+  <link rel="alternate" type="application/atom+xml" href="https://cdn.example.com/feed.xml" />
+</head>
+<body></body>
+</html>
+END
+
+my @https-feeds = $d.find-feeds($html-https, "http://example.com/");
+is @https-feeds.elems, 1, "found HTTPS feed link";
+is @https-feeds[0], "https://cdn.example.com/feed.xml", "HTTPS feed URL preserved";
+
+# ===== No rel=alternate but matching type =====
+my $html-no-rel = q:to/END/;
+<html>
+<head>
+  <link rel="search" type="application/opensearchdescription+xml" href="/search.xml" />
+  <link rel="alternate" type="text/html" href="/page.html" />
+</head>
+<body></body>
+</html>
+END
+
+my @no-rel-feeds = $d.find-feeds($html-no-rel, "http://example.com/");
+is @no-rel-feeds.elems, 0, "no feeds when rel is not alternate";
+
+# ===== Alternative attribute quoting =====
+my $html-alt-quotes = q:to/END/;
+<html>
+<head>
+  <link rel='alternate' type='application/rss+xml' href='/rss.xml' />
+</head>
+<body></body>
+</html>
+END
+
+my @alt-q-feeds = $d.find-feeds($html-alt-quotes, "http://example.com/");
+is @alt-q-feeds.elems, 1, "single-quoted attributes work";
+is @alt-q-feeds[0], "http://example.com/rss.xml", "single-quoted href";
+
+done-testing;

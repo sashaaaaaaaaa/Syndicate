@@ -1,7 +1,9 @@
 use v6.d;
 use Syndicate::RSS::Item;
+use Syndicate::RSS::V1_0::Item;
 use Syndicate::Atom::Item;
 use Syndicate::RSS::V0_91::Item;
+use Syndicate::JSONFeed::Item;
 
 unit class Syndicate::Builder::Entry:ver<0.0.1>:auth<zef:sasha>;
 
@@ -60,6 +62,35 @@ method build-v0_91-item {
     my %bless = :title($!title // Str), :link($!link // Str),
         :summary($!summary // Str);
     Syndicate::RSS::V0_91::Item.new(|%bless)
+}
+
+method build-json-item {
+    my %author-detail;
+    %author-detail<name> = $!author-name if $!author-name.defined;
+    %author-detail<url>  = $!author-email if $!author-email.defined;
+
+    my $item-id = $!id // $!link // Str;
+    my $content-html = $!content.defined ?? $!content !! Str;
+    my %bless = :title($!title // Str), :link($!link // Str),
+        :id($item-id),
+        :summary($!summary // Str),
+        :content_html($content-html);
+    %bless<date_published> = $!published if $!published ~~ DateTime;
+    %bless<date_modified>  = $!updated   if $!updated ~~ DateTime;
+    my @tags = @!categories;
+    my @authors = %author-detail ?? %(%author-detail) !! ();
+    Syndicate::JSONFeed::Item.new(|%bless, :@authors, :@tags)
+}
+
+method build-v1_0-item {
+    my $about = $!id // $!link // Str;
+    my %bless = :title($!title // Str), :link($!link // Str),
+        :summary($!summary // Str),
+        :$about,
+        :author($!author-name // Str);
+    %bless<updated> = $!updated if $!updated ~~ DateTime;
+    my @dc-subjects = @!categories;
+    Syndicate::RSS::V1_0::Item.new(|%bless, :@dc-subjects)
 }
 
 method build-atom-item {

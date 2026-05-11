@@ -4,6 +4,8 @@ use DateTime::Format::RFC2822;
 use Syndicate::Feed;
 use Syndicate::RSS::Item;
 use Syndicate::Utils;
+use Syndicate::Extension::DublinCore;
+use Syndicate::Extension::MediaRSS;
 
 unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 
@@ -71,6 +73,8 @@ multi method new(Str $xml) {
 
 method XML {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('2.0')}));
+    add-dc-declaration($xml);
+    add-media-declaration($xml);
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;
 

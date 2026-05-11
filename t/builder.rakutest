@@ -5,7 +5,7 @@ use Syndicate;
 use Syndicate::Builder::Feed;
 use Syndicate::Builder::Entry;
 
-plan 98;
+plan 115;
 
 # ===== Feed builder fields =====
 my $fb = Syndicate::Builder::Feed.new;
@@ -90,7 +90,7 @@ is $e3.content, "<p>Hello <em>world</em></p>", "entry content get/set";
 # ===== RSS XML output =====
 my $rss-str = $fb.rss-str;
 ok $rss-str.chars > 0, "rss-str generates output";
-like $rss-str, /'<rss version="2.0">'/, "RSS output has rss root";
+like $rss-str, /'<rss'/, "RSS output has rss root";
 like $rss-str, /'<channel>'/, "RSS output has channel";
 like $rss-str, /"Test Builder Feed"/, "RSS output has feed title";
 like $rss-str, /"en"/, "RSS output has language";
@@ -164,7 +164,7 @@ $fb-empty.id("http://example.com/empty");
 $fb-empty.updated(DateTime.new("2026-06-15T12:00:00Z"));
 
 my $rss-empty = $fb-empty.rss-str;
-like $rss-empty, /'<rss version="2.0">'/, "empty RSS has root";
+like $rss-empty, /'<rss'/, "empty RSS has root";
 like $rss-empty, /"Empty Feed"/, "empty RSS has title";
 
 my $atom-empty = $fb-empty.atom-str;
@@ -207,5 +207,38 @@ $fb-rss091-empty.description("Empty 0.91 test");
 my $rss091-empty-str = $fb-rss091-empty.rss091-str;
 like $rss091-empty-str, /'<rss version="0.91">'/, "empty RSS 0.91 has root";
 like $rss091-empty-str, /"Empty 0.91"/, "empty RSS 0.91 has title";
+
+# ===== RSS 1.0 builder output =====
+my $rss1-str = $fb.rss1-str;
+ok $rss1-str.chars > 0, "rss1-str generates output";
+like $rss1-str, /'<rdf:RDF'/, "RSS 1.0 output has rdf:RDF root";
+like $rss1-str, /'<channel'/, "RSS 1.0 output has channel";
+like $rss1-str, /"Test Builder Feed"/, "RSS 1.0 output has feed title";
+like $rss1-str, /'<item rdf:about'/, "RSS 1.0 output has items";
+
+my $rss1-feed = $fb.rss1-feed;
+isa-ok $rss1-feed, Syndicate::RSS::V1_0, "rss1-feed returns V1_0";
+
+# RSS 1.0 roundtrip
+my $rss1-parsed = Syndicate::RSS::V1_0.new($rss1-str);
+isa-ok $rss1-parsed, Syndicate::RSS::V1_0, "RSS 1.0 roundtrip parsed";
+is $rss1-parsed.title, "Test Builder Feed", "RSS 1.0 roundtrip title";
+is $rss1-parsed.link, "http://example.com", "RSS 1.0 roundtrip link";
+is $rss1-parsed.description, "A feed built with the builder API", "RSS 1.0 roundtrip description";
+is $rss1-parsed.items.elems, 2, "RSS 1.0 roundtrip item count";
+is $rss1-parsed.items[0].title, "Entry One", "RSS 1.0 roundtrip first item title";
+is $rss1-parsed.items[0].link, "http://example.com/1", "RSS 1.0 roundtrip first item link";
+is $rss1-parsed.items[0].summary, "First entry summary", "RSS 1.0 roundtrip first item summary";
+is $rss1-parsed.items[0].author, "Jane", "RSS 1.0 roundtrip first item author (dc:creator)";
+
+# Empty RSS 1.0
+my $fb-rss1-empty = Syndicate::Builder::Feed.new;
+$fb-rss1-empty.title("Empty 1.0");
+$fb-rss1-empty.link("http://example.com/empty1");
+$fb-rss1-empty.description("Empty 1.0 test");
+
+my $rss1-empty-str = $fb-rss1-empty.rss1-str;
+like $rss1-empty-str, /'<rdf:RDF'/, "empty RSS 1.0 has root";
+like $rss1-empty-str, /"Empty 1.0"/, "empty RSS 1.0 has title";
 
 done-testing;

@@ -1,7 +1,9 @@
 use v6.d;
 use Syndicate::RSS;
 use Syndicate::RSS::V0_91;
+use Syndicate::RSS::V1_0;
 use Syndicate::Atom;
+use Syndicate::JSONFeed;
 use Syndicate::Builder::Entry;
 
 unit class Syndicate::Builder::Feed:ver<0.0.1>:auth<zef:sasha>;
@@ -100,8 +102,37 @@ method rss091-feed {
     Syndicate::RSS::V0_91.new(|%bless, :@items)
 }
 
-method rss-str    { ~$.rss-feed    }
+method json-feed {
+    my @items = @!entries.map(*.build-json-item);
+    my %author;
+    %author<name> = $!author-name if $!author-name.defined;
+    %author<url>  = $!author-email if $!author-email.defined;
+    my $feed-id = $!id // $!link // Str;
+    my %bless = :title($!title // Str), :link($!link // Str),
+        :description($!description // Str),
+        :feed_url($feed-id),
+        :language($!language // Str),
+        :icon($!icon // Str),
+        :favicon($!logo // Str),
+        :author(%author);
+    Syndicate::JSONFeed.new(|%bless, :@items)
+}
 
-method rss091-str { ~$.rss091-feed }
+method rss1-feed {
+    my @items = @!entries.map(*.build-v1_0-item);
+    my $about = $!id // $!link // Str;
+    my %bless = :title($!title // Str), :link($!link // Str),
+        :description($!description // Str),
+        :$about;
+    Syndicate::RSS::V1_0.new(|%bless, :@items)
+}
 
-method atom-str   { ~$.atom-feed   }
+method rss-str     { ~$.rss-feed     }
+
+method rss1-str    { ~$.rss1-feed    }
+
+method rss091-str  { ~$.rss091-feed  }
+
+method atom-str    { ~$.atom-feed    }
+
+method json-str    { $.json-feed.to-json }

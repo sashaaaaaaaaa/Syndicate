@@ -1,0 +1,91 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+
+plan 63;
+
+my $json = slurp "t/data/jsonfeed-full.json";
+my $feed = Syndicate::JSONFeed.new($json);
+
+isa-ok $feed, Syndicate::JSONFeed, "Parsed JSON Feed";
+isa-ok $feed, Syndicate::Feed, "Does Syndicate::Feed role";
+
+is $feed.title, "Test JSON Feed", "feed title";
+is $feed.link, "http://example.com", "feed link (home_page_url)";
+is $feed.description, "A test JSON Feed 1.1 feed", "feed description";
+is $feed.feed_url, "http://example.com/feed.json", "feed feed_url";
+is $feed.user_comment, "This is a test feed for the Syndicate module", "feed user_comment";
+is $feed.next_url, "http://example.com/feed-next.json", "feed next_url";
+is $feed.icon, "http://example.com/icon.png", "feed icon";
+is $feed.favicon, "http://example.com/favicon.ico", "feed favicon";
+is $feed.language, "en", "feed language";
+ok $feed.expired ~~ Bool, "feed expired is Bool";
+ok !$feed.expired, "feed expired is false";
+
+is $feed.author<name>, "Test Author", "feed author name";
+is $feed.author<url>, "http://example.com/about", "feed author url";
+is $feed.author<avatar>, "http://example.com/avatar.png", "feed author avatar";
+
+is $feed.items.elems, 2, "two entries";
+
+# ---- Entry 1 ----
+my $entry = $feed.items[0];
+isa-ok $entry, Syndicate::JSONFeed::Item, "entry is JSONFeed::Item";
+is $entry.title, "First Entry", "entry title";
+is $entry.link, "http://example.com/entry1", "entry link (url)";
+is $entry.id, "http://example.com/entry1", "entry id";
+is $entry.external_url, "http://external.example.com/article1", "entry external_url";
+is $entry.summary, "Summary of the first entry", "entry summary";
+is $entry.content_html, "<p>Full content of entry 1</p>", "entry content_html";
+is $entry.content_text, "Full content of entry 1", "entry content_text";
+is $entry.image, "http://example.com/image1.png", "entry image";
+is $entry.banner_image, "http://example.com/banner1.png", "entry banner_image";
+isa-ok $entry.date_published, DateTime, "entry date_published is DateTime";
+is $entry.date_published.year, 2025, "entry date_published year";
+isa-ok $entry.date_modified, DateTime, "entry date_modified is DateTime";
+is $entry.date_modified.year, 2025, "entry date_modified year";
+is $entry.authors.elems, 1, "entry has one author";
+is $entry.authors[0]<name>, "Entry Author", "entry author name";
+is $entry.authors[0]<url>, "http://entry.example.com", "entry author url";
+is $entry.authors[0]<avatar>, "http://entry.example.com/avatar.png", "entry author avatar";
+is $entry.tags.elems, 2, "entry has 2 tags";
+is $entry.tags[0], "News", "entry first tag";
+is $entry.tags[1], "Tech", "entry second tag";
+
+# ---- Entry 2 (minimal) ----
+my $entry2 = $feed.items[1];
+is $entry2.title, "Second Entry", "entry2 title";
+is $entry2.link, "http://example.com/entry2", "entry2 link";
+is $entry2.id, "http://example.com/entry2", "entry2 id";
+nok $entry2.external_url.defined, "entry2 external_url is undefined";
+nok $entry2.content_html.defined, "entry2 content_html is undefined";
+nok $entry2.date_published.defined, "entry2 date_published is undefined";
+isa-ok $entry2.date_modified, DateTime, "entry2 date_modified is DateTime";
+is $entry2.date_modified.year, 2025, "entry2 date_modified year";
+is $entry2.authors.elems, 0, "entry2 has no authors";
+is $entry2.tags.elems, 0, "entry2 has no tags";
+
+# ===== Roundtrip via to-json =====
+my $json-out = $feed.to-json;
+my $feed2 = Syndicate::JSONFeed.new($json-out);
+is $feed2.title, "Test JSON Feed", "roundtrip title";
+is $feed2.link, "http://example.com", "roundtrip link";
+is $feed2.description, "A test JSON Feed 1.1 feed", "roundtrip description";
+is $feed2.feed_url, "http://example.com/feed.json", "roundtrip feed_url";
+is $feed2.icon, "http://example.com/icon.png", "roundtrip icon";
+is $feed2.favicon, "http://example.com/favicon.ico", "roundtrip favicon";
+is $feed2.language, "en", "roundtrip language";
+is $feed2.author<name>, "Test Author", "roundtrip author name";
+is $feed2.items.elems, 2, "roundtrip 2 entries";
+is $feed2.items[0].title, "First Entry", "roundtrip entry1 title";
+is $feed2.items[0].content_html, "<p>Full content of entry 1</p>", "roundtrip entry1 content_html";
+is $feed2.items[0].tags.elems, 2, "roundtrip entry1 2 tags";
+is $feed2.items[0].authors.elems, 1, "roundtrip entry1 1 author";
+is $feed2.items[1].title, "Second Entry", "roundtrip entry2 title";
+
+# ===== Str gives JSON =====
+my $json-str = ~$feed;
+lives-ok { Syndicate::JSONFeed.new($json-str) }, "Str roundtrip lives";
+
+done-testing;

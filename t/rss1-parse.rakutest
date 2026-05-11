@@ -1,0 +1,59 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+
+plan 32;
+
+my $xml = slurp "t/data/rss1-full.xml";
+my $feed = Syndicate::RSS::V1_0.new($xml);
+
+isa-ok $feed, Syndicate::RSS::V1_0, "Parsed RSS 1.0 feed";
+isa-ok $feed, Syndicate::Feed, "Does Syndicate::Feed role";
+
+is $feed.title, "Test RSS 1.0 Feed", "channel title";
+is $feed.link, "http://example.com", "channel link";
+is $feed.description, "A test RSS 1.0 feed for Syndicate", "channel description";
+is $feed.about, "http://example.com/rss1", "channel about";
+
+is $feed.image-url, "http://example.com/image.png", "image url";
+is $feed.image-title, "Example Logo", "image title";
+is $feed.image-link, "http://example.com", "image link";
+is $feed.image-about, "http://example.com/image.png", "image about";
+
+is $feed.items.elems, 2, "two items";
+isa-ok $feed.items[0], Syndicate::RSS::V1_0::Item, "item is correct type";
+is $feed.items[0].title, "First Item", "item 0 title";
+is $feed.items[0].link, "http://example.com/item1", "item 0 link";
+is $feed.items[0].summary, "This is the first RSS 1.0 item", "item 0 summary";
+is $feed.items[0].about, "http://example.com/item1", "item 0 about";
+is $feed.items[1].title, "Second Item", "item 1 title";
+is $feed.items[1].link, "http://example.com/item2", "item 1 link";
+
+# Str roundtrip
+my $str = ~$feed;
+isa-ok Syndicate::RSS::V1_0.new($str), Syndicate::RSS::V1_0, "Str roundtrip";
+is Syndicate::RSS::V1_0.new($str).title, $feed.title, "roundtrip title matches";
+
+# ===== Dublin Core extension tests =====
+my $dc-xml = slurp "t/data/rss1-dc.xml";
+my $dc-feed = Syndicate::RSS::V1_0.new($dc-xml);
+
+is $dc-feed.items.elems, 2, "dc feed has 2 items";
+is $dc-feed.items[0].author, "Alice Author", "dc:creator maps to author";
+isa-ok $dc-feed.items[0].updated, DateTime, "dc:date maps to DateTime";
+is $dc-feed.items[0].updated.year, 2025, "dc:date year";
+is $dc-feed.items[0].dc-subjects.elems, 2, "two dc:subject elements";
+is $dc-feed.items[0].dc-subjects[0], "News", "first dc:subject";
+is $dc-feed.items[0].dc-subjects[1], "Technology", "second dc:subject";
+is $dc-feed.items[1].author, "Bob Blogger", "dc:creator maps to author on item 1";
+is $dc-feed.items[1].dc-subjects.elems, 1, "one dc:subject on item 1";
+is $dc-feed.items[1].dc-subjects[0], "Science", "dc:subject on item 1";
+
+# DC roundtrip
+my $dc-str = ~$dc-feed;
+my $dc-rt = Syndicate::RSS::V1_0.new($dc-str);
+is $dc-rt.items[0].author, "Alice Author", "roundtrip dc:creator";
+is $dc-rt.items[0].dc-subjects.elems, 2, "roundtrip dc:subjects count";
+
+done-testing;

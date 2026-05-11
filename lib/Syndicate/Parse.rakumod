@@ -1,33 +1,40 @@
 use v6.d;
 use Syndicate::RSS;
 use Syndicate::RSS::V0_91;
+use Syndicate::RSS::V1_0;
 use Syndicate::Atom;
+use Syndicate::JSONFeed;
 
 unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
-enum FeedFormat is export <Atom RSS2 RSS091>;
+enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeed>;
 
 sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
     die "Empty input" unless $clean.chars;
 
+    return JSONFeed if $clean.starts-with('{') || $clean.starts-with('[');
+
     my $root = root-element($clean);
     die "Unknown feed format: cannot find root element" unless $root.defined;
 
     given $root<name> {
-        when 'feed' { return Atom }
-        when 'rss'  {
+        when 'feed'   { return Atom }
+        when 'rss'    {
             return $root<ver> eq '0.91' ?? RSS091 !! RSS2
         }
+        when 'rdf:RDF' { return RSS1 }
         default { die "Unknown feed format: <$_>" }
     }
 }
 
 sub parse-feed(Str $input --> Any) is export {
     given feed-format($input) {
-        when Atom   { return Syndicate::Atom.new($input) }
-        when RSS2   { return Syndicate::RSS.new($input) }
-        when RSS091 { return Syndicate::RSS::V0_91.new($input) }
+        when Atom    { return Syndicate::Atom.new($input) }
+        when RSS2    { return Syndicate::RSS.new($input) }
+        when RSS091  { return Syndicate::RSS::V0_91.new($input) }
+        when RSS1    { return Syndicate::RSS::V1_0.new($input) }
+        when JSONFeed { return Syndicate::JSONFeed.new($input) }
     }
 }
 
