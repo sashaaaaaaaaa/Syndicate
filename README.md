@@ -375,9 +375,10 @@ zef test .
 Or run individual test files:
 
 ```bash
-raku -I lib t/builder.rakutest
-raku -I lib t/parse.rakutest
-raku -I lib t/roundtrip.rakutest
+raku -I lib t/00-basic.rakutest
+raku -I lib t/01-roundtrip.rakutest
+raku -I lib t/02-parse.rakutest
+raku -I lib t/08-builder.rakutest
 ```
 
 ## License
