@@ -10,6 +10,7 @@ has Str $.id;
 has Str $.subtitle;
 has Str $.author;
 has %.author-detail;
+has DateTime $!computed-updated;
 has @.categories;
 has DateTime $.updated;
 has Str $.rights;
@@ -130,11 +131,11 @@ method XML {
         $xml.append: $c;
     }
 
-    my $upd = $!updated;
+    my $upd = $!updated // $!computed-updated;
     unless $upd.defined {
         my @dates = @.items.map({$_.updated}).grep(*.defined);
-        $!updated = @dates ?? @dates.max !! DateTime.now;
-        $upd = $!updated;
+        $!computed-updated = @dates ?? @dates.max !! DateTime.now;
+        $upd = $!computed-updated;
     }
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
 
