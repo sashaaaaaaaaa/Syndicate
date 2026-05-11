@@ -1,0 +1,29 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Config;
+
+plan 6;
+
+my $stats = Syndicate::Stats.new;
+isa-ok $stats, Syndicate::Stats, "Stats monitor created";
+
+is $stats.feeds-parsed, 0, "starts at zero";
+is $stats.items-parsed, 0, "items starts at zero";
+is $stats.errors, 0, "errors starts at zero";
+
+# Test concurrency: increment from multiple threads
+my @promises;
+for ^10 {
+    @promises.push: start {
+        $stats.record-feed;
+        $stats.record-item for ^5;
+    }
+}
+await @promises;
+
+is $stats.feeds-parsed, 10, "feeds-parsed = 10 after concurrent increments";
+is $stats.items-parsed, 50, "items-parsed = 50 after concurrent increments";
+
+done-testing;

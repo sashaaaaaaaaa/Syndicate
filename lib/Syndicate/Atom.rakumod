@@ -1,0 +1,118 @@
+use v6.d;
+use XML;
+use Syndicate::Feed;
+use Syndicate::Atom::Item;
+use Syndicate::Utils;
+
+unit class Syndicate::Atom:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
+
+has Str $.id;
+has Str $.subtitle;
+has %.author-detail;
+has @.categories;
+has DateTime $.updated;
+has Str $.rights;
+has Str $.generator;
+has Str $.icon;
+has Str $.logo;
+has @.contributors;
+has %.link-self;
+has %.link-alternate;
+
+multi method new(Str $xml) {
+    my $doc = XML::Document.new($xml);
+    my $feed = $doc.root;
+    die "Not an Atom feed" unless $feed.name eq "feed";
+    die "Not an Atom namespace" unless ($feed.nsURI // "") eq "http://www.w3.org/2005/Atom";
+
+    my $id       = get-text($feed, "id");
+    my $title    = get-text($feed, "title");
+    my $subtitle = get-text-optional($feed, "subtitle");
+    my $rights   = get-text-optional($feed, "rights");
+    my $gen      = get-text-optional($feed, "generator");
+    my $icon     = get-text-optional($feed, "icon");
+    my $logo     = get-text-optional($feed, "logo");
+    my $upd      = parse-date-optional(get-text($feed, "updated"));
+
+    my %author-detail;
+    with $feed.elements(:TAG<author>)[0] {
+        %author-detail<name>  = get-text-optional($_, "name");
+        %author-detail<email> = get-text-optional($_, "email");
+        %author-detail<uri>   = get-text-optional($_, "uri");
+    }
+
+    my @categories;
+    for $feed.elements(:TAG<category>) {
+        @categories.push: .attribs<term> // "";
+    }
+
+    my @contributors;
+    for $feed.elements(:TAG<contributor>) -> $c {
+        my %c;
+        %c<name>  = get-text-optional($c, "name");
+        %c<email> = get-text-optional($c, "email");
+        %c<uri>   = get-text-optional($c, "uri");
+        @contributors.push: %c;
+    }
+
+    my %link-self;
+    my %link-alternate;
+    my $primary-link = "";
+    for $feed.elements(:TAG<link>) {
+        my $rel = .attribs<rel> // "alternate";
+        my $href = .attribs<href> // "";
+        if $rel eq "self" {
+            %link-self = (href => $href, type => .attribs<type> // Str);
+        }
+        elsif $rel eq "alternate" {
+            %link-alternate = (href => $href, type => .attribs<type> // Str);
+            $primary-link = $href unless $primary-link;
+        }
+        else {
+            $primary-link = $href unless $primary-link;
+        }
+    }
+
+    my @items;
+    for $feed.elements(:TAG<entry>) -> $entry-elem {
+        @items.push: Syndicate::Atom::Item.new-from-xml($entry-elem);
+    }
+
+    my $author = %author-detail<name> // %author-detail<email> // Str;
+
+    my %bless = :$id, :$title, :link($primary-link),
+        :description($subtitle),
+        :$subtitle, :$rights,
+        :generator($gen), :$icon, :$logo,
+        :author-detail(%author-detail),
+        :link-self(%link-self), :link-alternate(%link-alternate);
+    %bless<updated> = $upd if $upd ~~ DateTime;
+    self.bless(|%bless, :@items, :@contributors, :categories(@categories))
+}
+
+method XML {
+    my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns('http://www.w3.org/2005/Atom')}));
+    $xml.append: XML::Element.new(:name<id>, :nodes([$.id // $.link // ""]));
+    $xml.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
+    $xml.append: XML::Element.new(:name<subtitle>, :nodes([$.subtitle])) if $.subtitle.defined;
+
+    my $alt-link = $.link // "";
+    if $alt-link.defined {
+        $xml.append: XML::Element.new(:name<link>, :attribs({:href($alt-link), :rel<alternate>}));
+    }
+    if %!link-self<href>.defined {
+        $xml.append: XML::Element.new(:name<link>, :attribs({:href(%!link-self<href>), :rel<self>}));
+    }
+
+    my $upd = $.updated;
+    unless $upd.defined {
+        $upd = @.items ?? @.items.map({$_.updated}).grep(*.defined).max // DateTime.now !! DateTime.now;
+    }
+    $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
+
+    $xml.append: $_.XML for @.items;
+
+    return $xml;
+}
+
+method Str { ~self.XML }

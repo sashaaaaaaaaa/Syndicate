@@ -1,1 +1,8 @@
 .precomp
+.*.precomp
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+examples/

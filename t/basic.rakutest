@@ -1,0 +1,33 @@
+use v6.d;
+use Test;
+use lib 'lib';
+
+plan 8;
+
+use-ok "Syndicate";
+use Syndicate;
+
+my $title = "My Title";
+my $link = "http://example.com/feed.xml";
+my $summary = "My Summary";
+my $author = "My Name";
+my $updated = DateTime.new("2015-07-27T20:00:00Z");
+
+my $rss-item = Syndicate::RSS::Item.new(
+    :$title, :$link, :$summary, :$author, :$updated
+);
+
+ok $rss-item.XML, "RSS::Item generates XML";
+like ~$rss-item, /"<item>"/, "RSS::Item Str contains item tag";
+
+my $rss-feed = Syndicate::RSS.new(
+    :$title, :$link, :description("A test feed"),
+    :items([$rss-item]),
+);
+ok $rss-feed.XML, "RSS feed generates XML";
+like ~$rss-feed, /"<rss"/, "RSS feed Str contains rss tag";
+like ~$rss-feed, /"<channel>"/, "RSS feed contains channel tag";
+like ~$rss-feed, /"My Title"/, "RSS feed contains title text";
+like ~$rss-feed, /"<item>"/, "RSS feed contains item tag";
+
+done-testing;

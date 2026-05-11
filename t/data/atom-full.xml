@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>http://example.com/atom.xml</id>
+  <title>Test Atom Feed</title>
+  <subtitle>A test Atom 1.0 feed</subtitle>
+  <link href="http://example.com" rel="alternate"/>
+  <link href="http://example.com/atom.xml" rel="self"/>
+  <updated>2025-01-01T12:00:00Z</updated>
+  <author>
+    <name>Test Author</name>
+    <email>author@example.com</email>
+    <uri>http://example.com/about</uri>
+  </author>
+  <category term="Technology"/>
+  <category term="Open Source"/>
+  <generator>Syndicate</generator>
+  <rights>Copyright 2025 Example Corp</rights>
+  <icon>http://example.com/favicon.ico</icon>
+  <logo>http://example.com/logo.png</logo>
+  <entry>
+    <id>http://example.com/entry1</id>
+    <title>First Entry</title>
+    <link href="http://example.com/entry1" rel="alternate"/>
+    <summary>Summary of the first entry</summary>
+    <content type="html">&lt;p&gt;Full content of entry 1&lt;/p&gt;</content>
+    <author>
+      <name>Entry Author</name>
+      <email>entry@example.com</email>
+    </author>
+    <category term="News"/>
+    <published>2025-01-01T10:00:00Z</published>
+    <updated>2025-01-01T12:00:00Z</updated>
+    <rights>Copyright 2025</rights>
+    <contributor>
+      <name>Contributor One</name>
+    </contributor>
+    <source>
+      <title>Source Feed</title>
+      <id>http://source.example.com/feed</id>
+      <link href="http://source.example.com/feed" rel="alternate"/>
+      <updated>2025-01-01T08:00:00Z</updated>
+    </source>
+  </entry>
+  <entry>
+    <id>http://example.com/entry2</id>
+    <title>Second Entry</title>
+    <link href="http://example.com/entry2" rel="alternate"/>
+    <summary>Minimal entry with required fields only</summary>
+    <updated>2025-01-02T00:00:00Z</updated>
+  </entry>
+</feed>

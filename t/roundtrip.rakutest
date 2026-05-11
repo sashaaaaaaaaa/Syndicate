@@ -1,0 +1,59 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+
+plan 5;
+
+# RSS roundtrip: create → generate → parse → compare
+my $rss = Syndicate::RSS.new(
+    :title("Roundtrip RSS"),
+    :link("http://example.com/rss"),
+    :description("Testing roundtrip"),
+    :language("en"),
+    :items([
+        Syndicate::RSS::Item.new(
+            :title("Item A"),
+            :link("http://example.com/a"),
+            :summary("Item A summary"),
+            :author("a@example.com"),
+            :updated(DateTime.new("2025-06-15T10:00:00Z")),
+            :guid("http://example.com/a"),
+        ),
+        Syndicate::RSS::Item.new(
+            :title("Item B"),
+            :link("http://example.com/b"),
+        ),
+    ]),
+);
+
+my $rss-xml = ~$rss;
+my $parsed-rss = Syndicate::RSS.new($rss-xml);
+
+is $parsed-rss.title, "Roundtrip RSS", "RSS roundtrip title";
+is $parsed-rss.items.elems, 2, "RSS roundtrip item count";
+is $parsed-rss.items[0].title, "Item A", "RSS roundtrip first item title";
+
+# Atom roundtrip
+my $atom = Syndicate::Atom.new(
+    :title("Roundtrip Atom"),
+    :id("http://example.com/atom"),
+    :description("Testing atom roundtrip"),
+    :updated(DateTime.new("2025-06-15T10:00:00Z")),
+    :items([
+        Syndicate::Atom::Item.new(
+            :title("Entry 1"),
+            :id("http://example.com/1"),
+            :link("http://example.com/1"),
+            :updated(DateTime.new("2025-06-15T10:00:00Z")),
+        ),
+    ]),
+);
+
+my $atom-xml = ~$atom;
+my $parsed-atom = Syndicate::Atom.new($atom-xml);
+
+is $parsed-atom.title, "Roundtrip Atom", "Atom roundtrip title";
+is $parsed-atom.items.elems, 1, "Atom roundtrip item count";
+
+done-testing;

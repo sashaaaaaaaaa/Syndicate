@@ -1,12 +1,35 @@
 {
-    "perl" : "6.*",
-    "name" : "Syndication",
-    "version" : "1.0.0",
-    "author" : "github:retupmoca",
-    "description" : "Syndication feed parser/generator (RSS / Atom)",
-    "depends" : ["XML"],
-    "provides" : {
-        "Syndication" : "lib/Syndication.pm6"
+    "name": "Syndicate",
+    "auth": "zef:sasha",
+    "version": "0.0.1",
+    "description": "Syndication feed parser/generator (RSS / Atom)",
+    "raku": "6.d",
+    "license": "Artistic-2.0",
+    "depends": [
+        "XML",
+        "DateTime::Grammar",
+        "DateTime::Format",
+        "OO::Monitors"
+    ],
+    "provides": {
+        "Syndicate": "lib/Syndicate.rakumod",
+        "Syndicate::Item": "lib/Syndicate/Item.rakumod",
+        "Syndicate::Feed": "lib/Syndicate/Feed.rakumod",
+        "Syndicate::Config": "lib/Syndicate/Config.rakumod",
+        "Syndicate::Utils": "lib/Syndicate/Utils.rakumod",
+        "Syndicate::RSS": "lib/Syndicate/RSS.rakumod",
+        "Syndicate::RSS::Item": "lib/Syndicate/RSS/Item.rakumod",
+        "Syndicate::Atom": "lib/Syndicate/Atom.rakumod",
+        "Syndicate::Atom::Item": "lib/Syndicate/Atom/Item.rakumod"
     },
-    "source-url" : "https://github.com/retupmoca/p6-syndication.git"
+    "source-url": "https://github.com/sashaaaaaaaaa/Syndicate.git",
+    "authors": [
+        "Sasha Abbott"
+    ],
+    "tags": [
+        "RSS",
+        "Atom",
+        "syndication",
+        "feed"
+    ]
 }

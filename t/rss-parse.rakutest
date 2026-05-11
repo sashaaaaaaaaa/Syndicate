@@ -1,0 +1,31 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+
+plan 17;
+
+my $xml = slurp "t/data/rss2-full.xml";
+my $feed = Syndicate::RSS.new($xml);
+
+isa-ok $feed, Syndicate::RSS, "Parsed RSS 2.0 feed";
+isa-ok $feed, Syndicate::Feed, "Does Syndicate::Feed role";
+
+is $feed.title, "Test RSS Feed", "channel title";
+is $feed.link, "http://example.com", "channel link";
+is $feed.description, "A test RSS 2.0 feed for Syndicate", "channel description";
+is $feed.language, "en-us", "channel language";
+is $feed.copyright, "Copyright 2025 Example Corp", "channel copyright";
+is $feed.managingEditor, "editor@example.com", "channel managingEditor";
+is $feed.webMaster, "webmaster@example.com", "channel webMaster";
+is $feed.category, "Technology", "channel category";
+is $feed.generator, "Syndicate", "channel generator";
+is $feed.docs, "http://www.rssboard.org/rss-specification", "channel docs";
+is $feed.ttl, 60, "channel ttl";
+
+isa-ok $feed.pubDate, DateTime, "pubDate is DateTime";
+is $feed.pubDate.year, 2025, "pubDate year";
+is $feed.pubDate.month, 1, "pubDate month";
+is $feed.pubDate.day, 1, "pubDate day";
+
+done-testing;

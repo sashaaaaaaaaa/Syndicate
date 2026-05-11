@@ -1,0 +1,31 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+
+plan 14;
+
+my $xml = slurp "t/data/atom-full.xml";
+my $feed = Syndicate::Atom.new($xml);
+
+isa-ok $feed, Syndicate::Atom, "Parsed Atom 1.0 feed";
+isa-ok $feed, Syndicate::Feed, "Does Syndicate::Feed role";
+
+is $feed.title, "Test Atom Feed", "feed title";
+is $feed.id, "http://example.com/atom.xml", "feed id";
+is $feed.subtitle, "A test Atom 1.0 feed", "feed subtitle";
+is $feed.rights, "Copyright 2025 Example Corp", "feed rights";
+is $feed.generator, "Syndicate", "feed generator";
+is $feed.icon, "http://example.com/favicon.ico", "feed icon";
+is $feed.logo, "http://example.com/logo.png", "feed logo";
+
+isa-ok $feed.updated, DateTime, "updated is DateTime";
+is $feed.updated.year, 2025, "updated year";
+
+is $feed.items.elems, 2, "two entries";
+
+my $entry = $feed.items[0];
+isa-ok $entry, Syndicate::Atom::Item, "entry is Atom::Item";
+is $entry.title, "First Entry", "entry title";
+
+done-testing;

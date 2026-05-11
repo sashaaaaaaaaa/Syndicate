@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Test RSS Feed</title>
+    <link>http://example.com</link>
+    <description>A test RSS 2.0 feed for Syndicate</description>
+    <language>en-us</language>
+    <copyright>Copyright 2025 Example Corp</copyright>
+    <managingEditor>editor@example.com</managingEditor>
+    <webMaster>webmaster@example.com</webMaster>
+    <pubDate>Mon, 01 Jan 2025 12:00:00 GMT</pubDate>
+    <lastBuildDate>Mon, 01 Jan 2025 12:00:00 GMT</lastBuildDate>
+    <category>Technology</category>
+    <generator>Syndicate</generator>
+    <docs>http://www.rssboard.org/rss-specification</docs>
+    <ttl>60</ttl>
+    <image>
+      <url>http://example.com/image.png</url>
+      <title>Test RSS Feed</title>
+      <link>http://example.com</link>
+    </image>
+    <item>
+      <title>First Item</title>
+      <link>http://example.com/first</link>
+      <description>This is the first item description</description>
+      <author>author@example.com</author>
+      <category>News</category>
+      <comments>http://example.com/first/comments</comments>
+      <enclosure url="http://example.com/podcast.mp3" length="1234567" type="audio/mpeg"/>
+      <guid isPermaLink="true">http://example.com/first</guid>
+      <pubDate>Mon, 01 Jan 2025 12:00:00 GMT</pubDate>
+      <source url="http://other.example.com/feed.xml">Other Feed</source>
+    </item>
+    <item>
+      <title>Second Item</title>
+      <link>http://example.com/second</link>
+      <description>Second item with minimal fields</description>
+      <guid>uuid-1234-5678</guid>
+      <pubDate>Tue, 02 Jan 2025 00:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
