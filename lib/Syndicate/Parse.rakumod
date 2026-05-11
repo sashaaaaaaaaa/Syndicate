@@ -46,8 +46,14 @@ sub root-element(Str $input) {
         my $start = index($s, '<', $pos);
         return Nil unless $start.defined;
 
-        # Scan past XML comments properly: find the first '-->' after '<!--'
+        # Scan past XML comments: find the first '-->' after '<!--'
         if $s.substr($start) ~~ /^ \<\!\- \- .+? \-\- \> / {
+            $pos = $start + $/.chars;
+            next;
+        }
+
+        # Scan past CDATA sections: find the first ']]>' after '<![CDATA['
+        if $s.substr($start) ~~ /^ \<\!\[CDATA\[ .+? \]\]\> / {
             $pos = $start + $/.chars;
             next;
         }

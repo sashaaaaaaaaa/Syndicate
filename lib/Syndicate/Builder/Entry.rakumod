@@ -106,12 +106,13 @@ method build-json-item {
     # JSON Feed author object has no 'email' field, so skip it
 
     my $item-id = $!id // $!link // Str;
-    my $content-html = $!content.defined ?? $!content !! Str;
+    my $c = $!content // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :id($item-id),
         :summary($!summary // Str),
-        :content($!content // Str),
-        :content_html($content-html);
+        :content($c),
+        :content_html($c),
+        :content_text($c);
     %bless<date_published> = $!published if $!published ~~ DateTime;
     %bless<date_modified>  = $!updated   if $!updated ~~ DateTime;
     my @tags = @!categories;

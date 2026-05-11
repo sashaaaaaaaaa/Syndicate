@@ -11,7 +11,8 @@
         "DateTime::Grammar",
         "DateTime::Format",
         "OO::Monitors",
-        "HTTP::Tiny"
+        "HTTP::Tiny",
+        "URI"
     ],
     "provides": {
         "Syndicate": "lib/Syndicate.rakumod",

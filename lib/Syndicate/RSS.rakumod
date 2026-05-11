@@ -9,6 +9,8 @@ use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 
+my constant $RFC2822 = DateTime::Format::RFC2822.new;
+
 unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.copyright;
@@ -88,12 +90,10 @@ method XML {
     add-itunes-element($channel, "summary", $.itunes-summary) if $.itunes-summary.defined;
 
     if $.pubDate.defined {
-        my $f = DateTime::Format::RFC2822.new;
-        $channel.append: XML::Element.new(:name<pubDate>, :nodes([$f.to-string($.pubDate)]));
+        $channel.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.pubDate)]));
     }
     if $.lastBuildDate.defined {
-        my $f = DateTime::Format::RFC2822.new;
-        $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$f.to-string($.lastBuildDate)]));
+        $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$RFC2822.to-string($.lastBuildDate)]));
     }
 
     $channel.append: XML::Element.new(:name<category>, :nodes([$.category])) if $.category.defined;

@@ -5,6 +5,8 @@ use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Extensions;
 
+my constant $RFC2822 = DateTime::Format::RFC2822.new;
+
 unit class Syndicate::RSS::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
 has Str $.guid;
@@ -66,8 +68,11 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $media-title       = %extra<media-title>         // Str;
     my $media-description = %extra<media-description>   // Str;
 
+    my $item-id = $guid // $link // Str;
     my %bless = :$title, :$link, :summary($desc),
         :$author,
+        :id($item-id),
+        :content($desc // Str),
         :$guid, :guid-is-permalink($guid-is-permalink),
         :category($cat), :comments($comment),
         :enclosure(%enclosure), :source($source),
@@ -90,8 +95,7 @@ method XML {
     }
     $xml.append: XML::Element.new(:name<description>, :nodes([$.summary])) if $.summary.defined;
     if $.updated.defined {
-        my $f = DateTime::Format::RFC2822.new;
-        $xml.append: XML::Element.new(:name<pubDate>, :nodes([$f.to-string($.updated)]));
+        $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
     }
     $xml.append: XML::Element.new(:name<author>, :nodes([$.author])) if $.author.defined;
     $xml.append: XML::Element.new(:name<category>, :nodes([$.category])) if $.category.defined;

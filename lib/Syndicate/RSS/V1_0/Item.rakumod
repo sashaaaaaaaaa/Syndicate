@@ -33,14 +33,17 @@ multi method new-from-xml(XML::Element $item-elem) {
 
     my @dc-subjects = get-dc-texts($item-elem, "subject");
 
+    my $item-id = $about // $link // Str;
     my %bless = :$about, :$title, :$link, :summary($desc),
-                :$author;
+                :$author,
+                :id($item-id),
+                :content($desc // Str);
     %bless<updated> = $updated if $updated ~~ DateTime;
     self.bless(|%bless, :dc-subjects(@dc-subjects))
 }
 
 method XML {
-    my $xml = XML::Element.new(:name<item>, :attribs({ 'xmlns' => 'http://purl.org/rss/1.0/' }));
+    my $xml = XML::Element.new(:name<item>);
     $xml.attribs{'rdf:about'} = $.about if $.about.defined;
     $xml.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
     $xml.append: XML::Element.new(:name<link>, :nodes([$.link])) if $.link.defined;

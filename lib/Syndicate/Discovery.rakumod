@@ -1,5 +1,6 @@
 use v6.d;
 use HTTP::Tiny;
+use URI;
 use Syndicate::Parse;
 
 my constant $link-tag = rx/ '<link' [.|\n]*? ['/>' | '>'] /;
@@ -76,21 +77,18 @@ method resolve-url(Str $url, Str $base --> Str) {
     my $scheme = $base ~~ /^(https?)/ ?? ~$0 !! 'https';
     return $scheme ~ ':' ~ $url if $url ~~ /^\/\//;
 
-    if $url.starts-with('/') {
-        my $b = $base ~~ /^ (https?\:\/\/ [<-[\/]>+] ) /;
-        return $b[0] ~ $url;
+    my $b = URI.new($base);
+    my $u = URI.new($url);
+    my $rp = $u.path.path;
+    unless $rp.starts-with('/') {
+        my $bp = $b.path.path;
+        $bp ~~ s/ <-[/]>* $ // unless $bp.ends-with('/');
+        $rp = $bp ~ $rp;
     }
-
-    my $b = $base;
-    if $b !~~ /\/$/ {
-        if $b ~~ /^ (https?\:\/\/ <-[\/]>+ ) \/ .+ $/ {
-            $b = ~$0 ~ '/';
-        } else {
-            $b ~= '/';
-        }
-    }
-
-    $b ~ $url
+    my $result = $b.scheme ~ '://' ~ $b.host ~ $rp;
+    $result ~= '?' ~ $u.query.Str if $u.query.Str.chars;
+    $result ~= '#' ~ $u.fragment  if $u.fragment.defined && $u.fragment.chars;
+    $result
 }
 
 =begin pod

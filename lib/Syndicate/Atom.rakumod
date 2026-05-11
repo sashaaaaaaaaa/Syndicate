@@ -82,6 +82,7 @@ multi method new(Str $xml) {
     my %bless = :$id, :$title, :link($primary-link),
         :description($subtitle),
         :$subtitle, :$rights,
+        :$author,
         :generator($gen), :$icon, :$logo,
         :author-detail(%author-detail),
         :link-self(%link-self), :link-alternate(%link-alternate);

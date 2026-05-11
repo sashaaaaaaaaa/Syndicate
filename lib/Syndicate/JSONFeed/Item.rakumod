@@ -39,8 +39,10 @@ method new-from-hash(%h) {
     my @tags;
     @tags = @(%h<tags>) if %h<tags>:exists;
 
+    my $content = %h<content_html> // %h<content_text> // Str;
     my %bless = :$title, :$link, :summary($summary),
         :$id,
+        :$content,
         :external_url(%h<external_url> // Str),
         :content_html(%h<content_html> // Str),
         :content_text(%h<content_text> // Str),

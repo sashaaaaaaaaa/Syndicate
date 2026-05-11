@@ -4,6 +4,8 @@ use DateTime::Grammar;
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
+# Per-call XML::Entity.new is intentional — XML::Entity's thread-safety
+# is undocumented, so constructing per call avoids shared-state races.
 sub decode-entities(Str $text) is export {
     return $text unless $text.defined && $text.chars;
     XML::Entity.new.decode($text)

@@ -7,6 +7,9 @@ my $ext-lock = Lock.new;
 
 sub register-ext(:&parse, :&generate) is export {
     $ext-lock.protect: {
+        # `===` on Code objects checks identity — safe here because
+        # `register-ext` is called once per module at compile time,
+        # so the same closure is never re-registered.
         return if @extensions.first: { .<parse> === &parse && .<generate> === &generate };
         @extensions.push: %(:&parse, :&generate)
     }

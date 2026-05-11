@@ -6,6 +6,8 @@ use Syndicate::RSS::Common;
 use Syndicate::RSS::V0_91::Item;
 use Syndicate::Utils;
 
+my constant $RFC2822 = DateTime::Format::RFC2822.new;
+
 unit class Syndicate::RSS::V0_91:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.copyright;
@@ -77,12 +79,10 @@ method XML {
     $channel.append: XML::Element.new(:name<webMaster>, :nodes([$.webMaster])) if $.webMaster.defined;
 
     if $.pubDate.defined {
-        my $f = DateTime::Format::RFC2822.new;
-        $channel.append: XML::Element.new(:name<pubDate>, :nodes([$f.to-string($.pubDate)]));
+        $channel.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.pubDate)]));
     }
     if $.lastBuildDate.defined {
-        my $f = DateTime::Format::RFC2822.new;
-        $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$f.to-string($.lastBuildDate)]));
+        $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$RFC2822.to-string($.lastBuildDate)]));
     }
 
     self.build-xml-image($channel, %.image);
