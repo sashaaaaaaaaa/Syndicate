@@ -57,6 +57,7 @@ multi method new-from-xml(XML::Element $item-elem) {
     }
 
     my %extra;
+    %extra<author> = $author if $author.defined;
     run-parsers($item-elem, %extra);
     $author //= %extra<author> // Str;
 
@@ -95,9 +96,9 @@ method XML {
     $xml.append: XML::Element.new(:name<author>, :nodes([$.author])) if $.author.defined;
     $xml.append: XML::Element.new(:name<category>, :nodes([$.category])) if $.category.defined;
     $xml.append: XML::Element.new(:name<comments>, :nodes([$.comments])) if $.comments.defined;
-    if %.enclosure {
+    if %.enclosure<url>.defined && %.enclosure<url>.chars {
         my $enc = XML::Element.new(:name<enclosure>);
-        $enc.attribs<url>    = %.enclosure<url>    // "";
+        $enc.attribs<url>    = %.enclosure<url>;
         $enc.attribs<length> = %.enclosure<length> // "0";
         $enc.attribs<type>   = %.enclosure<type>   // "";
         $xml.append: $enc;

@@ -381,6 +381,10 @@ raku -I lib t/02-parse.rakutest
 raku -I lib t/08-builder.rakutest
 ```
 
-## License
+# AUTHOR
 
-Artistic License 2.0
+Sasha Abbott <sashaa@disroot.org>
+
+# LICENSE
+
+This library is free software; you can redistribute it and/or modify it under CC0.

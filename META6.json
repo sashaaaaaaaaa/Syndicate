@@ -4,7 +4,7 @@
     "version": "0.0.1",
     "description": "Syndication feed parser/generator (RSS / Atom / JSON Feed)",
     "raku": "6.d",
-    "license": "Artistic-2.0",
+    "license": "CC0-1.0",
     "depends": [
         "XML",
         "JSON::Fast",

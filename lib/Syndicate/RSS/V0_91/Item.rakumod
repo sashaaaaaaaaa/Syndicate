@@ -1,8 +1,17 @@
 use v6.d;
 use XML;
 use Syndicate::Item;
+use Syndicate::Utils;
 
 unit class Syndicate::RSS::V0_91::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
+
+proto method new-from-xml(|) {*}
+multi method new-from-xml(XML::Element $item-elem) {
+    my $title = get-text($item-elem, "title");
+    my $link  = get-text($item-elem, "link");
+    my $desc  = get-text-optional($item-elem, "description");
+    self.bless(:$title, :$link, :summary($desc))
+}
 
 method XML {
     my $xml = XML::Element.new(:name<item>);

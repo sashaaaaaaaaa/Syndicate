@@ -32,7 +32,9 @@ method parse-skip-hours($channel --> Array) {
     my @skipHours;
     with $channel.elements(:TAG<skipHours>)[0] {
         for .elements(:TAG<hour>) -> $h {
-            @skipHours.push: $h.contents[0].text.Int;
+            with $h.contents[0] {
+                @skipHours.push: .text.Int;
+            }
         }
     }
     @skipHours
@@ -42,7 +44,9 @@ method parse-skip-days($channel --> Array) {
     my @skipDays;
     with $channel.elements(:TAG<skipDays>)[0] {
         for .elements(:TAG<day>) -> $d {
-            @skipDays.push: $d.contents[0].text;
+            with $d.contents[0] {
+                @skipDays.push: .text;
+            }
         }
     }
     @skipDays

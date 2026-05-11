@@ -40,7 +40,7 @@ multi method new-from-xml(XML::Element $item-elem) {
 }
 
 method XML {
-    my $xml = XML::Element.new(:name<item>);
+    my $xml = XML::Element.new(:name<item>, :attribs({ 'xmlns' => 'http://purl.org/rss/1.0/' }));
     $xml.attribs{'rdf:about'} = $.about if $.about.defined;
     $xml.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
     $xml.append: XML::Element.new(:name<link>, :nodes([$.link])) if $.link.defined;

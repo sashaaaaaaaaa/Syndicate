@@ -68,7 +68,7 @@ method XML {
     for @.items -> $item {
         my $li = XML::Element.new(:name<rdf:li>);
         my $resource = $item.link // $item.about // Str;
-        $li.attribs<resource> = $resource if $resource.chars;
+        $li.attribs{'rdf:resource'} = $resource if $resource.defined;
         $seq.append: $li;
     }
 

@@ -38,8 +38,8 @@ multi method new(Str $xml) {
     my $wm      = get-text-optional($channel, "webMaster");
     my $rating  = get-text-optional($channel, "rating");
     my $docs    = get-text-optional($channel, "docs");
-    my $pd      = parse-date-optional(get-text($channel, "pubDate"));
-    my $lbd     = parse-date-optional(get-text($channel, "lastBuildDate"));
+    my $pd      = parse-date-optional(get-text-optional($channel, "pubDate"));
+    my $lbd     = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
 
     my %image     = self.parse-image($channel);
     my %textInput = self.parse-textinput($channel);
@@ -48,12 +48,7 @@ multi method new(Str $xml) {
 
     my @items;
     for $channel.elements(:TAG<item>) -> $item-elem {
-        my $it = get-text($item-elem, "title");
-        my $il = get-text($item-elem, "link");
-        my $id = get-text-optional($item-elem, "description");
-        @items.push: Syndicate::RSS::V0_91::Item.new(
-            :title($it), :link($il), :summary($id)
-        );
+        @items.push: Syndicate::RSS::V0_91::Item.new-from-xml($item-elem);
     }
 
     my %bless = :$title, :$link, :description($desc),
