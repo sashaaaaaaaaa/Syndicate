@@ -2,42 +2,33 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
-    - Complete rewrite of original p6-syndication
-
-    [Core architecture]
-    - Add Syndicate::Extensions registry for decoupled extension
-      parsing/generation (MediaRSS, DublinCore, ITunes)
-    - Extract Syndicate::RSS::Common role to deduplicate image, textinput,
-      skipHours, skipDays logic between RSS 2.0 and V0_91
-    - Thicken Syndicate::Feed role with $.generator and $.language
-    - Thicken Syndicate::Item role with $.id and $.content
-    - Standardize extension naming: iTunes → ITunes (CamelCase)
+    - Initial release. Syndication feed parser and generator for
+      RSS 2.0, RSS 0.91, RSS 1.0 (RDF), Atom 1.0, and JSON Feed 1.1.
 
     [Formats]
-    - Add RSS 0.91 parsing and generation
-    - Add RSS 1.0 (RDF) parsing and generation
-    - Add Atom 1.0 full XML output with all fields and entity handling
-    - Add JSON Feed 1.1 parsing and generation
-    - Add feed discovery via HTML <link> tag scanning
+    - RSS 2.0 parsing, generation, and XML output
+    - RSS 0.91 parsing, generation, and XML output
+    - RSS 1.0 (RDF) parsing, generation, and XML output
+    - Atom 1.0 parsing, full XML output with all fields and entity handling
+    - JSON Feed 1.1 parsing and JSON generation
 
     [API]
-    - Add Syndicate::Builder::Feed / Syndicate::Builder::Entry for
+    - Syndicate::Builder::Feed and Syndicate::Builder::Entry for
       format-agnostic feed construction
-    - Add Syndicate.parse, feed-format, parse-feed unified API
-    - Add builder ↔ feed data sync for role attributes
+    - Unified Syndicate.parse, feed-format, and parse-feed entry points
+    - Syndicate::Feed role with $.title, $.link, $.description,
+      $.generator, $.language, @.items
+    - Syndicate::Item role with $.title, $.link, $.summary, $.author,
+      $.updated, $.id, $.content
+    - Syndicate::Discovery for feed URL discovery from HTML pages
+    - Syndicate::Stats for thread-safe parsing statistics
 
     [Extensions]
-    - Add iTunes podcast extension (itunes:author, itunes:summary,
-      itunes:duration)
-    - Add Media RSS extension (media:content, media:thumbnail,
-      media:title, media:description)
-    - Add Dublin Core extension (dc:creator, dc:date, dc:subject)
+    - Dublin Core (dc:creator, dc:date, dc:subject)
+    - Media RSS (media:content, media:thumbnail, media:title,
+      media:description)
+    - iTunes podcast (itunes:author, itunes:summary, itunes:duration)
 
-    [Docs & Packaging]
-    - Comprehensive README with usage guide and API reference
-    - POD documentation on all 23 modules
-    - Register missing modules in META6.json provides (Syndicate::Extensions,
-      Syndicate::RSS::Common, Syndicate::Extension::ITunes)
-    - Full test suite (13 files, 483 assertions) covering parsing,
-      generation, roundtrip, builder, discovery, concurrency, and
-      extensions
+    [Testing]
+    - 13 test files with 483 assertions covering parsing, generation,
+      roundtrip, builder API, feed discovery, extensions, and concurrency
