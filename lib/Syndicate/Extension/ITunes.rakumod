@@ -1,7 +1,21 @@
 use v6.d;
 use XML;
+use Syndicate::Extensions;
 
 unit module Syndicate::Extension::ITunes:ver<0.0.1>:auth<zef:sasha>;
+
+register-ext(
+    parse => sub ($elem, %attrs) {
+        %attrs<itunes-author>   = get-itunes-text($elem, "author");
+        %attrs<itunes-summary>  = get-itunes-text($elem, "summary");
+        %attrs<itunes-duration> = get-itunes-duration($elem);
+    },
+    generate => sub ($xml, $item) {
+        add-itunes-element($xml, "author",   $item.itunes-author)   if $item.itunes-author.defined;
+        add-itunes-element($xml, "summary",  $item.itunes-summary)  if $item.itunes-summary.defined;
+        add-itunes-element($xml, "duration", $item.itunes-duration) if $item.itunes-duration.defined;
+    }
+);
 
 my constant NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 

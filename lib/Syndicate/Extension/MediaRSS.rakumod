@@ -1,7 +1,23 @@
 use v6.d;
 use XML;
+use Syndicate::Extensions;
 
 unit module Syndicate::Extension::MediaRSS:ver<0.0.1>:auth<zef:sasha>;
+
+register-ext(
+    parse => sub ($elem, %attrs) {
+        %attrs<media-contents>    = get-media-contents($elem);
+        %attrs<media-thumbnails>  = get-media-thumbnails($elem);
+        %attrs<media-title>       = get-media-text($elem, "title");
+        %attrs<media-description> = get-media-text($elem, "description");
+    },
+    generate => sub ($xml, $item) {
+        add-media-content-element($xml, $_) for @($item.media-contents);
+        add-media-thumbnail-element($xml, $_) for @($item.media-thumbnails);
+        $xml.append: XML::Element.new(:name<media:title>, :nodes([$item.media-title])) if $item.media-title.defined;
+        $xml.append: XML::Element.new(:name<media:description>, :nodes([$item.media-description])) if $item.media-description.defined;
+    }
+);
 
 sub get-media-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("media:$tag"))[0] -> $e {

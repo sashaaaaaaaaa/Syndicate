@@ -3,9 +3,7 @@ use XML;
 use DateTime::Format::RFC2822;
 use Syndicate::Item;
 use Syndicate::Utils;
-use Syndicate::Extension::DublinCore;
-use Syndicate::Extension::MediaRSS;
-use Syndicate::Extension::ITunes;
+use Syndicate::Extensions;
 
 unit class Syndicate::RSS::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -38,14 +36,10 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $link    = get-text($item-elem, "link");
     my $desc    = get-text($item-elem, "description");
     my $author  = get-text-optional($item-elem, "author");
-    $author //= get-dc-text($item-elem, "creator");
     my $cat     = get-text-optional($item-elem, "category");
     my $comment = get-text-optional($item-elem, "comments");
     my $pubdate = parse-date-optional(get-text($item-elem, "pubDate"));
     my $source  = get-text-optional($item-elem, "source");
-    my $it-author  = get-itunes-text($item-elem, "author");
-    my $it-summary = get-itunes-text($item-elem, "summary");
-    my $it-dur     = get-itunes-duration($item-elem);
 
     my $guid-elem = $item-elem.elements(:TAG<guid>)[0];
     my $guid = Str;
@@ -62,19 +56,24 @@ multi method new-from-xml(XML::Element $item-elem) {
         %enclosure<type>   = .attribs<type>   // Str;
     }
 
-    my @media-contents  = get-media-contents($item-elem);
-    my @media-thumbnails = get-media-thumbnails($item-elem);
-    my $media-title     = get-media-text($item-elem, "title");
-    my $media-desc      = get-media-text($item-elem, "description");
+    my %extra;
+    run-parsers($item-elem, %extra);
+    $author //= %extra<author> // Str;
+
+    my @media-contents    = @(%extra<media-contents>    // []);
+    my @media-thumbnails  = @(%extra<media-thumbnails>  // []);
+    my $media-title       = %extra<media-title>         // Str;
+    my $media-description = %extra<media-description>   // Str;
 
     my %bless = :$title, :$link, :summary($desc),
         :$author,
         :$guid, :guid-is-permalink($guid-is-permalink),
         :category($cat), :comments($comment),
         :enclosure(%enclosure), :source($source),
-        :media-title($media-title), :media-description($media-desc),
-        :itunes-author($it-author), :itunes-summary($it-summary),
-        :itunes-duration($it-dur);
+        :media-title($media-title), :media-description($media-description),
+        :itunes-author(%extra<itunes-author> // Str),
+        :itunes-summary(%extra<itunes-summary> // Str),
+        :itunes-duration(%extra<itunes-duration> // Str);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
     self.bless(|%bless, :@media-contents, :@media-thumbnails)
 }
@@ -94,7 +93,6 @@ method XML {
         $xml.append: XML::Element.new(:name<pubDate>, :nodes([$f.to-string($.updated)]));
     }
     $xml.append: XML::Element.new(:name<author>, :nodes([$.author])) if $.author.defined;
-    add-dc-element($xml, "creator", $.author) if $.author.defined;
     $xml.append: XML::Element.new(:name<category>, :nodes([$.category])) if $.category.defined;
     $xml.append: XML::Element.new(:name<comments>, :nodes([$.comments])) if $.comments.defined;
     if %.enclosure {
@@ -106,14 +104,7 @@ method XML {
     }
     $xml.append: XML::Element.new(:name<source>, :nodes([$.source])) if $.source.defined;
 
-    add-itunes-element($xml, "author", $.itunes-author) if $.itunes-author.defined;
-    add-itunes-element($xml, "summary", $.itunes-summary) if $.itunes-summary.defined;
-    add-itunes-element($xml, "duration", $.itunes-duration) if $.itunes-duration.defined;
-
-    add-media-content-element($xml, $_) for @.media-contents;
-    add-media-thumbnail-element($xml, $_) for @.media-thumbnails;
-    $xml.append: XML::Element.new(:name<media:title>, :nodes([$.media-title])) if $.media-title.defined;
-    $xml.append: XML::Element.new(:name<media:description>, :nodes([$.media-description])) if $.media-description.defined;
+    run-generators($xml, self);
 
     return $xml;
 }

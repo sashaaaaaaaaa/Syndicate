@@ -1,7 +1,20 @@
 use v6.d;
 use XML;
+use Syndicate::Extensions;
 
 unit module Syndicate::Extension::DublinCore:ver<0.0.1>:auth<zef:sasha>;
+
+register-ext(
+    parse => sub ($elem, %attrs) {
+        if !%attrs<author>.defined || !%attrs<author>.chars {
+            my $creator = get-dc-text($elem, "creator");
+            %attrs<author> = $creator if $creator.defined && $creator.chars;
+        }
+    },
+    generate => sub ($xml, $item) {
+        add-dc-element($xml, "creator", $item.author) if $item.author.defined;
+    }
+);
 
 sub get-dc-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("dc:$tag"))[0] -> $e {
