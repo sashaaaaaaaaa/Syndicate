@@ -2,13 +2,14 @@ use v6.d;
 use XML;
 use DateTime::Format::RFC2822;
 use Syndicate::Feed;
+use Syndicate::RSS::Common;
 use Syndicate::RSS::Item;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 
-unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
+unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.language;
 has Str $.copyright;
@@ -21,9 +22,6 @@ has Str $.generator;
 has Str $.docs;
 has Int $.ttl;
 has %.image;
-has %.textInput;
-has @.skipHours;
-has @.skipDays;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 
@@ -50,15 +48,7 @@ multi method new(Str $xml) {
     my $it-author  = get-itunes-text($channel, "author");
     my $it-summary = get-itunes-text($channel, "summary");
 
-    my %image;
-    with $channel.elements(:TAG<image>)[0] {
-        %image<url>         = get-text($_, "url");
-        %image<title>       = get-text($_, "title");
-        %image<link>        = get-text($_, "link");
-        %image<width>       = get-text-optional($_, "width");
-        %image<height>      = get-text-optional($_, "height");
-        %image<description> = get-text-optional($_, "description");
-    }
+    my %image = self.parse-image($channel);
 
     my @items;
     for $channel.elements(:TAG<item>) -> $item-elem {
@@ -109,13 +99,7 @@ method XML {
     $channel.append: XML::Element.new(:name<docs>, :nodes([$.docs])) if $.docs.defined;
     $channel.append: XML::Element.new(:name<ttl>, :nodes([~$.ttl])) if $.ttl.defined;
 
-    if %.image {
-        my $img = XML::Element.new(:name<image>);
-        $img.append: XML::Element.new(:name<url>, :nodes([%.image<url>]));
-        $img.append: XML::Element.new(:name<title>, :nodes([%.image<title>]));
-        $img.append: XML::Element.new(:name<link>, :nodes([%.image<link>]));
-        $channel.append: $img;
-    }
+    self.build-xml-image($channel, %.image);
 
     $channel.append: $_.XML for @.items;
 

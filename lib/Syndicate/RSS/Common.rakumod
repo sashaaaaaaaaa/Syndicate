@@ -1,0 +1,85 @@
+use v6.d;
+use XML;
+use Syndicate::Utils;
+
+unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
+
+method parse-image($channel --> Hash) {
+    my %image;
+    with $channel.elements(:TAG<image>)[0] {
+        %image<url>         = get-text($_, "url");
+        %image<title>       = get-text($_, "title");
+        %image<link>        = get-text($_, "link");
+        %image<width>       = get-text-optional($_, "width");
+        %image<height>      = get-text-optional($_, "height");
+        %image<description> = get-text-optional($_, "description");
+    }
+    %image
+}
+
+method parse-textinput($channel --> Hash) {
+    my %textInput;
+    with $channel.elements(:TAG<textinput>)[0] {
+        %textInput<title>       = get-text($_, "title");
+        %textInput<description> = get-text($_, "description");
+        %textInput<name>        = get-text($_, "name");
+        %textInput<link>        = get-text($_, "link");
+    }
+    %textInput
+}
+
+method parse-skip-hours($channel --> Array) {
+    my @skipHours;
+    with $channel.elements(:TAG<skipHours>)[0] {
+        for .elements(:TAG<hour>) -> $h {
+            @skipHours.push: $h.contents[0].text.Int;
+        }
+    }
+    @skipHours
+}
+
+method parse-skip-days($channel --> Array) {
+    my @skipDays;
+    with $channel.elements(:TAG<skipDays>)[0] {
+        for .elements(:TAG<day>) -> $d {
+            @skipDays.push: $d.contents[0].text;
+        }
+    }
+    @skipDays
+}
+
+method build-xml-image($channel, %image) {
+    return unless %image;
+    my $img = XML::Element.new(:name<image>);
+    $img.append: XML::Element.new(:name<url>, :nodes([%image<url>]));
+    $img.append: XML::Element.new(:name<title>, :nodes([%image<title>]));
+    $img.append: XML::Element.new(:name<link>, :nodes([%image<link>]));
+    $img.append: XML::Element.new(:name<width>, :nodes([%image<width>])) if %image<width>.defined;
+    $img.append: XML::Element.new(:name<height>, :nodes([%image<height>])) if %image<height>.defined;
+    $img.append: XML::Element.new(:name<description>, :nodes([%image<description>])) if %image<description>.defined;
+    $channel.append: $img;
+}
+
+method build-xml-textinput($channel, %textInput) {
+    return unless %textInput;
+    my $ti = XML::Element.new(:name<textinput>);
+    $ti.append: XML::Element.new(:name<title>, :nodes([%textInput<title>]));
+    $ti.append: XML::Element.new(:name<description>, :nodes([%textInput<description>]));
+    $ti.append: XML::Element.new(:name<name>, :nodes([%textInput<name>]));
+    $ti.append: XML::Element.new(:name<link>, :nodes([%textInput<link>]));
+    $channel.append: $ti;
+}
+
+method build-xml-skip-hours($channel, @skipHours) {
+    return unless @skipHours;
+    my $sh = XML::Element.new(:name<skipHours>);
+    $sh.append: XML::Element.new(:name<hour>, :nodes([~$_])) for @skipHours;
+    $channel.append: $sh;
+}
+
+method build-xml-skip-days($channel, @skipDays) {
+    return unless @skipDays;
+    my $sd = XML::Element.new(:name<skipDays>);
+    $sd.append: XML::Element.new(:name<day>, :nodes([$_])) for @skipDays;
+    $channel.append: $sd;
+}
