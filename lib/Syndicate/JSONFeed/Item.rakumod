@@ -79,3 +79,36 @@ method to-hash {
     }
     %h
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::JSONFeed::Item - JSON Feed item
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+my $item = Syndicate::JSONFeed::Item.new-from-hash(%json-hash);
+my %h = $item.to-hash;
+=end code
+
+=head1 DESCRIPTION
+
+A JSON Feed item. Does L<C<Syndicate::Item>|rakudoc:Syndicate::Item>.
+
+=head1 ATTRIBUTES
+
+=item C<$.title>, C<$.link>, C<$.summary>, C<$.author> - from Item role
+=item C<$.id>, C<$.content> - from Item role
+=item C<$.external_url> - External URL
+=item C<$.content_html> - Content as HTML
+=item C<$.content_text> - Content as plain text
+=item C<$.image> - Image URL
+=item C<$.banner_image> - Banner image URL
+=item C<$.date_published> - Published timestamp
+=item C<$.date_modified> - Modified timestamp
+=item C<@.authors> - Array of author hashes
+=item C<@.tags> - Array of tag strings
+
+=end pod

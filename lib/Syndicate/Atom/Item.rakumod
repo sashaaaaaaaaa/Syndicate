@@ -136,3 +136,41 @@ method XML {
 }
 
 method Str { ~self.XML }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Atom::Item - Atom 1.0 entry
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+my $entry = Syndicate::Atom::Item.new(
+    :title("Entry"),
+    :id("urn:uuid:abc-123"),
+    :link("https://example.com/1"),
+    :content("<p>Hello</p>"),
+    :content-type("xhtml"),
+    :updated(DateTime.now),
+);
+say ~$entry;
+=end code
+
+=head1 DESCRIPTION
+
+An Atom 1.0 entry. Does L<C<Syndicate::Item>|rakudoc:Syndicate::Item>.
+
+=head1 ATTRIBUTES
+
+=item C<$.title>, C<$.link>, C<$.summary>, C<$.author>, C<$.updated> - from Item role
+=item C<$.id>, C<$.content> - from Item role
+=item C<%.author-detail> - Author hash (name, email, uri)
+=item C<@.categories> - Category terms
+=item C<$.published> - Published timestamp
+=item C<$.content-type> - Content MIME type (e.g. "xhtml", "text")
+=item C<$.rights> - Rights text
+=item C<%.source-feed> - Source feed hash (title, id, link, updated)
+=item C<@.contributors> - Array of contributor hashes
+
+=end pod

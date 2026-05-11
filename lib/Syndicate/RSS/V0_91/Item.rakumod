@@ -13,3 +13,16 @@ method XML {
 }
 
 method Str { ~self.XML }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::RSS::V0_91::Item - RSS 0.91 item
+
+=head1 DESCRIPTION
+
+An RSS 0.91 item. Does L<C<Syndicate::Item>|rakudoc:Syndicate::Item>.
+Only supports title, link, and description — no metadata fields.
+
+=end pod

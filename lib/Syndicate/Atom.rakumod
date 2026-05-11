@@ -140,3 +140,39 @@ method XML {
 }
 
 method Str { ~self.XML }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Atom - Atom 1.0 feed
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+my $feed = Syndicate::Atom.new($xml-string);
+my $feed = Syndicate::Atom.new(:title("My Feed"), :id("urn:uuid:..."), ...);
+say ~$feed;
+=end code
+
+=head1 DESCRIPTION
+
+Parses and generates Atom 1.0 feeds. Does L<C<Syndicate::Feed>|rakudoc:Syndicate::Feed>.
+
+=head1 ATTRIBUTES
+
+=item C<$.title>, C<$.link>, C<$.description> - from Feed role (description → subtitle)
+=item C<$.generator>, C<$.language> - from Feed role
+=item C<$.id> - Atom feed ID
+=item C<$.subtitle> - Feed subtitle
+=item C<%.author-detail> - Author hash (name, email, uri)
+=item C<@.categories> - Category terms
+=item C<$.updated> - Last updated timestamp
+=item C<$.rights> - Rights/license text
+=item C<$.icon> - Feed icon URL
+=item C<$.logo> - Feed logo URL
+=item C<@.contributors> - Array of contributor hashes
+=item C<%.link-self> - Self link hash (href, type)
+=item C<%.link-alternate> - Alternate link hash (href, type)
+
+=end pod

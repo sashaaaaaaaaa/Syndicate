@@ -101,3 +101,39 @@ method XML {
 }
 
 method Str { ~self.XML }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::RSS::V0_91 - RSS 0.91 feed
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+my $feed = Syndicate::RSS::V0_91.new($xml-string);
+say ~$feed;
+=end code
+
+=head1 DESCRIPTION
+
+Parses and generates RSS 0.91 feeds. Does L<C<Syndicate::Feed>|rakudoc:Syndicate::Feed>
+and L<C<Syndicate::RSS::Common>|rakudoc:Syndicate::RSS::Common>.
+
+=head1 ATTRIBUTES
+
+=item C<$.title>, C<$.link>, C<$.description> - from Feed role
+=item C<$.generator>, C<$.language> - from Feed role
+=item C<$.copyright> - Copyright notice
+=item C<$.managingEditor> - Managing editor
+=item C<$.webMaster> - Webmaster
+=item C<$.rating> - PICS rating
+=item C<$.docs> - Documentation URL
+=item C<$.pubDate> - Publication date
+=item C<$.lastBuildDate> - Last build date
+=item C<%.image> - Image hash
+=item C<%.textInput> - Text input hash
+=item C<@.skipHours> - Hours to skip
+=item C<@.skipDays> - Days to skip
+
+=end pod

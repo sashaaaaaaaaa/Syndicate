@@ -83,3 +83,28 @@ method build-xml-skip-days($channel, @skipDays) {
     $sd.append: XML::Element.new(:name<day>, :nodes([$_])) for @skipDays;
     $channel.append: $sd;
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::RSS::Common - Shared role for RSS 2.0 and RSS 0.91
+
+=head1 DESCRIPTION
+
+Provides shared parsing and XML generation methods for image, textinput,
+skipHours, and skipDays elements. Used by both L<C<Syndicate::RSS>|rakudoc:Syndicate::RSS>
+and L<C<Syndicate::RSS::V0_91>|rakudoc:Syndicate::RSS::V0_91>.
+
+=head1 METHODS
+
+=item C<parse-image($channel)> - Parse image element into Hash
+=item C<parse-textinput($channel)> - Parse textinput element into Hash
+=item C<parse-skip-hours($channel)> - Parse skipHours into Array of Int
+=item C<parse-skip-days($channel)> - Parse skipDays into Array of Str
+=item C<build-xml-image($channel, %image)> - Generate image XML
+=item C<build-xml-textinput($channel, %textInput)> - Generate textinput XML
+=item C<build-xml-skip-hours($channel, @skipHours)> - Generate skipHours XML
+=item C<build-xml-skip-days($channel, @skipDays)> - Generate skipDays XML
+
+=end pod

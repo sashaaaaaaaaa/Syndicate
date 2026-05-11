@@ -87,3 +87,32 @@ method XML {
 }
 
 method Str { ~self.XML }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::RSS::V1_0 - RSS 1.0 (RDF) feed
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+my $feed = Syndicate::RSS::V1_0.new($xml-string);
+say ~$feed;
+=end code
+
+=head1 DESCRIPTION
+
+Parses and generates RSS 1.0 (RDF-based) feeds. Does L<C<Syndicate::Feed>|rakudoc:Syndicate::Feed>.
+
+=head1 ATTRIBUTES
+
+=item C<$.title>, C<$.link>, C<$.description> - from Feed role
+=item C<$.generator>, C<$.language> - from Feed role
+=item C<$.about> - RDF about URL
+=item C<$.image-url> - Image URL
+=item C<$.image-title> - Image title
+=item C<$.image-link> - Image link
+=item C<$.image-about> - Image RDF about
+
+=end pod

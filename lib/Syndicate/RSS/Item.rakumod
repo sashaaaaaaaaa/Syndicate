@@ -110,3 +110,55 @@ method XML {
 }
 
 method Str { ~self.XML }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::RSS::Item - RSS 2.0 item
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+my $item = Syndicate::RSS::Item.new(
+    :title("Article"),
+    :link("https://example.com/1"),
+    :summary("Description"),
+    :guid("https://example.com/1"),
+    :author("author@example.com"),
+    :updated(DateTime.now),
+);
+say ~$item;  # XML output
+=end code
+
+=head1 DESCRIPTION
+
+An RSS 2.0 item. Does L<C<Syndicate::Item>|rakudoc:Syndicate::Item>.
+
+=head1 ATTRIBUTES
+
+=item C<$.title>, C<$.link>, C<$.summary>, C<$.author>, C<$.updated> - from Item role
+=item C<$.id>, C<$.content> - from Item role
+=item C<$.guid> - Globally unique identifier (falls back to link)
+=item C<$.guid-is-permalink> - Whether guid is a permalink (default: True)
+=item C<$.category> - Item category
+=item C<$.comments> - Comments URL
+=item C<%.enclosure> - Enclosure hash (url, length, type)
+=item C<$.source> - Source feed URL
+=item C<@.media-contents> - Media RSS content entries
+=item C<@.media-thumbnails> - Media RSS thumbnails
+=item C<$.media-title> - Media RSS title
+=item C<$.media-description> - Media RSS description
+=item C<$.itunes-author> - iTunes author
+=item C<$.itunes-summary> - iTunes summary
+=item C<$.itunes-duration> - iTunes duration (HH:MM:SS)
+
+=head1 METHODS
+
+=item C<new(Str $xml)> - Parse from XML element string
+=item C<new(XML::Element)> - Parse from XML::Element
+=item C<new-from-xml(XML::Element)> - Parse from XML element
+=item C<XML> - Returns L<C<XML::Element>|rakudoc:XML::Element>
+=item C<Str> - Returns XML string
+
+=end pod

@@ -85,3 +85,37 @@ method to-json {
 }
 
 method Str { $.to-json }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::JSONFeed - JSON Feed 1.1
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+my $feed = Syndicate::JSONFeed.new($json-string);
+my $feed = Syndicate::JSONFeed.new(:title("My Feed"), :feed_url("..."), ...);
+say $feed.to-json;
+my %h = $feed.to-hash;
+=end code
+
+=head1 DESCRIPTION
+
+Parses and generates JSON Feed 1.1. Does L<C<Syndicate::Feed>|rakudoc:Syndicate::Feed>.
+
+=head1 ATTRIBUTES
+
+=item C<$.title>, C<$.link>, C<$.description> - from Feed role
+=item C<$.generator>, C<$.language> - from Feed role
+=item C<$.version> - JSON Feed version (default: C<https://jsonfeed.org/version/1.1>)
+=item C<$.feed_url> - Feed URL
+=item C<$.user_comment> - User comment
+=item C<$.next_url> - Next URL for pagination
+=item C<$.icon> - Feed icon URL
+=item C<$.favicon> - Favicon URL
+=item C<%.author> - Author hash (name, url, avatar)
+=item C<$.expired> - Whether feed is expired
+
+=end pod

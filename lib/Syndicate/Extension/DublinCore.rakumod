@@ -44,3 +44,30 @@ sub add-dc-element(XML::Element $parent, Str $tag, Str $content --> Nil) is expo
     return unless $content.defined && $content.chars;
     $parent.append: XML::Element.new(:name("dc:$tag"), :nodes([$content]));
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Extension::DublinCore - Dublin Core metadata extension
+
+=head1 DESCRIPTION
+
+Automatically registers with L<C<Syndicate::Extensions>|rakudoc:Syndicate::Extensions>
+to parse and generate C<dc:creator>, C<dc:date>, and C<dc:subject> elements
+in RSS items.
+
+Simply C<use> this module to activate:
+
+=begin code :lang<raku>
+use Syndicate::Extension::DublinCore;
+=end code
+
+=head1 EXPORTED SUBS
+
+=item C<get-dc-text($parent, $tag)> - Get dc:* text content
+=item C<get-dc-texts($parent, $tag)> - Get all dc:* text values as array
+=item C<add-dc-declaration(XML::Element)> - Add namespace declaration
+=item C<add-dc-element($parent, $tag, $content)> - Add dc:* element
+
+=end pod

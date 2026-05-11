@@ -80,3 +80,32 @@ sub add-media-thumbnail-element(XML::Element $parent, %thumb --> Nil) is export 
     $e.attribs<height> = %thumb<height> if %thumb<height>.defined;
     $parent.append: $e;
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Extension::MediaRSS - Media RSS (MRSS) extension
+
+=head1 DESCRIPTION
+
+Automatically registers with L<C<Syndicate::Extensions>|rakudoc:Syndicate::Extensions>
+to parse and generate C<media:content>, C<media:thumbnail>, C<media:title>,
+and C<media:description> elements in RSS items.
+
+Simply C<use> this module to activate:
+
+=begin code :lang<raku>
+use Syndicate::Extension::MediaRSS;
+=end code
+
+=head1 EXPORTED SUBS
+
+=item C<get-media-text($parent, $tag)> - Get media:* text
+=item C<get-media-contents($parent)> - Get media:content entries
+=item C<get-media-thumbnails($parent)> - Get media:thumbnail entries
+=item C<add-media-declaration(XML::Element)> - Add namespace declaration
+=item C<add-media-content-element($parent, %content)> - Add media:content
+=item C<add-media-thumbnail-element($parent, %thumb)> - Add media:thumbnail
+
+=end pod

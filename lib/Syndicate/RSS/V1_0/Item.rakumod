@@ -57,3 +57,20 @@ method XML {
 }
 
 method Str { ~self.XML }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::RSS::V1_0::Item - RSS 1.0 (RDF) item
+
+=head1 DESCRIPTION
+
+An RSS 1.0 item. Does L<C<Syndicate::Item>|rakudoc:Syndicate::Item>.
+
+=head1 ATTRIBUTES
+
+=item C<$.about> - RDF about URL
+=item C<@.dc-subjects> - Dublin Core subjects
+
+=end pod

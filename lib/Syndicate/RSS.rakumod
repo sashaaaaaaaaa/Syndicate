@@ -105,3 +105,49 @@ method XML {
 }
 
 method Str { ~self.XML }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::RSS - RSS 2.0 feed
+
+=head1 SYNOPSIS
+
+=begin code :lang<raku>
+my $feed = Syndicate::RSS.new($xml-string);
+my $feed = Syndicate::RSS.new(:title("My Feed"), :link("https://example.com"), ...);
+say ~$feed;  # XML output
+=end code
+
+=head1 DESCRIPTION
+
+Parses and generates RSS 2.0 feeds. Does L<C<Syndicate::Feed>|rakudoc:Syndicate::Feed>
+and L<C<Syndicate::RSS::Common>|rakudoc:Syndicate::RSS::Common>.
+
+Supports iTunes podcast and Media RSS extensions via the extension registry.
+
+=head1 ATTRIBUTES
+
+=item C<$.title>, C<$.link>, C<$.description> - from Feed role
+=item C<$.generator>, C<$.language> - from Feed role
+=item C<$.copyright> - Copyright notice
+=item C<$.managingEditor> - Managing editor email
+=item C<$.webMaster> - Webmaster email
+=item C<$.pubDate> - Publication date (L<C<DateTime>|rakudoc:DateTime>)
+=item C<$.lastBuildDate> - Last build date (L<C<DateTime>|rakudoc:DateTime>)
+=item C<$.category> - Feed category
+=item C<$.docs> - Documentation URL
+=item C<$.ttl> - Time to live (minutes)
+=item C<%.image> - Feed image hash (url, title, link, width, height)
+=item C<$.itunes-author> - iTunes author
+=item C<$.itunes-summary> - iTunes summary
+
+=head1 METHODS
+
+=item C<new(Str $xml)> - Parse RSS 2.0 XML string
+=item C<new(:$title, :$link, ...)> - Construct with named args
+=item C<XML> - Returns L<C<XML::Element>|rakudoc:XML::Element>
+=item C<Str> - Returns XML string
+
+=end pod

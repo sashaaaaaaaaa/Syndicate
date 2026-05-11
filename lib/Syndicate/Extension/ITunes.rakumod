@@ -41,3 +41,30 @@ sub add-itunes-element(XML::Element $parent, Str $tag, Str $content --> Nil) is 
     return unless $content.defined && $content.chars;
     $parent.append: XML::Element.new(:name("itunes:$tag"), :nodes([$content]));
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Extension::ITunes - iTunes podcast extension
+
+=head1 DESCRIPTION
+
+Automatically registers with L<C<Syndicate::Extensions>|rakudoc:Syndicate::Extensions>
+to parse and generate C<itunes:author>, C<itunes:summary>, and C<itunes:duration>
+elements in RSS items.
+
+Simply C<use> this module to activate:
+
+=begin code :lang<raku>
+use Syndicate::Extension::ITunes;
+=end code
+
+=head1 EXPORTED SUBS
+
+=item C<get-itunes-text($parent, $tag)> - Get itunes:* text
+=item C<get-itunes-duration($parent)> - Get itunes:duration
+=item C<add-itunes-declaration(XML::Element)> - Add namespace declaration
+=item C<add-itunes-element($parent, $tag, $content)> - Add itunes:* element
+
+=end pod

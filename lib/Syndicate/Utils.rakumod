@@ -52,3 +52,25 @@ sub parse-date-optional(Str $str) is export {
     return Str unless $str.defined && $str.trim.chars > 0;
     try { datetime-interpret($str.trim) } // Str
 }
+
+=begin pod
+
+=head1 NAME
+
+Syndicate::Utils - Internal utility functions
+
+=head1 DESCRIPTION
+
+Shared helper functions used by parser/generator classes.
+Not typically needed by end users.
+
+=head1 EXPORTED SUBS
+
+=item C<decode-entities(Str)>, C<encode-entities(Str)> - XML entity handling
+=item C<get-text($parent, $tag)> - Get required text content of a child element
+=item C<get-text-optional($parent, $tag)> - Get optional text content (returns C<Str>)
+=item C<get-attrib($parent, $tag, $attr)> - Get an attribute value from a child element
+=item C<parse-date(Str)> - Parse date string returning C<DateTime> or C<Nil>
+=item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Str>
+
+=end pod
