@@ -1,7 +1,7 @@
 use v6.d;
 use XML;
 
-unit module Syndicate::Extension::iTunes:ver<0.0.1>:auth<zef:sasha>;
+unit module Syndicate::Extension::ITunes:ver<0.0.1>:auth<zef:sasha>;
 
 my constant NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 

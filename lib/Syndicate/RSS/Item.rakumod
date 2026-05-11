@@ -5,7 +5,7 @@ use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
-use Syndicate::Extension::iTunes;
+use Syndicate::Extension::ITunes;
 
 unit class Syndicate::RSS::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
