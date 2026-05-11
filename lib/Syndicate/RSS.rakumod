@@ -22,6 +22,7 @@ has Int $.ttl;
 has %.image;
 has Str $.itunes-author;
 has Str $.itunes-summary;
+has Str $.atom-self-link;
 
 multi method new(Str $xml) {
     my $doc = XML::Document.new($xml);
@@ -70,6 +71,9 @@ method XML {
     add-dc-declaration($xml);
     add-media-declaration($xml);
     add-itunes-declaration($xml);
+    if $.atom-self-link.defined {
+        $xml.attribs{'xmlns:atom'} = 'http://www.w3.org/2005/Atom';
+    }
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;
 
@@ -99,12 +103,19 @@ method XML {
 
     self.build-xml-image($channel, %.image);
 
+    if $.atom-self-link.defined {
+        $channel.append: XML::Element.new(
+            :name<atom:link>,
+            :attribs({ :href($.atom-self-link), :rel<self>, :type('application/rss+xml') })
+        );
+    }
+
     $channel.append: $_.XML for @.items;
 
     return $xml;
 }
 
-method Str { ~self.XML }
+method Str(Bool :$pretty = True) { '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML }
 
 =begin pod
 

@@ -12,7 +12,7 @@ method XML {
     $xml
 }
 
-method Str { ~self.XML }
+method Str(Bool :$pretty = True) { ~self.XML }
 
 =begin pod
 

@@ -20,6 +20,10 @@ has Str $!author-uri;
 has @!categories;
 has Str $!content;
 has Str $!content-type;
+has Str $!media-title;
+has Str $!media-description;
+has @!media-contents;
+has @!media-thumbnails;
 
 method title(Str $v?)      { $!title = $v if $v.defined; $!title }
 method link(Str $v?)       { $!link = $v if $v.defined; $!link }
@@ -33,6 +37,28 @@ method content(Str $v?, Str :$type) {
     $!content      = $v    if $v.defined;
     $!content-type = $type if $type.defined;
     $!content
+}
+
+method media-title(Str $v?) { $!media-title = $v if $v.defined; $!media-title }
+
+method media-description(Str $v?) { $!media-description = $v if $v.defined; $!media-description }
+
+method media-content(Str :$url, Str :$type, Int :$width, Int :$height, Int :$duration) {
+    my %mc = :$url, :$type;
+    %mc<width>    = $width    if $width.defined;
+    %mc<height>   = $height   if $height.defined;
+    %mc<duration> = $duration if $duration.defined;
+    @!media-contents.push: %mc;
+    @!media-contents
+}
+
+method media-thumbnail(Str :$url, Int :$width, Int :$height, Str :$time) {
+    my %mt = :$url;
+    %mt<width>  = $width  if $width.defined;
+    %mt<height> = $height if $height.defined;
+    %mt<time>   = $time   if $time.defined;
+    @!media-thumbnails.push: %mt;
+    @!media-thumbnails
 }
 
 method author(Str :$name, Str :$email, Str :$uri) {
@@ -55,10 +81,14 @@ method build-rss-item {
         :author($!author-name // Str),
         :id($item-id),
         :content($!content // Str),
-        :$guid;
+        :$guid,
+        :media-title($!media-title // Str),
+        :media-description($!media-description // Str);
     %bless<updated> = $!updated if $!updated ~~ DateTime;
     %bless<category> = @!categories[0] if @!categories;
-    Syndicate::RSS::Item.new(|%bless)
+    Syndicate::RSS::Item.new(|%bless,
+        :media-contents(@!media-contents),
+        :media-thumbnails(@!media-thumbnails))
 }
 
 method build-v0_91-item {
