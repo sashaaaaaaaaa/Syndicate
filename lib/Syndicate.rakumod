@@ -12,8 +12,13 @@ use Syndicate::Atom::Item;
 use Syndicate::Utils;
 use Syndicate::Builder::Feed;
 use Syndicate::Builder::Entry;
+use Syndicate::Parse;
 
 unit class Syndicate:ver<0.0.1>:auth<zef:sasha>;
+
+sub parse(Str $input --> Any) is export {
+    parse-feed($input)
+}
 
 sub parse-rss(Str $xml) is export {
     Syndicate::RSS.new($xml)

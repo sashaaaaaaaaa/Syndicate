@@ -1,0 +1,61 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Parse;
+
+plan 23;
+
+# ===== feed-format detection =====
+
+# Atom from file
+my $atom-xml = slurp "t/data/atom-full.xml";
+is feed-format($atom-xml), Atom, "atom-full.xml detected as Atom";
+
+# RSS 2.0 from file
+my $rss-xml = slurp "t/data/rss2-full.xml";
+is feed-format($rss-xml), RSS2, "rss2-full.xml detected as RSS2";
+
+# RSS 0.91 from file
+my $rss091-xml = slurp "t/data/rss091-full.xml";
+is feed-format($rss091-xml), RSS091, "rss091-full.xml detected as RSS091";
+
+# RSS 2.0 without version attribute (should default to RSS2)
+is feed-format("<rss><channel><title>t</title></channel></rss>"), RSS2, "RSS without version -> RSS2";
+
+# RSS 2.0 with explicit version
+is feed-format('<rss version="2.0"><channel><title>t</title></channel></rss>'), RSS2, 'RSS version="2.0" -> RSS2';
+
+# RSS 0.91 bare (no XML declaration)
+is feed-format('<rss version="0.91"><channel><title>t</title></channel></rss>'), RSS091, 'RSS version="0.91" -> RSS091';
+
+# Atom bare
+is feed-format('<feed xmlns="http://www.w3.org/2005/Atom"><id>i</id></feed>'), Atom, "bare Atom -> Atom";
+
+# ===== parse-feed returns correct types =====
+isa-ok parse-feed($atom-xml), Syndicate::Atom, "parse-feed atom returns Atom";
+isa-ok parse-feed($rss-xml), Syndicate::RSS, "parse-feed rss2 returns RSS";
+isa-ok parse-feed($rss091-xml), Syndicate::RSS::V0_91, "parse-feed rss091 returns V0_91";
+
+# ===== parse() convenience sub =====
+isa-ok parse($atom-xml), Syndicate::Atom, "parse() atom returns Atom";
+isa-ok parse($rss-xml), Syndicate::RSS, "parse() rss2 returns RSS";
+isa-ok parse($rss091-xml), Syndicate::RSS::V0_91, "parse() rss091 returns V0_91";
+
+# ===== parse() returns correct feed data =====
+is parse($atom-xml).title, "Test Atom Feed", "parse() atom title";
+is parse($rss-xml).title, "Test RSS Feed", "parse() rss2 title";
+is parse($rss091-xml).title, "Test RSS 0.91 Feed", "parse() rss091 title";
+
+# ===== Error cases =====
+dies-ok { feed-format("") }, "empty string dies";
+dies-ok { feed-format("   ") }, "whitespace-only dies";
+dies-ok { feed-format("not xml at all") }, "non-XML dies";
+dies-ok { feed-format("<html></html>") }, "unknown root element dies";
+
+# ===== Parse exports =====
+ok defined(&feed-format), "feed-format is exported";
+ok defined(&parse-feed), "parse-feed is exported";
+ok defined(&parse), "parse is exported from Syndicate";
+
+done-testing;

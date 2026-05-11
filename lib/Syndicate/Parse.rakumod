@@ -1,0 +1,71 @@
+use v6.d;
+use Syndicate::RSS;
+use Syndicate::RSS::V0_91;
+use Syndicate::Atom;
+
+unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
+
+enum FeedFormat is export <Atom RSS2 RSS091>;
+
+sub feed-format(Str $input --> FeedFormat) is export {
+    my $clean = $input.trim;
+    die "Empty input" unless $clean.chars;
+
+    my $root = root-element($clean);
+    die "Unknown feed format: cannot find root element" unless $root.defined;
+
+    given $root<name> {
+        when 'feed' { return Atom }
+        when 'rss'  {
+            return $root<ver> eq '0.91' ?? RSS091 !! RSS2
+        }
+        default { die "Unknown feed format: <$_>" }
+    }
+}
+
+sub parse-feed(Str $input --> Any) is export {
+    given feed-format($input) {
+        when Atom   { return Syndicate::Atom.new($input) }
+        when RSS2   { return Syndicate::RSS.new($input) }
+        when RSS091 { return Syndicate::RSS::V0_91.new($input) }
+    }
+}
+
+sub root-element(Str $input) {
+    my $s = $input.trim;
+    my $pos = 0;
+
+    loop {
+        my $start = index($s, '<', $pos);
+        return Nil unless $start.defined;
+
+        my $close = index($s, '>', $start);
+        return Nil unless $close.defined;
+
+        my $tag = $s.substr($start, $close - $start + 1);
+        $pos = $close + 1;
+
+        # Skip XML declaration <?xml ...?>
+        next if $tag.starts-with('<?');
+
+        # Skip comments <!--...-->
+        next if $tag.starts-with('<!--');
+
+        # Skip DOCTYPE <!DOCTYPE ...>
+        next if $tag.starts-with('<!');
+
+        # Extract tag name: <name ...> or <name/>
+        my $inner = $tag.substr(1, $tag.chars - 2).trim;
+        my $name-end = $inner.index(' ') // $inner.index('/') // $inner.index('>') // $inner.chars;
+        my $name = $inner.substr(0, $name-end);
+        next unless $name.chars;
+
+        my $rest = $inner.substr($name-end);
+
+        my $ver = "";
+        if $rest ~~ /version\s*\=\s*\"(\S+?)\"/ { $ver = ~$0 }
+        elsif $rest ~~ /version\s*\=\s*\'(\S+?)\'/ { $ver = ~$0 }
+
+        return %(:$name, :$ver, :rest($rest))
+    }
+}
