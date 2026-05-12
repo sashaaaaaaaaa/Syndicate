@@ -131,11 +131,10 @@ method XML {
         $xml.append: $c;
     }
 
-    my $upd = $!updated // $!computed-updated;
+    my $upd = $!updated;
     unless $upd.defined {
         my @dates = @.items.map({$_.updated}).grep(*.defined);
-        $!computed-updated = @dates ?? @dates.max !! DateTime.now;
-        $upd = $!computed-updated;
+        $upd = @dates ?? @dates.max !! DateTime.now;
     }
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
 

@@ -47,13 +47,13 @@ sub root-element(Str $input) {
         return Nil unless $start.defined;
 
         # Scan past XML comments: find the first '-->' after '<!--'
-        if $s.substr($start) ~~ /^ \<\!\- \- .+? \-\- \> / {
+        if $s.substr($start) ~~ /^ '<!--' [\N\n]+? '-->' / {
             $pos = $start + $/.chars;
             next;
         }
 
         # Scan past CDATA sections: find the first ']]>' after '<![CDATA['
-        if $s.substr($start) ~~ /^ \<\!\[CDATA\[ .+? \]\]\> / {
+        if $s.substr($start) ~~ /^ '<![CDATA[' [\N\n]+? ']]>' / {
             $pos = $start + $/.chars;
             next;
         }

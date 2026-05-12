@@ -16,16 +16,14 @@ sub register-ext(:&parse, :&generate) is export {
 }
 
 sub run-parsers($elem, %attrs) is export {
-    $ext-lock.protect: {
-        .<parse>($elem, %attrs) for @extensions
-    }
+    my @exts = $ext-lock.protect: { @extensions.clone };
+    .<parse>($elem, %attrs) for @exts;
 }
 
 sub run-generators($xml, $item) is export {
-    $ext-lock.protect: {
-        for @extensions -> %ext {
-            %ext<generate>($xml, $item)
-        }
+    my @exts = $ext-lock.protect: { @extensions.clone };
+    for @exts -> %ext {
+        %ext<generate>($xml, $item)
     }
 }
 
