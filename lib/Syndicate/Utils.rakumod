@@ -22,7 +22,7 @@ sub get-text($parent, $tag) is export {
             return decode-entities($t.text // "");
         }
     }
-    ""
+    Str
 }
 
 sub get-text-optional($parent, $tag) is export {

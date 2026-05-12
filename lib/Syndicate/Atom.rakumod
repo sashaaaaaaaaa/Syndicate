@@ -95,8 +95,8 @@ multi method new(Str $xml) {
 method XML {
     my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns('http://www.w3.org/2005/Atom')}));
     $xml.append: XML::Element.new(:name<id>, :nodes([$.id // $.link // ""]));
-    $xml.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
-    $xml.append: XML::Element.new(:name<subtitle>, :nodes([$.subtitle])) if $.subtitle.defined;
+    $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
+    $xml.append: XML::Element.new(:name<subtitle>, :nodes([encode-entities($.subtitle)])) if $.subtitle.defined;
 
     my $alt-link = $.link // "";
     if $alt-link.defined {
@@ -114,10 +114,10 @@ method XML {
         $xml.append: $author;
     }
 
-    $xml.append: XML::Element.new(:name<rights>, :nodes([$.rights])) if $.rights.defined;
-    $xml.append: XML::Element.new(:name<generator>, :nodes([$.generator])) if $.generator.defined;
-    $xml.append: XML::Element.new(:name<icon>, :nodes([$.icon])) if $.icon.defined;
-    $xml.append: XML::Element.new(:name<logo>, :nodes([$.logo])) if $.logo.defined;
+    $xml.append: XML::Element.new(:name<rights>, :nodes([encode-entities($.rights)])) if $.rights.defined;
+    $xml.append: XML::Element.new(:name<generator>, :nodes([encode-entities($.generator)])) if $.generator.defined;
+    $xml.append: XML::Element.new(:name<icon>, :nodes([encode-entities($.icon)])) if $.icon.defined;
+    $xml.append: XML::Element.new(:name<logo>, :nodes([encode-entities($.logo)])) if $.logo.defined;
 
     for @.categories -> $cat {
         $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));

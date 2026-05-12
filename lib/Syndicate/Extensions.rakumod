@@ -16,11 +16,17 @@ sub register-ext(:&parse, :&generate) is export {
 }
 
 sub run-parsers($elem, %attrs) is export {
-    .<parse>($elem, %attrs) for @extensions
+    $ext-lock.protect: {
+        .<parse>($elem, %attrs) for @extensions
+    }
 }
 
 sub run-generators($xml, $item) is export {
-    .<generate>($xml, $item) for @extensions
+    $ext-lock.protect: {
+        for @extensions -> %ext {
+            %ext<generate>($xml, $item)
+        }
+    }
 }
 
 =begin pod

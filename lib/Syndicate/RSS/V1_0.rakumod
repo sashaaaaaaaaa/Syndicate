@@ -54,6 +54,7 @@ method XML {
     $channel.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
     $channel.append: XML::Element.new(:name<link>, :nodes([$.link])) if $.link.defined;
     $channel.append: XML::Element.new(:name<description>, :nodes([$.description])) if $.description.defined;
+    $channel.append: XML::Element.new(:name<generator>, :nodes([$.generator])) if $.generator.defined;
 
     my $items-wrapper = XML::Element.new(:name<items>);
     $channel.append: $items-wrapper;

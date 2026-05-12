@@ -117,6 +117,7 @@ method build-json-item {
     } else {
         %bless<content_html> = $c;
     }
+    %bless<updated>       = $!updated   if $!updated ~~ DateTime;
     %bless<date_published> = $!published if $!published ~~ DateTime;
     %bless<date_modified>  = $!updated   if $!updated ~~ DateTime;
     my @tags = @!categories;

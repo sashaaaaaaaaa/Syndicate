@@ -1,7 +1,7 @@
 use v6.d;
 use OO::Monitors;
 
-unit monitor Syndicate::Stats:ver<0.0.1>:auth<zef:sasha>;
+unit monitor Syndicate::Config:ver<0.0.1>:auth<zef:sasha>;
 
 has int $!feeds-parsed = 0;
 has int $!items-parsed = 0;

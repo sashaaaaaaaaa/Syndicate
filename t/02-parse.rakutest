@@ -34,10 +34,10 @@ is feed-format('<feed xmlns="http://www.w3.org/2005/Atom"><id>i</id></feed>'), A
 
 # JSON Feed from file
 my $json-str = slurp "t/data/jsonfeed-full.json";
-is feed-format($json-str), JSONFeed, "jsonfeed-full.json detected as JSONFeed";
+is feed-format($json-str), JSONFeedFmt, "jsonfeed-full.json detected as JSONFeedFmt";
 
 # JSON bare
-is feed-format('{"version":"https://jsonfeed.org/version/1","title":"t","items":[]}'), JSONFeed, "bare JSON -> JSONFeed";
+is feed-format('{"version":"https://jsonfeed.org/version/1","title":"t","items":[]}'), JSONFeedFmt, "bare JSON -> JSONFeedFmt";
 
 # ===== parse-feed returns correct types =====
 isa-ok parse-feed($json-str), Syndicate::JSONFeed, "parse-feed json returns JSONFeed";

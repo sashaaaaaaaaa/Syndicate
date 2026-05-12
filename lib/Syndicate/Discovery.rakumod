@@ -38,7 +38,7 @@ method find-feeds(Str $html, Str $base-url --> Array) {
     for $html.comb($link-tag) -> $tag {
         my %attr = self!parse-attrs($tag);
         next unless %attr<rel> && %attr<rel>.lc eq 'alternate';
-        my $tv = %attr<type>.lc // "";
+        my $tv = (%attr<type> // "").lc;
         next unless $tv eq 'application/rss+xml'
                   || $tv eq 'application/atom+xml'
                   || $tv eq 'application/feed+json';

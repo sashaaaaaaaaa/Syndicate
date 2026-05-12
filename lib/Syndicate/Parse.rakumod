@@ -7,13 +7,13 @@ use Syndicate::JSONFeed;
 
 unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
-enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeed>;
+enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 
 sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
     die "Empty input" unless $clean.chars;
 
-    return JSONFeed if $clean.starts-with('{');
+    return JSONFeedFmt if $clean.starts-with('{');
 
     my $root = root-element($clean);
     die "Unknown feed format: cannot find root element" unless $root.defined;
@@ -34,7 +34,7 @@ sub parse-feed(Str $input --> Any) is export {
         when RSS2    { return Syndicate::RSS.new($input) }
         when RSS091  { return Syndicate::RSS::V0_91.new($input) }
         when RSS1    { return Syndicate::RSS::V1_0.new($input) }
-        when JSONFeed { return Syndicate::JSONFeed.new($input) }
+        when JSONFeedFmt { return Syndicate::JSONFeed.new($input) }
     }
 }
 

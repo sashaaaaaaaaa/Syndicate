@@ -12,10 +12,12 @@ register-ext(
         %attrs<media-description> = get-media-text($elem, "description");
     },
     generate => sub ($xml, $item) {
-        add-media-content-element($xml, $_) for @($item.media-contents);
-        add-media-thumbnail-element($xml, $_) for @($item.media-thumbnails);
-        $xml.append: XML::Element.new(:name<media:title>, :nodes([$item.media-title])) if $item.media-title.defined;
-        $xml.append: XML::Element.new(:name<media:description>, :nodes([$item.media-description])) if $item.media-description.defined;
+        add-media-content-element($xml, $_) for @($item.?media-contents // []);
+        add-media-thumbnail-element($xml, $_) for @($item.?media-thumbnails // []);
+        my $mt = $item.?media-title // Str;
+        $xml.append: XML::Element.new(:name<media:title>, :nodes([$mt])) if $mt.defined;
+        my $md = $item.?media-description // Str;
+        $xml.append: XML::Element.new(:name<media:description>, :nodes([$md])) if $md.defined;
     }
 );
 
