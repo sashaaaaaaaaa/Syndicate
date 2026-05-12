@@ -4,6 +4,7 @@ use DateTime::Format::RFC2822;
 use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Extensions;
+use Syndicate::Config;
 
 my constant $RFC2822 = DateTime::Format::RFC2822.new;
 
@@ -81,6 +82,7 @@ multi method new-from-xml(XML::Element $item-elem) {
         :itunes-summary(%extra<itunes-summary> // Str),
         :itunes-duration(%extra<itunes-duration> // Str);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
+    Syndicate::Config.record-item;
     self.bless(|%bless, :@media-contents, :@media-thumbnails)
 }
 

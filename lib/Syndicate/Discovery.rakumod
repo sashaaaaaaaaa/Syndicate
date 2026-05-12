@@ -85,7 +85,9 @@ method resolve-url(Str $url, Str $base --> Str) {
         $bp ~~ s/ <-[/]>* $ // unless $bp.ends-with('/');
         $rp = $bp ~ $rp;
     }
-    my $result = $b.scheme ~ '://' ~ $b.host ~ $rp;
+    my $port = $b.port;
+    $port = 0 if $port == 80 || $port == 443;
+    my $result = $b.scheme ~ '://' ~ $b.host ~ ($port ?? ":$port" !! "") ~ $rp;
     $result ~= '?' ~ $u.query.Str if $u.query.Str.chars;
     $result ~= '#' ~ $u.fragment  if $u.fragment.defined && $u.fragment.chars;
     $result

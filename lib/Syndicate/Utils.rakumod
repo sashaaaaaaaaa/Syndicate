@@ -19,7 +19,7 @@ sub encode-entities(Str $text) is export {
 sub get-text($parent, $tag) is export {
     with $parent.elements(:TAG($tag))[0] -> $e {
         with $e.contents[0] -> $t {
-            return decode-entities($t.text // "");
+            return decode-entities($t.?text // "");
         }
     }
     Str
@@ -28,8 +28,8 @@ sub get-text($parent, $tag) is export {
 sub get-text-optional($parent, $tag) is export {
     with $parent.elements(:TAG($tag))[0] -> $e {
         with $e.contents[0] -> $t {
-            my $text = $t.text;
-            return $text.chars ?? decode-entities($text) !! Str;
+            my $text = $t.?text // Str;
+            return $text.defined && $text.chars ?? decode-entities($text) !! Str;
         }
     }
     Str
@@ -44,8 +44,8 @@ sub get-attrib($parent, $tag, $attr) is export {
 }
 
 sub parse-date(Str $str) is export {
-    return Str unless $str.defined && $str.trim.chars > 0;
-    try { datetime-interpret($str.trim) } // Str
+    die "Cannot parse date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
+    datetime-interpret($str.trim)
 }
 
 sub parse-date-optional(Str $str) is export {
@@ -70,7 +70,7 @@ Not typically needed by end users.
 =item C<get-text($parent, $tag)> - Get required text content of a child element
 =item C<get-text-optional($parent, $tag)> - Get optional text content (returns C<Str>)
 =item C<get-attrib($parent, $tag, $attr)> - Get an attribute value from a child element
-=item C<parse-date(Str)> - Parse date string returning C<DateTime> or C<Nil>
+=item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>
 =item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Str>
 
 =end pod

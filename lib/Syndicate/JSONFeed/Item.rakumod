@@ -1,6 +1,7 @@
 use v6.d;
 use Syndicate::Item;
 use Syndicate::Utils;
+use Syndicate::Config;
 
 unit class Syndicate::JSONFeed::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -20,8 +21,8 @@ method new-from-hash(%h) {
     my $summary = %h<summary> // Str;
     my $id      = %h<id> // $link // Str;
 
-    my $dp = parse-date(%h<date_published> // Str);
-    my $dm = parse-date(%h<date_modified> // Str);
+    my $dp = parse-date-optional(%h<date_published> // Str);
+    my $dm = parse-date-optional(%h<date_modified> // Str);
     my $author = Str;
 
     my @authors;
@@ -51,6 +52,7 @@ method new-from-hash(%h) {
         :$author;
     %bless<date_published> = $dp if $dp ~~ DateTime;
     %bless<date_modified>  = $dm if $dm ~~ DateTime;
+    Syndicate::Config.record-item;
     self.bless(|%bless, :@authors, :@tags)
 }
 

@@ -1,19 +1,18 @@
 use v6.d;
-use OO::Monitors;
 
-unit monitor Syndicate::Config:ver<0.0.1>:auth<zef:sasha>;
+unit class Syndicate::Config:ver<0.0.1>:auth<zef:sasha>;
 
-has int $!feeds-parsed = 0;
-has int $!items-parsed = 0;
-has int $!errors = 0;
+my atomicint $feeds-parsed = 0;
+my atomicint $items-parsed = 0;
+my atomicint $errors = 0;
 
-method feeds-parsed { $!feeds-parsed }
-method items-parsed { $!items-parsed }
-method errors { $!errors }
+method feeds-parsed { $feeds-parsed.Int }
+method items-parsed { $items-parsed.Int }
+method errors { $errors.Int }
 
-method record-feed { ++$!feeds-parsed }
-method record-item { ++$!items-parsed }
-method record-error { ++$!errors }
+method record-feed { $feeds-parsed⚛++ }
+method record-item { $items-parsed⚛++ }
+method record-error { $errors⚛++ }
 
 =begin pod
 
@@ -31,9 +30,9 @@ say Syndicate::Config.feeds-parsed;
 
 =head1 DESCRIPTION
 
-A monitor (thread-safe) that tracks parsing statistics: feeds parsed,
-items parsed, and error counts. Used internally. C<OO::Monitors> ensures
-atomic operations.
+Tracks parsing statistics: feeds parsed, items parsed, and error counts.
+Uses class-scoped C<atomicint> counters for thread safety. Methods may be
+called on the type object directly (no instantiation needed).
 
 =head1 METHODS
 

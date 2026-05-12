@@ -98,10 +98,10 @@ method XML {
     $xml.append: XML::Element.new(:name<subtitle>, :nodes([encode-entities($.subtitle)])) if $.subtitle.defined;
 
     if $.link.defined {
-        $xml.append: XML::Element.new(:name<link>, :attribs({:href($.link), :rel<alternate>}));
+        $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link)), :rel<alternate>}));
     }
     if %!link-self<href>.defined {
-        $xml.append: XML::Element.new(:name<link>, :attribs({:href(%!link-self<href>), :rel<self>}));
+        $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities(%!link-self<href>)), :rel<self>}));
     }
 
     if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {

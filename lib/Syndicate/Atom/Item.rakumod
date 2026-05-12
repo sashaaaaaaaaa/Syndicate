@@ -2,6 +2,7 @@ use v6.d;
 use XML;
 use Syndicate::Item;
 use Syndicate::Utils;
+use Syndicate::Config;
 
 unit class Syndicate::Atom::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -79,6 +80,7 @@ multi method new-from-xml(XML::Element $entry-elem) {
         :source-feed(%source-feed);
     %bless<updated> = $updated if $updated ~~ DateTime;
     %bless<published> = $pub if $pub ~~ DateTime;
+    Syndicate::Config.record-item;
     self.bless(|%bless, :@contributors, :categories(@categories))
 }
 

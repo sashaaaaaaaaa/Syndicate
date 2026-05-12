@@ -4,6 +4,7 @@ use Syndicate::RSS::V0_91;
 use Syndicate::RSS::V1_0;
 use Syndicate::Atom;
 use Syndicate::JSONFeed;
+use Syndicate::Config;
 
 unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
@@ -29,13 +30,21 @@ sub feed-format(Str $input --> FeedFormat) is export {
 }
 
 sub parse-feed(Str $input --> Any) is export {
-    given feed-format($input) {
-        when Atom    { return Syndicate::Atom.new($input) }
-        when RSS2    { return Syndicate::RSS.new($input) }
-        when RSS091  { return Syndicate::RSS::V0_91.new($input) }
-        when RSS1    { return Syndicate::RSS::V1_0.new($input) }
-        when JSONFeedFmt { return Syndicate::JSONFeed.new($input) }
+    my $feed = try {
+        given feed-format($input) {
+            when Atom    { Syndicate::Atom.new($input) }
+            when RSS2    { Syndicate::RSS.new($input) }
+            when RSS091  { Syndicate::RSS::V0_91.new($input) }
+            when RSS1    { Syndicate::RSS::V1_0.new($input) }
+            when JSONFeedFmt { Syndicate::JSONFeed.new($input) }
+        }
+    };
+    if $!.defined {
+        Syndicate::Config.record-error;
+        die $!;
     }
+    Syndicate::Config.record-feed;
+    $feed
 }
 
 sub root-element(Str $input) {
@@ -47,13 +56,13 @@ sub root-element(Str $input) {
         return Nil unless $start.defined;
 
         # Scan past XML comments: find the first '-->' after '<!--'
-        if $s.substr($start) ~~ /^ '<!--' [\N\n]+? '-->' / {
+        if $s.substr($start) ~~ /^ '<!--' .+? '-->' / {
             $pos = $start + $/.chars;
             next;
         }
 
         # Scan past CDATA sections: find the first ']]>' after '<![CDATA['
-        if $s.substr($start) ~~ /^ '<![CDATA[' [\N\n]+? ']]>' / {
+        if $s.substr($start) ~~ /^ '<![CDATA[' .+? ']]>' / {
             $pos = $start + $/.chars;
             next;
         }
@@ -62,13 +71,14 @@ sub root-element(Str $input) {
         # since PUBLIC/SYSTEM identifiers may contain >
         if $s.substr($start) ~~ /^ '<!DOCTYPE' / {
             $pos = $start;
-            my $in-single = False;
-            my $in-double = False;
+            my ($in-single, $in-double, $paren-depth);
             while $pos < $s.chars {
                 my $c = $s.substr($pos++, 1);
                 if $c eq '"' && !$in-single    { $in-double = !$in-double }
                 elsif $c eq "'" && !$in-double { $in-single = !$in-single }
-                elsif $c eq '>' && !$in-single && !$in-double { last }
+                elsif $c eq '(' && !$in-single && !$in-double { $paren-depth++ }
+                elsif $c eq ')' && !$in-single && !$in-double && $paren-depth > 0 { $paren-depth-- }
+                elsif $c eq '>' && !$in-single && !$in-double && $paren-depth == 0 { last }
             }
             next;
         }
