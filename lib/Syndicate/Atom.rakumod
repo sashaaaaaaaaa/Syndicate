@@ -10,7 +10,6 @@ has Str $.id;
 has Str $.subtitle;
 has Str $.author;
 has %.author-detail;
-has DateTime $!computed-updated;
 has @.categories;
 has DateTime $.updated;
 has Str $.rights;
