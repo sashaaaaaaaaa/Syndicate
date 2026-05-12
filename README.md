@@ -12,7 +12,6 @@ Syndication feed parser and generator supporting **RSS 2.0**, **RSS
 - `HTTP::Tiny` — Feed fetching via HTTP/HTTPS
 - `IO::Socket::SSL` — HTTPS support (required by HTTP::Tiny)
 - `URI` — URL resolution
-- `OO::Monitors` — Thread-safe stats counters
 
 ## Installation
 
