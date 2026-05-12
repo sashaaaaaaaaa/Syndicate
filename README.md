@@ -5,16 +5,14 @@ Syndication feed parser and generator supporting **RSS 2.0**, **RSS
 
 ## Dependencies
 
-| Module | Used by | Purpose |
-|--------|---------|---------|
-| `XML` | Core | XML parsing and generation (RSS, Atom) |
-| `JSON::Fast` | JSONFeed | JSON parsing and generation |
-| `DateTime::Grammar` | All parsers | W3C/ISO 8601 date parsing |
-| `DateTime::Format` | RSS | RFC 2822 date formatting |
-| `HTTP::Tiny` | Discovery | Feed fetching via HTTP/HTTPS |
-| `IO::Socket::SSL` | Discovery | HTTPS support (required by HTTP::Tiny) |
-| `URI` | Discovery | URL resolution |
-| `OO::Monitors` | Config | Thread-safe stats counters |
+- `XML` — XML parsing and generation (RSS, Atom)
+- `JSON::Fast` — JSON parsing and generation
+- `DateTime::Grammar` — W3C/ISO 8601 date parsing
+- `DateTime::Format` — RFC 2822 date formatting
+- `HTTP::Tiny` — Feed fetching via HTTP/HTTPS
+- `IO::Socket::SSL` — HTTPS support (required by HTTP::Tiny)
+- `URI` — URL resolution
+- `OO::Monitors` — Thread-safe stats counters
 
 ## Installation
 
@@ -382,11 +380,11 @@ Each format also exposes its own attributes:
 
 ```raku
 use Syndicate::Config;
-say "Feeds parsed: {Syndicate::Stats.feeds-parsed}";
-say "Items parsed: {Syndicate::Stats.items-parsed}";
+say "Feeds parsed: {Syndicate::Config.feeds-parsed}";
+say "Items parsed: {Syndicate::Config.items-parsed}";
 
-Syndicate::Stats.record-feed;
-Syndicate::Stats.record-item;
+Syndicate::Config.record-feed;
+Syndicate::Config.record-item;
 ```
 
 # AUTHOR
