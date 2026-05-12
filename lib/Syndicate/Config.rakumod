@@ -19,14 +19,14 @@ method record-error { ++$!errors }
 
 =head1 NAME
 
-Syndicate::Stats - Thread-safe statistics monitor
+Syndicate::Config - Thread-safe configuration monitor
 
 =head1 SYNOPSIS
 
 =begin code :lang<raku>
 use Syndicate::Config;
-Syndicate::Stats.record-feed;
-say Syndicate::Stats.feeds-parsed;
+Syndicate::Config.record-feed;
+say Syndicate::Config.feeds-parsed;
 =end code
 
 =head1 DESCRIPTION

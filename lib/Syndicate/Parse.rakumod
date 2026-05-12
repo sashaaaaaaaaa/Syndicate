@@ -112,7 +112,7 @@ to the appropriate parser class.
 =item C<RSS2> - RSS 2.0
 =item C<RSS091> - RSS 0.91
 =item C<RSS1> - RSS 1.0
-=item C<JSONFeed> - JSON Feed
+=item C<JSONFeedFmt> - JSON Feed
 
 =head1 EXPORTED SUBS
 
