@@ -94,9 +94,8 @@ method XML {
         $xml.append: XML::Element.new(:name<content>, :attribs(%attribs), :nodes([encode-entities($.content)]));
     }
 
-    if $.updated.defined {
-        $xml.append: XML::Element.new(:name<updated>, :nodes([$.updated.Str]));
-    }
+    my $upd = $.updated // DateTime.now;
+    $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
     if $.published.defined {
         $xml.append: XML::Element.new(:name<published>, :nodes([$.published.Str]));
     }
