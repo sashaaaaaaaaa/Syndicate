@@ -97,9 +97,8 @@ method XML {
     $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
     $xml.append: XML::Element.new(:name<subtitle>, :nodes([encode-entities($.subtitle)])) if $.subtitle.defined;
 
-    my $alt-link = $.link // "";
-    if $alt-link.defined {
-        $xml.append: XML::Element.new(:name<link>, :attribs({:href($alt-link), :rel<alternate>}));
+    if $.link.defined {
+        $xml.append: XML::Element.new(:name<link>, :attribs({:href($.link), :rel<alternate>}));
     }
     if %!link-self<href>.defined {
         $xml.append: XML::Element.new(:name<link>, :attribs({:href(%!link-self<href>), :rel<self>}));

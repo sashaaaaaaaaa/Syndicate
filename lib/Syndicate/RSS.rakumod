@@ -41,7 +41,7 @@ multi method new(Str $xml) {
     my $me      = get-text-optional($channel, "managingEditor");
     my $wm      = get-text-optional($channel, "webMaster");
     my $pd      = parse-date-optional(get-text-optional($channel, "pubDate"));
-    my $lbd     = parse-date-optional(get-text($channel, "lastBuildDate"));
+    my $lbd     = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
     my $cat     = get-text-optional($channel, "category");
     my $gen     = get-text-optional($channel, "generator");
     my $docs    = get-text-optional($channel, "docs");

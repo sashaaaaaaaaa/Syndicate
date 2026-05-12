@@ -44,8 +44,8 @@ sub get-attrib($parent, $tag, $attr) is export {
 }
 
 sub parse-date(Str $str) is export {
-    return Nil unless $str.defined && $str.trim.chars > 0;
-    try { datetime-interpret($str.trim) } // Nil
+    return Str unless $str.defined && $str.trim.chars > 0;
+    try { datetime-interpret($str.trim) } // Str
 }
 
 sub parse-date-optional(Str $str) is export {

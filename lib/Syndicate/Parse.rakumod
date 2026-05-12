@@ -58,6 +58,21 @@ sub root-element(Str $input) {
             next;
         }
 
+        # Skip DOCTYPE declarations — scan for > not inside quotes,
+        # since PUBLIC/SYSTEM identifiers may contain >
+        if $s.substr($start) ~~ /^ '<!DOCTYPE' / {
+            $pos = $start;
+            my $in-single = False;
+            my $in-double = False;
+            while $pos < $s.chars {
+                my $c = $s.substr($pos++, 1);
+                if $c eq '"' && !$in-single    { $in-double = !$in-double }
+                elsif $c eq "'" && !$in-double { $in-single = !$in-single }
+                elsif $c eq '>' && !$in-single && !$in-double { last }
+            }
+            next;
+        }
+
         my $close = index($s, '>', $start);
         return Nil unless $close.defined;
 

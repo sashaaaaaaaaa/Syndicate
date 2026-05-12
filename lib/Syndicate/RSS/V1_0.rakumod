@@ -60,6 +60,12 @@ method XML {
     $channel.append: XML::Element.new(:name<generator>, :nodes([$.generator])) if $.generator.defined;
     add-dc-element($channel, "language", $.language) if $.language.defined;
 
+    if %.image<about>.defined {
+        my $img-ref = XML::Element.new(:name<image>);
+        $img-ref.attribs{'rdf:resource'} = %.image<about>;
+        $channel.append: $img-ref;
+    }
+
     my $items-wrapper = XML::Element.new(:name<items>);
     $channel.append: $items-wrapper;
     my $seq = XML::Element.new(:name<rdf:Seq>);
@@ -69,12 +75,6 @@ method XML {
         my $resource = $item.link // $item.about // Str;
         $li.attribs{'rdf:resource'} = $resource if $resource.defined && $resource.chars;
         $seq.append: $li;
-    }
-
-    if %.image<about>.defined {
-        my $img-ref = XML::Element.new(:name<image>);
-        $img-ref.attribs{'rdf:resource'} = %.image<about>;
-        $channel.append: $img-ref;
     }
 
     if %.image<url>.defined || %.image<title>.defined {
