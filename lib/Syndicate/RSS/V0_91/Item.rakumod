@@ -7,8 +7,8 @@ unit class Syndicate::RSS::V0_91::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate
 
 proto method new-from-xml(|) {*}
 multi method new-from-xml(XML::Element $item-elem) {
-    my $title = get-text($item-elem, "title");
-    my $link  = get-text($item-elem, "link");
+    my $title = get-text-optional($item-elem, "title");
+    my $link  = get-text-optional($item-elem, "link");
     my $desc  = get-text-optional($item-elem, "description");
     self.bless(:$title, :$link, :summary($desc), :id($link // Str), :content($desc // Str))
 }

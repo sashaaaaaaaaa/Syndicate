@@ -92,4 +92,12 @@ Parse RSS 2.0 XML, returning C<Syndicate::RSS>.
 
 Parse Atom 1.0 XML, returning C<Syndicate::Atom>.
 
+=head2 C<parse-json(Str $json)>
+
+Parse JSON Feed, returning C<Syndicate::JSONFeed>.
+
+=head2 C<parse-rss1(Str $xml)>
+
+Parse RSS 1.0 XML, returning C<Syndicate::RSS::V1_0>.
+
 =end pod
