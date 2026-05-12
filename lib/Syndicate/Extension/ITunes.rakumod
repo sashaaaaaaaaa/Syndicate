@@ -22,7 +22,7 @@ my constant NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 sub get-itunes-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("itunes:$tag"))[0] -> $e {
         with $e.contents[0] -> $t {
-            return $t.text // "";
+            return $t.?text // "";
         }
     }
     Str

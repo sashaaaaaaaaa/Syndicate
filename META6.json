@@ -10,7 +10,6 @@
         "JSON::Fast",
         "DateTime::Grammar",
         "DateTime::Format",
-        "OO::Monitors",
         "HTTP::Tiny",
         "IO::Socket::SSL",
         "URI"
@@ -19,7 +18,7 @@
         "Syndicate": "lib/Syndicate.rakumod",
         "Syndicate::Item": "lib/Syndicate/Item.rakumod",
         "Syndicate::Feed": "lib/Syndicate/Feed.rakumod",
-        "Syndicate::Config": "lib/Syndicate/Config.rakumod",
+        "Syndicate::Stats": "lib/Syndicate/Stats.rakumod",
         "Syndicate::Utils": "lib/Syndicate/Utils.rakumod",
         "Syndicate::Parse": "lib/Syndicate/Parse.rakumod",
         "Syndicate::RSS": "lib/Syndicate/RSS.rakumod",

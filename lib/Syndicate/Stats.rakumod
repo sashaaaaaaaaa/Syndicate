@@ -1,6 +1,6 @@
 use v6.d;
 
-unit class Syndicate::Config:ver<0.0.1>:auth<zef:sasha>;
+unit class Syndicate::Stats:ver<0.0.1>:auth<zef:sasha>;
 
 my atomicint $feeds-parsed = 0;
 my atomicint $items-parsed = 0;
@@ -18,14 +18,14 @@ method record-error { $errors⚛++ }
 
 =head1 NAME
 
-Syndicate::Config - Thread-safe configuration monitor
+Syndicate::Stats - Thread-safe parsing statistics
 
 =head1 SYNOPSIS
 
 =begin code :lang<raku>
-use Syndicate::Config;
-Syndicate::Config.record-feed;
-say Syndicate::Config.feeds-parsed;
+use Syndicate::Stats;
+Syndicate::Stats.record-feed;
+say Syndicate::Stats.feeds-parsed;
 =end code
 
 =head1 DESCRIPTION

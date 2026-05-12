@@ -2,12 +2,12 @@ use v6.d;
 use Test;
 use lib 'lib';
 use Syndicate;
-use Syndicate::Config;
+use Syndicate::Stats;
 
 plan 6;
 
-my $stats = Syndicate::Config.new;
-isa-ok $stats, Syndicate::Config, "Config monitor created";
+my $stats = Syndicate::Stats.new;
+isa-ok $stats, Syndicate::Stats, "Stats object created";
 
 is $stats.feeds-parsed, 0, "starts at zero";
 is $stats.items-parsed, 0, "items starts at zero";

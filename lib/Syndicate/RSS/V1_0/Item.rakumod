@@ -2,6 +2,7 @@ use v6.d;
 use XML;
 use Syndicate::Item;
 use Syndicate::Utils;
+use Syndicate::Stats;
 use Syndicate::Extension::DublinCore;
 
 unit class Syndicate::RSS::V1_0::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
@@ -39,6 +40,7 @@ multi method new-from-xml(XML::Element $item-elem) {
                 :id($item-id),
                 :content($desc // Str);
     %bless<updated> = $updated if $updated ~~ DateTime;
+    Syndicate::Stats.record-item;
     self.bless(|%bless, :dc-subjects(@dc-subjects))
 }
 

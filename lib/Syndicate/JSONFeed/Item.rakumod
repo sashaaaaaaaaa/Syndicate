@@ -1,7 +1,7 @@
 use v6.d;
 use Syndicate::Item;
 use Syndicate::Utils;
-use Syndicate::Config;
+use Syndicate::Stats;
 
 unit class Syndicate::JSONFeed::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -52,7 +52,7 @@ method new-from-hash(%h) {
         :$author;
     %bless<date_published> = $dp if $dp ~~ DateTime;
     %bless<date_modified>  = $dm if $dm ~~ DateTime;
-    Syndicate::Config.record-item;
+    Syndicate::Stats.record-item;
     self.bless(|%bless, :@authors, :@tags)
 }
 

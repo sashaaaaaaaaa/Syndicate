@@ -379,12 +379,14 @@ Each format also exposes its own attributes:
 ## Statistics
 
 ```raku
-use Syndicate::Config;
-say "Feeds parsed: {Syndicate::Config.feeds-parsed}";
-say "Items parsed: {Syndicate::Config.items-parsed}";
+use Syndicate::Stats;
 
-Syndicate::Config.record-feed;
-Syndicate::Config.record-item;
+say "Feeds parsed: {Syndicate::Stats.feeds-parsed}";
+say "Items parsed: {Syndicate::Stats.items-parsed}";
+
+Syndicate::Stats.record-feed;
+
+Syndicate::Stats.record-item;
 ```
 
 # AUTHOR

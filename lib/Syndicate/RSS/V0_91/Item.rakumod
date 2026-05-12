@@ -2,6 +2,7 @@ use v6.d;
 use XML;
 use Syndicate::Item;
 use Syndicate::Utils;
+use Syndicate::Stats;
 
 unit class Syndicate::RSS::V0_91::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -10,6 +11,7 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $title = get-text-optional($item-elem, "title");
     my $link  = get-text-optional($item-elem, "link");
     my $desc  = get-text-optional($item-elem, "description");
+    Syndicate::Stats.record-item;
     self.bless(:$title, :$link, :summary($desc), :id($link // Str), :content($desc // Str))
 }
 

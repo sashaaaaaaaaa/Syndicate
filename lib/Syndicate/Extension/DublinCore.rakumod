@@ -19,7 +19,7 @@ register-ext(
 sub get-dc-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("dc:$tag"))[0] -> $e {
         with $e.contents[0] -> $t {
-            return $t.text // "";
+            return $t.?text // "";
         }
     }
     Str

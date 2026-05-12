@@ -2,7 +2,7 @@ use v6.d;
 
 use Syndicate::Item;
 use Syndicate::Feed;
-use Syndicate::Config;
+use Syndicate::Stats;
 use Syndicate::RSS;
 use Syndicate::RSS::Item;
 use Syndicate::RSS::V0_91;

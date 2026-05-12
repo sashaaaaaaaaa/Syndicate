@@ -48,7 +48,9 @@ method XML {
         'xmlns:rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
         'xmlns'     => 'http://purl.org/rss/1.0/'
     }));
-    add-dc-declaration($root) if $.language.defined || @.items;
+    add-dc-declaration($root) if $.language.defined
+        || @.items.first({ .?author.defined || .?updated.defined
+            || ( .?dc-subjects && .?dc-subjects.elems > 0 ) });
 
     my $channel = XML::Element.new(:name<channel>);
     $channel.attribs{'rdf:about'} = $.about if $.about.defined;

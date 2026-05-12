@@ -10,8 +10,8 @@ register-ext(
         %attrs<media-contents> = @mc if @mc;
         my @mt = get-media-thumbnails($elem);
         %attrs<media-thumbnails> = @mt if @mt;
-        %attrs<media-title>       = get-media-text($elem, "title");
-        %attrs<media-description> = get-media-text($elem, "description");
+        with get-media-text($elem, "title")       { %attrs<media-title>       = $_ }
+        with get-media-text($elem, "description") { %attrs<media-description> = $_ }
     },
     generate => sub ($xml, $item) {
         add-media-content-element($xml, $_) for @($item.?media-contents // []);
@@ -28,7 +28,7 @@ register-ext(
 sub get-media-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("media:$tag"))[0] -> $e {
         with $e.contents[0] -> $t {
-            return $t.text // "";
+            return $t.?text // "";
         }
     }
     Str

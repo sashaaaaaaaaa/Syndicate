@@ -112,10 +112,12 @@ method build-json-item {
         :id($item-id),
         :summary($!summary // Str),
         :content($c);
-    if ($!content-type // "") eq 'text' {
-        %bless<content_text> = $c;
-    } else {
-        %bless<content_html> = $c;
+    if $c.defined {
+        if ($!content-type // "") eq 'text' {
+            %bless<content_text> = $c;
+        } else {
+            %bless<content_html> = $c;
+        }
     }
     %bless<date_published> = $!published if $!published ~~ DateTime;
     %bless<date_modified>  = $!updated   if $!updated ~~ DateTime;

@@ -4,7 +4,7 @@ use DateTime::Format::RFC2822;
 use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Extensions;
-use Syndicate::Config;
+use Syndicate::Stats;
 
 my constant $RFC2822 = DateTime::Format::RFC2822.new;
 
@@ -48,7 +48,7 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $guid = Str;
     my $guid-is-permalink = True;
     with $guid-elem {
-        $guid = .contents[0].text // Str;
+        $guid = .contents[0].?text // Str;
         $guid-is-permalink = (.attribs<isPermaLink> // "true") eq "true";
     }
 
@@ -82,7 +82,7 @@ multi method new-from-xml(XML::Element $item-elem) {
         :itunes-summary(%extra<itunes-summary> // Str),
         :itunes-duration(%extra<itunes-duration> // Str);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
-    Syndicate::Config.record-item;
+    Syndicate::Stats.record-item;
     self.bless(|%bless, :@media-contents, :@media-thumbnails)
 }
 

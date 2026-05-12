@@ -4,7 +4,7 @@ use Syndicate::RSS::V0_91;
 use Syndicate::RSS::V1_0;
 use Syndicate::Atom;
 use Syndicate::JSONFeed;
-use Syndicate::Config;
+use Syndicate::Stats;
 
 unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
@@ -40,10 +40,10 @@ sub parse-feed(Str $input --> Any) is export {
         }
     };
     if $!.defined {
-        Syndicate::Config.record-error;
+        Syndicate::Stats.record-error;
         die $!;
     }
-    Syndicate::Config.record-feed;
+    Syndicate::Stats.record-feed;
     $feed
 }
 
