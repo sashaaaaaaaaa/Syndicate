@@ -5,13 +5,13 @@ Syndication feed parser and generator supporting **RSS 2.0**, **RSS
 
 ## Dependencies
 
-- `XML` — XML parsing and generation (RSS, Atom)
-- `JSON::Fast` — JSON parsing and generation
-- `DateTime::Grammar` — W3C/ISO 8601 date parsing
-- `DateTime::Format` — RFC 2822 date formatting
-- `HTTP::Tiny` — Feed fetching via HTTP/HTTPS
-- `IO::Socket::SSL` — HTTPS support (required by HTTP::Tiny)
-- `URI` — URL resolution
+- [XML](https://raku.land/zef:raku-community-modules/XML) — XML parsing and generation (RSS, Atom)
+- [JSON::Fast](https://raku.land/cpan:TIMOTIMO/JSON::Fast) — JSON parsing and generation
+- [DateTime::Grammar](https://raku.land/zef:antononcube/DateTime::Grammar) — W3C/ISO 8601 date parsing
+- [DateTime::Format](https://raku.land/zef:raku-community-modules/DateTime::Format) — RFC 2822 date formatting
+- [HTTP::Tiny](https://raku.land/zef:jjatria/HTTP::Tiny) — Feed fetching via HTTP/HTTPS
+- [IO::Socket::SSL](https://raku.land/zef:raku-community-modules/IO::Socket::SSL) — HTTPS support (required by HTTP::Tiny)
+- [URI](https://raku.land/zef:raku-community-modules/URI) — URL resolution
 
 ## Installation
 
