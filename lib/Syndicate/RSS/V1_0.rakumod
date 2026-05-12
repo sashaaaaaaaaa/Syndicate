@@ -48,7 +48,7 @@ method XML {
         'xmlns:rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
         'xmlns'     => 'http://purl.org/rss/1.0/'
     }));
-    add-dc-declaration($root);
+    add-dc-declaration($root) if $.language.defined || @.items;
 
     my $channel = XML::Element.new(:name<channel>);
     $channel.attribs{'rdf:about'} = $.about if $.about.defined;
@@ -72,7 +72,7 @@ method XML {
     $items-wrapper.append: $seq;
     for @.items -> $item {
         my $li = XML::Element.new(:name<rdf:li>);
-        my $resource = $item.link // $item.about // Str;
+        my $resource = $item.link // $item.?about // Str;
         $li.attribs{'rdf:resource'} = $resource if $resource.defined && $resource.chars;
         $seq.append: $li;
     }

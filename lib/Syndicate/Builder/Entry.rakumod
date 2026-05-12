@@ -43,7 +43,7 @@ method media-title(Str $v?) { $!media-title = $v if $v.defined; $!media-title }
 
 method media-description(Str $v?) { $!media-description = $v if $v.defined; $!media-description }
 
-method media-content(Str :$url, Str :$type, Int :$width, Int :$height, Int :$duration) {
+method media-content(Str :$url, Str :$type, Str :$width, Str :$height, Str :$duration) {
     my %mc = :$url, :$type;
     %mc<width>    = $width    if $width.defined;
     %mc<height>   = $height   if $height.defined;
@@ -52,7 +52,7 @@ method media-content(Str :$url, Str :$type, Int :$width, Int :$height, Int :$dur
     @!media-contents
 }
 
-method media-thumbnail(Str :$url, Int :$width, Int :$height, Str :$time) {
+method media-thumbnail(Str :$url, Str :$width, Str :$height, Str :$time) {
     my %mt = :$url;
     %mt<width>  = $width  if $width.defined;
     %mt<height> = $height if $height.defined;
@@ -117,7 +117,6 @@ method build-json-item {
     } else {
         %bless<content_html> = $c;
     }
-    %bless<updated>       = $!updated   if $!updated ~~ DateTime;
     %bless<date_published> = $!published if $!published ~~ DateTime;
     %bless<date_modified>  = $!updated   if $!updated ~~ DateTime;
     my @tags = @!categories;

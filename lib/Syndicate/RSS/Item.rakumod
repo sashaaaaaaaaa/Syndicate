@@ -41,7 +41,7 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $author  = get-text-optional($item-elem, "author");
     my $cat     = get-text-optional($item-elem, "category");
     my $comment = get-text-optional($item-elem, "comments");
-    my $pubdate = parse-date-optional(get-text($item-elem, "pubDate"));
+    my $pubdate = parse-date-optional(get-text-optional($item-elem, "pubDate"));
     my $source  = get-text-optional($item-elem, "source");
 
     my $guid-elem = $item-elem.elements(:TAG<guid>)[0];

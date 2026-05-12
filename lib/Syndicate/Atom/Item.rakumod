@@ -28,7 +28,15 @@ multi method new-from-xml(XML::Element $entry-elem) {
     my $id       = get-text($entry-elem, "id");
     my $title    = get-text($entry-elem, "title");
     my $summary  = get-text-optional($entry-elem, "summary");
-    my $content  = get-text-optional($entry-elem, "content");
+    my $content  = Str;
+    my $content-type = Str;
+    with $entry-elem.elements(:TAG<content>)[0] -> $ce {
+        with $ce.contents[0] -> $t {
+            my $text = $t.?text // Str;
+            $content = $text.defined && $text.chars ?? decode-entities($text) !! Str;
+        }
+        $content-type = $ce.attribs<type> // Str;
+    }
     my $updated  = parse-date-optional(get-text($entry-elem, "updated"));
     my $pub      = parse-date-optional(get-text($entry-elem, "published"));
     my $rights   = get-text-optional($entry-elem, "rights");
@@ -74,7 +82,7 @@ multi method new-from-xml(XML::Element $entry-elem) {
     my %bless = :$id, :$title, :$link, :summary($summary),
         :$author,
         :$content,
-        :content-type(get-attrib($entry-elem, "content", "type")),
+        :$content-type,
         :$rights,
         :author-detail(%author-detail),
         :source-feed(%source-feed);

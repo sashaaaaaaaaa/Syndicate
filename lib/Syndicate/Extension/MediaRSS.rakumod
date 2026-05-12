@@ -6,18 +6,22 @@ unit module Syndicate::Extension::MediaRSS:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(
     parse => sub ($elem, %attrs) {
-        %attrs<media-contents>    = get-media-contents($elem);
-        %attrs<media-thumbnails>  = get-media-thumbnails($elem);
+        my @mc = get-media-contents($elem);
+        %attrs<media-contents> = @mc if @mc;
+        my @mt = get-media-thumbnails($elem);
+        %attrs<media-thumbnails> = @mt if @mt;
         %attrs<media-title>       = get-media-text($elem, "title");
         %attrs<media-description> = get-media-text($elem, "description");
     },
     generate => sub ($xml, $item) {
         add-media-content-element($xml, $_) for @($item.?media-contents // []);
         add-media-thumbnail-element($xml, $_) for @($item.?media-thumbnails // []);
-        my $mt = $item.?media-title // Str;
-        $xml.append: XML::Element.new(:name<media:title>, :nodes([$mt])) if $mt.defined;
-        my $md = $item.?media-description // Str;
-        $xml.append: XML::Element.new(:name<media:description>, :nodes([$md])) if $md.defined;
+        with $item.?media-title {
+            $xml.append: XML::Element.new(:name<media:title>, :nodes([$_]));
+        }
+        with $item.?media-description {
+            $xml.append: XML::Element.new(:name<media:description>, :nodes([$_]));
+        }
     }
 );
 

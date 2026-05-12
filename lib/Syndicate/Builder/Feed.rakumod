@@ -125,7 +125,7 @@ method json-feed {
         :language($!language // Str),
         :generator($!generator // Str),
         :icon($!icon // Str),
-        :favicon($!logo // Str),
+        :favicon($!icon // Str),
         :author(%author);
     Syndicate::JSONFeed.new(|%bless, :@items)
 }

@@ -35,6 +35,7 @@ multi method new(Str $xml) {
     my $link    = get-text($channel, "link");
     my $desc    = get-text($channel, "description");
     my $lang    = get-text-optional($channel, "language");
+    my $gen     = get-text-optional($channel, "generator");
     my $cpy     = get-text-optional($channel, "copyright");
     my $me      = get-text-optional($channel, "managingEditor");
     my $wm      = get-text-optional($channel, "webMaster");
@@ -54,7 +55,7 @@ multi method new(Str $xml) {
     }
 
     my %bless = :$title, :$link, :description($desc),
-        :language($lang), :copyright($cpy),
+        :language($lang), :generator($gen), :copyright($cpy),
         :managingEditor($me), :webMaster($wm),
         :rating($rating), :$docs,
         :image(%image), :textInput(%textInput);

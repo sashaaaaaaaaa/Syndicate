@@ -11,9 +11,9 @@ register-ext(
         %attrs<itunes-duration> = get-itunes-duration($elem);
     },
     generate => sub ($xml, $item) {
-        add-itunes-element($xml, "author",   $item.?itunes-author // Str);
-        add-itunes-element($xml, "summary",  $item.?itunes-summary // Str);
-        add-itunes-element($xml, "duration", $item.?itunes-duration // Str);
+        with $item.?itunes-author  { add-itunes-element($xml, "author",   $_) }
+        with $item.?itunes-summary { add-itunes-element($xml, "summary",  $_) }
+        with $item.?itunes-duration { add-itunes-element($xml, "duration", $_) }
     }
 );
 

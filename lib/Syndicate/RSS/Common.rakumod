@@ -33,7 +33,7 @@ method parse-skip-hours($channel --> Array) {
     with $channel.elements(:TAG<skipHours>)[0] {
         for .elements(:TAG<hour>) -> $h {
             with $h.contents[0] {
-                @skipHours.push: .text.Int;
+                @skipHours.push: .text.Int if .text ~~ /^\d+$/;
             }
         }
     }
@@ -69,10 +69,14 @@ method build-xml-image($channel, %image) {
 method build-xml-textinput($channel, %textInput) {
     return unless %textInput;
     my $ti = XML::Element.new(:name<textinput>);
-    $ti.append: XML::Element.new(:name<title>, :nodes([%textInput<title>]));
-    $ti.append: XML::Element.new(:name<description>, :nodes([%textInput<description>]));
-    $ti.append: XML::Element.new(:name<name>, :nodes([%textInput<name>]));
-    $ti.append: XML::Element.new(:name<link>, :nodes([%textInput<link>]));
+    $ti.append: XML::Element.new(:name<title>, :nodes([%textInput<title>]))
+        if %textInput<title>.defined && %textInput<title>.chars;
+    $ti.append: XML::Element.new(:name<description>, :nodes([%textInput<description>]))
+        if %textInput<description>.defined && %textInput<description>.chars;
+    $ti.append: XML::Element.new(:name<name>, :nodes([%textInput<name>]))
+        if %textInput<name>.defined && %textInput<name>.chars;
+    $ti.append: XML::Element.new(:name<link>, :nodes([%textInput<link>]))
+        if %textInput<link>.defined && %textInput<link>.chars;
     $channel.append: $ti;
 }
 
