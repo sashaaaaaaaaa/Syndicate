@@ -21,6 +21,8 @@ multi method new(Str $xml) {
     my $title = get-text($channel, "title");
     my $link  = get-text($channel, "link");
     my $desc  = get-text($channel, "description");
+    my $gen   = get-text-optional($channel, "generator");
+    my $lang  = get-text-optional($channel, "language");
 
     my %image;
     with $root.elements(:TAG<image>)[0] -> $img {
@@ -36,6 +38,7 @@ multi method new(Str $xml) {
     }
 
     self.bless(:$about, :$title, :$link, :description($desc),
+               :generator($gen), :language($lang),
                :image(%image),
                :@items)
 }
@@ -65,6 +68,12 @@ method XML {
         my $resource = $item.link // $item.about // Str;
         $li.attribs{'rdf:resource'} = $resource if $resource.defined && $resource.chars;
         $seq.append: $li;
+    }
+
+    if %.image<about>.defined {
+        my $img-ref = XML::Element.new(:name<image>);
+        $img-ref.attribs{'rdf:resource'} = %.image<about>;
+        $channel.append: $img-ref;
     }
 
     if %.image<url>.defined || %.image<title>.defined {

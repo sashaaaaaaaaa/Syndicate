@@ -34,8 +34,8 @@ multi method new(XML::Element $xml-elem) {
 
 proto method new-from-xml(|) {*}
 multi method new-from-xml(XML::Element $item-elem) {
-    my $title   = get-text($item-elem, "title");
-    my $link    = get-text($item-elem, "link");
+    my $title   = get-text-optional($item-elem, "title");
+    my $link    = get-text-optional($item-elem, "link");
     my $desc    = get-text($item-elem, "description");
     my $author  = get-text-optional($item-elem, "author");
     my $cat     = get-text-optional($item-elem, "category");

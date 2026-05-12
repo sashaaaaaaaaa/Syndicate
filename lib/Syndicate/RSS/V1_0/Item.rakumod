@@ -29,7 +29,7 @@ multi method new-from-xml(XML::Element $item-elem) {
     $author //= get-dc-text($item-elem, "creator");
 
     my $dc-date = get-dc-text($item-elem, "date");
-    my $updated = parse-date($dc-date);
+    my $updated = parse-date-optional($dc-date);
 
     my @dc-subjects = get-dc-texts($item-elem, "subject");
 

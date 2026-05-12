@@ -19,6 +19,7 @@ use Syndicate::Builder::Entry;
 use Syndicate::Parse;
 use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
+use Syndicate::Extension::ITunes;
 use Syndicate::Discovery;
 
 unit class Syndicate:ver<0.0.1>:auth<zef:sasha>;
@@ -33,6 +34,14 @@ sub parse-rss(Str $xml) is export {
 
 sub parse-atom(Str $xml) is export {
     Syndicate::Atom.new($xml)
+}
+
+sub parse-json(Str $json) is export {
+    Syndicate::JSONFeed.new($json)
+}
+
+sub parse-rss1(Str $xml) is export {
+    Syndicate::RSS::V1_0.new($xml)
 }
 
 =begin pod
