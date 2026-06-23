@@ -21,7 +21,6 @@ multi method new(XML::Element $xml-elem) {
     self.new-from-xml($xml-elem)
 }
 
-proto method new-from-xml(|) {*}
 multi method new-from-xml(XML::Element $item-elem) {
     my $about   = $item-elem.attribs{'rdf:about'} // $item-elem.attribs<about> // Str;
     my $title   = get-text($item-elem, "title");

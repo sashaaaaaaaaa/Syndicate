@@ -24,7 +24,6 @@ multi method new(XML::Element $xml-elem) {
     self.new-from-xml($xml-elem)
 }
 
-proto method new-from-xml(|) {*}
 multi method new-from-xml(XML::Element $entry-elem) {
     my $id       = get-text($entry-elem, "id");
     my $title    = get-text($entry-elem, "title");

@@ -26,7 +26,7 @@ has Str $.itunes-duration;
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid RSS item XML: $!" unless $doc;
-    die "Not an item element" unless $doc.root.name eq "item";
+    die "Not an RSS item element" unless $doc.root.name eq "item";
     self.new-from-xml($doc.root)
 }
 
@@ -34,7 +34,6 @@ multi method new(XML::Element $xml-elem) {
     self.new-from-xml($xml-elem)
 }
 
-proto method new-from-xml(|) {*}
 multi method new-from-xml(XML::Element $item-elem) {
     my $title   = get-text-optional($item-elem, "title");
     my $link    = get-text-optional($item-elem, "link");

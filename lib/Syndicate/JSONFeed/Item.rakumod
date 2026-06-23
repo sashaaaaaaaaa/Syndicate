@@ -1,9 +1,16 @@
 use v6.d;
+use JSON::Fast;
 use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Stats;
 
 unit class Syndicate::JSONFeed::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
+
+multi method new(Str $json) {
+    my %h = try { from-json($json) };
+    die "Invalid JSON Feed item JSON: $!" unless %h;
+    self.new-from-hash(%h)
+}
 
 has Str $.external_url;
 has Str $.content_html;
@@ -83,6 +90,8 @@ method to-hash {
     }
     %h
 }
+
+method Str { to-json $.to-hash }
 
 =begin pod
 

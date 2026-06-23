@@ -122,7 +122,8 @@ method build-json-item {
     %bless<date_published> = $!published if $!published ~~ DateTime;
     %bless<date_modified>  = $!updated   if $!updated ~~ DateTime;
     my @tags = @!categories;
-    my @authors = %author-detail ?? %(%author-detail) !! ();
+    my @authors;
+    @authors.push: %author-detail if %author-detail;
     Syndicate::JSONFeed::Item.new(|%bless, :@authors, :@tags)
 }
 
