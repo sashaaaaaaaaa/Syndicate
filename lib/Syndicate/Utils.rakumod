@@ -18,10 +18,10 @@ sub encode-entities(Str $text) is export {
 }
 
 sub get-text($parent, $tag) is export {
-    with $parent.elements(:TAG($tag))[0] -> $e {
-        with $e.contents[0] -> $t {
-            return decode-entities($t.?text // "");
-        }
+    my $e = $parent.elements(:TAG($tag))[0];
+    die "Missing required element <$tag>" without $e;
+    with $e.contents[0] -> $t {
+        return decode-entities($t.?text // "");
     }
     Str
 }
@@ -68,7 +68,7 @@ Not typically needed by end users.
 =head1 EXPORTED SUBS
 
 =item C<decode-entities(Str)>, C<encode-entities(Str)> - XML entity handling
-=item C<get-text($parent, $tag)> - Get text content of a child element (returns C<Str> if missing)
+=item C<get-text($parent, $tag)> - Get required text content, dies if element missing
 =item C<get-text-optional($parent, $tag)> - Get optional text content (returns C<Str>)
 =item C<get-attrib($parent, $tag, $attr)> - Get an attribute value from a child element
 =item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>

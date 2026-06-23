@@ -39,7 +39,7 @@ multi method new-from-xml(XML::Element $entry-elem) {
         $content-type = $ce.attribs<type> // Str;
     }
     my $updated  = parse-date-optional(get-text($entry-elem, "updated"));
-    my $pub      = parse-date-optional(get-text($entry-elem, "published"));
+    my $pub      = parse-date-optional(get-text-optional($entry-elem, "published"));
     my $rights   = get-text-optional($entry-elem, "rights");
 
     my $link = "";
