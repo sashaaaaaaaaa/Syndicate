@@ -32,11 +32,11 @@ multi method new-from-xml(XML::Element $entry-elem) {
     my $content  = Str;
     my $content-type = Str;
     with $entry-elem.elements(:TAG<content>)[0] -> $ce {
+        $content-type = $ce.attribs<type> // "text";
         with $ce.contents[0] -> $t {
             my $text = $t.?text // Str;
             $content = $text.defined && $text.chars ?? decode-entities($text) !! Str;
         }
-        $content-type = $ce.attribs<type> // Str;
     }
     my $updated  = parse-date(get-text($entry-elem, "updated"));
     my $pub      = parse-date-optional(get-text-optional($entry-elem, "published"));

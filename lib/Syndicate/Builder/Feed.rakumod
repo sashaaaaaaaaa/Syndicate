@@ -68,18 +68,19 @@ method entries { @!entries }
 
 method rss-feed {
     my @items = @!entries.map(*.build-rss-item);
-    my $cat = @!categories ?? @!categories[0] !! Str;
-    my %bless = :title($!title // Str), :link($!link // Str),
-        :description($!description // Str),
-        :language($!language // Str),
-        :copyright($!rights // Str),
-        :managingEditor($!author-name // Str),
-        :generator($!generator // Str),
-        :category($cat),
-        :itunes-author($!itunes-author // Str),
-        :itunes-summary($!itunes-summary // Str);
-    %bless<atom-self-link> = $!atom-self-link if $!atom-self-link.defined;
-    %bless<pubDate> = $!updated if $!updated ~~ DateTime;
+    my %bless;
+    %bless<title>             = $!title          if $!title.defined;
+    %bless<link>              = $!link           if $!link.defined;
+    %bless<description>       = $!description    if $!description.defined;
+    %bless<language>          = $!language       if $!language.defined;
+    %bless<copyright>         = $!rights         if $!rights.defined;
+    %bless<managingEditor>    = $!author-name    if $!author-name.defined;
+    %bless<generator>         = $!generator      if $!generator.defined;
+    %bless<category>          = @!categories[0]  if @!categories;
+    %bless<itunes-author>     = $!itunes-author  if $!itunes-author.defined;
+    %bless<itunes-summary>    = $!itunes-summary if $!itunes-summary.defined;
+    %bless<atom-self-link>    = $!atom-self-link if $!atom-self-link.defined;
+    %bless<pubDate>           = $!updated        if $!updated ~~ DateTime;
     Syndicate::RSS.new(|%bless, :@items)
 }
 
@@ -91,29 +92,33 @@ method atom-feed {
     %author-detail<uri>   = $!author-uri   if $!author-uri.defined;
     my $atom-id = $!id // $!link // "";
     my $subtitle = $!description // Str;
-    my %bless = :title($!title // Str), :id($atom-id),
-        :link($!link // Str),
-        :description($subtitle),
-        :$subtitle,
-        :rights($!rights // Str),
-        :generator($!generator // Str),
-        :icon($!icon // Str),
-        :logo($!logo // Str),
-        :author-detail(%author-detail);
-    %bless<updated> = $!updated // DateTime.now;
+    my %bless;
+    %bless<title>         = $!title       if $!title.defined;
+    %bless<id>            = $atom-id;
+    %bless<link>          = $!link        if $!link.defined;
+    %bless<description>   = $subtitle;
+    %bless<subtitle>      = $subtitle     if $subtitle.defined;
+    %bless<rights>        = $!rights      if $!rights.defined;
+    %bless<generator>     = $!generator   if $!generator.defined;
+    %bless<icon>          = $!icon        if $!icon.defined;
+    %bless<logo>          = $!logo        if $!logo.defined;
+    %bless<author-detail> = %author-detail;
+    %bless<updated>       = $!updated // DateTime.now;
     my @cats = @!categories;
     Syndicate::Atom.new(|%bless, :@items, :categories(@cats))
 }
 
 method rss091-feed {
     my @items = @!entries.map(*.build-v0_91-item);
-    my %bless = :title($!title // Str), :link($!link // Str),
-        :description($!description // Str),
-        :language($!language // Str),
-        :copyright($!rights // Str),
-        :managingEditor($!author-name // Str),
-        :generator($!generator // Str);
-    %bless<pubDate> = $!updated if $!updated ~~ DateTime;
+    my %bless;
+    %bless<title>           = $!title        if $!title.defined;
+    %bless<link>            = $!link         if $!link.defined;
+    %bless<description>     = $!description  if $!description.defined;
+    %bless<language>        = $!language     if $!language.defined;
+    %bless<copyright>       = $!rights       if $!rights.defined;
+    %bless<managingEditor>  = $!author-name  if $!author-name.defined;
+    %bless<generator>       = $!generator    if $!generator.defined;
+    %bless<pubDate>         = $!updated      if $!updated ~~ DateTime;
     Syndicate::RSS::V0_91.new(|%bless, :@items)
 }
 
@@ -122,25 +127,29 @@ method json-feed {
     my %author;
     %author<name> = $!author-name if $!author-name.defined;
     # JSON Feed author object has no 'email' field, so skip it
-    my %bless = :title($!title // Str), :link($!link // Str),
-        :description($!description // Str),
-        :feed_url($!feed-url // Str),
-        :version($!version // Str),
-        :language($!language // Str),
-        :generator($!generator // Str),
-        :icon($!icon // Str),
-        :author(%author);
+    my %bless;
+    %bless<title>       = $!title       if $!title.defined;
+    %bless<link>        = $!link        if $!link.defined;
+    %bless<description> = $!description if $!description.defined;
+    %bless<feed_url>    = $!feed-url    if $!feed-url.defined;
+    %bless<version>     = $!version     if $!version.defined;
+    %bless<language>    = $!language    if $!language.defined;
+    %bless<generator>   = $!generator   if $!generator.defined;
+    %bless<icon>        = $!icon        if $!icon.defined;
+    %bless<author>      = %author if %author;
     Syndicate::JSONFeed.new(|%bless, :@items)
 }
 
 method rss1-feed {
     my @items = @!entries.map(*.build-v1_0-item);
     my $about = $!id // $!link // Str;
-    my %bless = :title($!title // Str), :link($!link // Str),
-        :description($!description // Str),
-        :$about,
-        :generator($!generator // Str),
-        :language($!language // Str);
+    my %bless;
+    %bless<title>       = $!title       if $!title.defined;
+    %bless<link>        = $!link        if $!link.defined;
+    %bless<description> = $!description if $!description.defined;
+    %bless<about>       = $about        if $about.defined && $about.chars;
+    %bless<generator>   = $!generator   if $!generator.defined;
+    %bless<language>    = $!language    if $!language.defined;
     Syndicate::RSS::V1_0.new(|%bless, :@items)
 }
 

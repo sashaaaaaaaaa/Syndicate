@@ -41,8 +41,8 @@ sub parse-date(Str $str) is export {
 }
 
 sub parse-date-optional(Str $str) is export {
-    return Str unless $str.defined && $str.trim.chars > 0;
-    datetime-interpret($str.trim) // Str
+    return Nil unless $str.defined && $str.trim.chars > 0;
+    datetime-interpret($str.trim) // Nil
 }
 
 =begin pod

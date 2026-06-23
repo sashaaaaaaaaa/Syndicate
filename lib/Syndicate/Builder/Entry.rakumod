@@ -113,7 +113,7 @@ method build-json-item {
         :summary($!summary // Str),
         :content($c);
     if $c.defined {
-        if ($!content-type // "").starts-with('text') {
+        if !$!content-type.defined || $!content-type.starts-with('text') {
             %bless<content_text> = $c;
         } else {
             %bless<content_html> = $c;

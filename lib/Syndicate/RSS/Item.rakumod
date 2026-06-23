@@ -1,7 +1,8 @@
 use v6.d;
 use XML;
 use Syndicate::Item;
-use Syndicate::RSS::RFC2822;
+use DateTime::Format::RFC2822;
+my constant $RFC2822 = DateTime::Format::RFC2822.new;
 use Syndicate::Utils;
 use Syndicate::Extensions;
 use Syndicate::Stats;
