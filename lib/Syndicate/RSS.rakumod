@@ -1,15 +1,13 @@
 use v6.d;
 use XML;
-use DateTime::Format::RFC2822;
 use Syndicate::Feed;
 use Syndicate::RSS::Common;
 use Syndicate::RSS::Item;
+use Syndicate::RSS::RFC2822;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
-
-my constant $RFC2822 = DateTime::Format::RFC2822.new;
 
 unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
@@ -25,6 +23,23 @@ has %.image;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.atom-self-link;
+has Bool $!needs-dc;
+has Bool $!needs-media;
+has Bool $!needs-itunes;
+
+submethod TWEAK {
+    $!needs-dc = False;
+    $!needs-media = False;
+    $!needs-itunes = $!itunes-author.defined || $!itunes-summary.defined;
+    unless $!needs-dc && $!needs-media && $!needs-itunes {
+        for @!items {
+            $!needs-dc     ||= .?author.defined;
+            $!needs-media  ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
+            $!needs-itunes ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
+            last if $!needs-dc && $!needs-media && $!needs-itunes;
+        }
+    }
+}
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
@@ -75,19 +90,9 @@ multi method new(Str $xml) {
 
 method XML {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('2.0')}));
-    my Bool ($need-dc, $need-media, $need-itunes) = False, False, False;
-    $need-itunes = True if $.itunes-author.defined || $.itunes-summary.defined;
-    unless $need-dc && $need-media && $need-itunes {
-        for @.items {
-            $need-dc     ||= .?author.defined;
-            $need-media  ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
-            $need-itunes ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
-            last if $need-dc && $need-media && $need-itunes;
-        }
-    }
-    add-dc-declaration($xml)    if $need-dc;
-    add-media-declaration($xml) if $need-media;
-    add-itunes-declaration($xml) if $need-itunes;
+    add-dc-declaration($xml)    if $!needs-dc;
+    add-media-declaration($xml) if $!needs-media;
+    add-itunes-declaration($xml) if $!needs-itunes;
     if $.atom-self-link.defined {
         $xml.attribs{'xmlns:atom'} = 'http://www.w3.org/2005/Atom';
     }

@@ -1,12 +1,10 @@
 use v6.d;
 use XML;
-use DateTime::Format::RFC2822;
 use Syndicate::Item;
+use Syndicate::RSS::RFC2822;
 use Syndicate::Utils;
 use Syndicate::Extensions;
 use Syndicate::Stats;
-
-my constant $RFC2822 = DateTime::Format::RFC2822.new;
 
 unit class Syndicate::RSS::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
