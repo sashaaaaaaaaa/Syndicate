@@ -1,11 +1,12 @@
 use v6.d;
 use XML;
 use Syndicate::Feed;
+use Syndicate::RSS::Common;
 use Syndicate::RSS::V1_0::Item;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
 
-unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
+unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.about;
 has %.image;
@@ -81,14 +82,7 @@ method XML {
         $seq.append: $li;
     }
 
-    if %.image<url>.defined || %.image<title>.defined {
-        my $img = XML::Element.new(:name<image>);
-        $img.attribs{'rdf:about'} = %.image<about> if %.image<about>.defined;
-        $img.append: XML::Element.new(:name<title>, :nodes([encode-entities(%.image<title>)])) if %.image<title>.defined;
-        $img.append: XML::Element.new(:name<url>, :nodes([encode-entities(%.image<url>)])) if %.image<url>.defined;
-        $img.append: XML::Element.new(:name<link>, :nodes([encode-entities(%.image<link>)])) if %.image<link>.defined;
-        $root.append: $img;
-    }
+    self.build-xml-image($root, %.image, :rdf-about) if %.image<url>.defined || %.image<title>.defined;
 
     $root.append: $_.XML for @.items;
 

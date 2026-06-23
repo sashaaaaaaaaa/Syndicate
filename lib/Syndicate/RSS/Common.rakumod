@@ -52,18 +52,17 @@ method parse-skip-days($channel --> Array) {
     @skipDays
 }
 
-method build-xml-image($channel, %image) {
+method build-xml-image($parent, %image, Bool :$rdf-about = False) {
     return unless %image;
     my $img = XML::Element.new(:name<image>);
-    # url/title/link come from get-text (returns Str on miss) so guard .chars too.
-    # width/height/description come from get-text-optional (returns Str) so .defined suffices.
+    $img.attribs{'rdf:about'} = %image<about> if $rdf-about && %image<about>.defined;
     $img.append: XML::Element.new(:name<url>, :nodes([encode-entities(%image<url>)])) if %image<url>.defined && %image<url>.chars;
     $img.append: XML::Element.new(:name<title>, :nodes([encode-entities(%image<title>)])) if %image<title>.defined && %image<title>.chars;
     $img.append: XML::Element.new(:name<link>, :nodes([encode-entities(%image<link>)])) if %image<link>.defined && %image<link>.chars;
     $img.append: XML::Element.new(:name<width>, :nodes([encode-entities(%image<width>)])) if %image<width>.defined;
     $img.append: XML::Element.new(:name<height>, :nodes([encode-entities(%image<height>)])) if %image<height>.defined;
     $img.append: XML::Element.new(:name<description>, :nodes([encode-entities(%image<description>)])) if %image<description>.defined;
-    $channel.append: $img;
+    $parent.append: $img;
 }
 
 method build-xml-textinput($channel, %textInput) {
@@ -112,7 +111,7 @@ and L<C<Syndicate::RSS::V0_91>|rakudoc:Syndicate::RSS::V0_91>.
 =item C<parse-textinput($channel)> - Parse textinput element into Hash
 =item C<parse-skip-hours($channel)> - Parse skipHours into Array of Int
 =item C<parse-skip-days($channel)> - Parse skipDays into Array of Str
-=item C<build-xml-image($channel, %image)> - Generate image XML
+=item C<build-xml-image($parent, %image, Bool :$rdf-about)> - Generate image XML
 =item C<build-xml-textinput($channel, %textInput)> - Generate textinput XML
 =item C<build-xml-skip-hours($channel, @skipHours)> - Generate skipHours XML
 =item C<build-xml-skip-days($channel, @skipDays)> - Generate skipDays XML
