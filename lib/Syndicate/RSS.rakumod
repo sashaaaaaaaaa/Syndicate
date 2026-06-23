@@ -75,12 +75,12 @@ multi method new(Str $xml) {
 
 method XML {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('2.0')}));
-    my ($need-dc, $need-media, $need-itunes);
+    my Bool ($need-dc, $need-media, $need-itunes) = False, False, False;
     $need-itunes = True if $.itunes-author.defined || $.itunes-summary.defined;
     unless $need-dc && $need-media && $need-itunes {
         for @.items {
             $need-dc     ||= .?author.defined;
-            $need-media  ||= .?media-contents || .?media-thumbnails || .?media-title.defined || .?media-description.defined;
+            $need-media  ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
             $need-itunes ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
             last if $need-dc && $need-media && $need-itunes;
         }

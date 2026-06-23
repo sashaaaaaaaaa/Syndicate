@@ -44,6 +44,10 @@ sub parse-rss1(Str $xml) is export {
     Syndicate::RSS::V1_0.new($xml)
 }
 
+sub parse-rss091(Str $xml) is export {
+    Syndicate::RSS::V0_91.new($xml)
+}
+
 =begin pod
 
 =head1 NAME

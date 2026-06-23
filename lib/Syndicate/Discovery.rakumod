@@ -8,10 +8,7 @@ my constant $base-tag = rx/ '<base' [.|\n]*? ['/>' | '>'] /;
 
 unit class Syndicate::Discovery:ver<0.0.1>:auth<zef:sasha>;
 
-method fetch(Str $url, Int :$max-redirects = 5, Int :$timeout = 30) {
-    my $ua = HTTP::Tiny.new(:$max-redirects, :$timeout);
-    my $resp = $ua.get($url);
-    die "HTTP {$resp<status>} - {$resp<reason>}" unless $resp<success>;
+method !decode-response($resp --> Str) {
     my $charset = 'utf-8';
     with $resp<headers><content-type>[0] {
         my $ct = .lc;
@@ -24,7 +21,14 @@ method fetch(Str $url, Int :$max-redirects = 5, Int :$timeout = 30) {
                 !! $ct.substr($start).trim;
         }
     }
-    my $body = $resp<content>.decode($charset);
+    $resp<content>.decode($charset)
+}
+
+method fetch(Str $url, Int :$max-redirects = 5, Int :$timeout = 30) {
+    my $ua = HTTP::Tiny.new(:$max-redirects, :$timeout);
+    my $resp = $ua.get($url);
+    die "HTTP {$resp<status>} - {$resp<reason>}" unless $resp<success>;
+    my $body = self!decode-response($resp);
     parse-feed($body)
 }
 
@@ -32,19 +36,7 @@ method discover(Str $url, Int :$max-redirects = 5, Int :$timeout = 30) {
     my $ua = HTTP::Tiny.new(:$max-redirects, :$timeout);
     my $resp = $ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason>}" unless $resp<success>;
-    my $charset = 'utf-8';
-    with $resp<headers><content-type>[0] {
-        my $ct = .lc;
-        my $i = index($ct, 'charset=');
-        if $i.defined {
-            my $start = $i + 8;
-            my $end = index($ct, ';', $start);
-            $charset = $end.defined
-                ?? $ct.substr($start, $end - $start).trim
-                !! $ct.substr($start).trim;
-        }
-    }
-    my $body = $resp<content>.decode($charset);
+    my $body = self!decode-response($resp);
 
     my $format;
     try { $format = feed-format($body) };

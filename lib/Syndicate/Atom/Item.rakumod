@@ -15,7 +15,8 @@ has %.source-feed;
 has @.contributors;
 
 multi method new(Str $xml) {
-    my $doc = XML::Document.new($xml);
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid Atom entry XML: $!" unless $doc;
     self.new-from-xml($doc.root)
 }
 

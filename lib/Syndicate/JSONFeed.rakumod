@@ -16,7 +16,8 @@ has %.author;
 has Bool $.expired;
 
 multi method new(Str $json) {
-    my %h = from-json($json);
+    my %h = try { from-json($json) };
+    die "Invalid JSON: $!" unless %h;
     self.new-from-hash(%h)
 }
 

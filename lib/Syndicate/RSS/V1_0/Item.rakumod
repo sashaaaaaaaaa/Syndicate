@@ -11,7 +11,8 @@ has Str $.about;
 has @.dc-subjects;
 
 multi method new(Str $xml) {
-    my $doc = XML::Document.new($xml);
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid RSS 1.0 item XML: $!" unless $doc;
     self.new-from-xml($doc.root)
 }
 

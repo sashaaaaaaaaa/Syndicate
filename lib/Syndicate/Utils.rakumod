@@ -68,7 +68,7 @@ Not typically needed by end users.
 =head1 EXPORTED SUBS
 
 =item C<decode-entities(Str)>, C<encode-entities(Str)> - XML entity handling
-=item C<get-text($parent, $tag)> - Get required text content of a child element
+=item C<get-text($parent, $tag)> - Get text content of a child element (returns C<Str> if missing)
 =item C<get-text-optional($parent, $tag)> - Get optional text content (returns C<Str>)
 =item C<get-attrib($parent, $tag, $attr)> - Get an attribute value from a child element
 =item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>
