@@ -12,7 +12,19 @@ method fetch(Str $url, Int :$max-redirects = 5, Int :$timeout = 30) {
     my $ua = HTTP::Tiny.new(:$max-redirects, :$timeout);
     my $resp = $ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason>}" unless $resp<success>;
-    my $body = $resp<content>.decode;
+    my $charset = 'utf-8';
+    with $resp<headers><content-type>[0] {
+        my $ct = .lc;
+        my $i = index($ct, 'charset=');
+        if $i.defined {
+            my $start = $i + 8;
+            my $end = index($ct, ';', $start);
+            $charset = $end.defined
+                ?? $ct.substr($start, $end - $start).trim
+                !! $ct.substr($start).trim;
+        }
+    }
+    my $body = $resp<content>.decode($charset);
     parse-feed($body)
 }
 
@@ -20,7 +32,19 @@ method discover(Str $url, Int :$max-redirects = 5, Int :$timeout = 30) {
     my $ua = HTTP::Tiny.new(:$max-redirects, :$timeout);
     my $resp = $ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason>}" unless $resp<success>;
-    my $body = $resp<content>.decode;
+    my $charset = 'utf-8';
+    with $resp<headers><content-type>[0] {
+        my $ct = .lc;
+        my $i = index($ct, 'charset=');
+        if $i.defined {
+            my $start = $i + 8;
+            my $end = index($ct, ';', $start);
+            $charset = $end.defined
+                ?? $ct.substr($start, $end - $start).trim
+                !! $ct.substr($start).trim;
+        }
+    }
+    my $body = $resp<content>.decode($charset);
 
     my $format;
     try { $format = feed-format($body) };
@@ -83,7 +107,7 @@ method resolve-url(Str $url, Str $base --> Str) {
     unless $rp.starts-with('/') {
         my $bp = $b.path.path;
         $bp ~~ s/ <-[/]>* $ // unless $bp.ends-with('/');
-        $rp = $bp ~ $rp;
+        $rp = ($bp.chars ?? $bp !! '/') ~ $rp;
     }
     my $port = $b.port;
     my $port-str = $port.defined ?? ($port == 80 || $port == 443 ?? "" !! ":$port") !! "";
