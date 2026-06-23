@@ -42,7 +42,7 @@ multi method new-from-xml(XML::Element $entry-elem) {
     my $pub      = parse-date-optional(get-text-optional($entry-elem, "published"));
     my $rights   = get-text-optional($entry-elem, "rights");
 
-    my $link = "";
+    my $link = Str;
     with $entry-elem.elements(:TAG<link>)[0] {
         $link = .attribs<href> // "";
     }

@@ -146,7 +146,7 @@ method build-atom-item {
     %author-detail<email> = $!author-email if $!author-email.defined;
     %author-detail<uri>   = $!author-uri   if $!author-uri.defined;
 
-    my $atom-id = $!id // $!link // "";
+    my $atom-id = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :id($atom-id),
         :summary($!summary // Str),

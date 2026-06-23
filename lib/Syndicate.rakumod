@@ -28,23 +28,23 @@ sub parse(Str $input --> Any) is export {
     parse-feed($input)
 }
 
-sub parse-rss(Str $xml) is export {
+sub parse-rss(Str $xml --> Syndicate::RSS) is export {
     Syndicate::RSS.new($xml)
 }
 
-sub parse-atom(Str $xml) is export {
+sub parse-atom(Str $xml --> Syndicate::Atom) is export {
     Syndicate::Atom.new($xml)
 }
 
-sub parse-json(Str $json) is export {
+sub parse-json(Str $json --> Syndicate::JSONFeed) is export {
     Syndicate::JSONFeed.new($json)
 }
 
-sub parse-rss1(Str $xml) is export {
+sub parse-rss1(Str $xml --> Syndicate::RSS::V1_0) is export {
     Syndicate::RSS::V1_0.new($xml)
 }
 
-sub parse-rss091(Str $xml) is export {
+sub parse-rss091(Str $xml --> Syndicate::RSS::V0_91) is export {
     Syndicate::RSS::V0_91.new($xml)
 }
 
