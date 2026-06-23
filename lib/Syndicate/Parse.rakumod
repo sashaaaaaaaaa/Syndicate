@@ -72,7 +72,7 @@ sub root-element(Str $input) {
         # since PUBLIC/SYSTEM identifiers may contain >
         if $s.substr-eq('<!DOCTYPE', $start) {
             $pos = $start;
-            my ($in-single, $in-double, $paren-depth, $bracket-depth);
+            my int ($in-single, $in-double, $paren-depth, $bracket-depth);
             while $pos < $s.chars {
                 my $c = $s.substr($pos, 1);
                 $pos++;

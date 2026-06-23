@@ -2,6 +2,7 @@ use v6.d;
 use XML;
 use Syndicate::Item;
 use Syndicate::Utils;
+use Syndicate::Extensions;
 use Syndicate::Stats;
 use Syndicate::Extension::DublinCore;
 
@@ -27,8 +28,12 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $link    = get-text($item-elem, "link");
     my $desc    = get-text-optional($item-elem, "description");
 
-    my $author  = get-text-optional($item-elem, "author");
-    $author //= get-dc-text($item-elem, "creator");
+    my $author  = get-dc-text($item-elem, "creator");
+
+    my %extra;
+    %extra<author> = $author if $author.defined;
+    run-parsers($item-elem, %extra);
+    $author //= %extra<author> // Str;
 
     my $dc-date = get-dc-text($item-elem, "date");
     my $updated = parse-date-optional($dc-date);
@@ -52,7 +57,7 @@ method XML {
     $xml.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
     $xml.append: XML::Element.new(:name<description>, :nodes([encode-entities($.summary)])) if $.summary.defined;
 
-    add-dc-element($xml, "creator", $.author) if $.author.defined;
+    run-generators($xml, self);
     if $.updated.defined {
         add-dc-element($xml, "date", $.updated.Str);
     }
