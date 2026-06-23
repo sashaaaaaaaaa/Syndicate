@@ -4,16 +4,17 @@ use DateTime::Grammar;
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
-# Per-call XML::Entity.new is intentional — XML::Entity's thread-safety
-# is undocumented, so constructing per call avoids shared-state races.
+my $entity-lock = Lock.new;
+my $entity = XML::Entity.new;
+
 sub decode-entities(Str $text) is export {
     return $text unless $text.defined && $text.chars;
-    XML::Entity.new.decode($text)
+    $entity-lock.protect: { $entity.decode($text) }
 }
 
 sub encode-entities(Str $text) is export {
     return $text unless $text.defined && $text.chars;
-    XML::Entity.new.encode($text)
+    $entity-lock.protect: { $entity.encode($text) }
 }
 
 sub get-text($parent, $tag) is export {
@@ -50,7 +51,7 @@ sub parse-date(Str $str) is export {
 
 sub parse-date-optional(Str $str) is export {
     return Str unless $str.defined && $str.trim.chars > 0;
-    try { datetime-interpret($str.trim) } // Str
+    datetime-interpret($str.trim) // Str
 }
 
 =begin pod
