@@ -109,7 +109,7 @@ method XML {
     if $.published.defined {
         $xml.append: XML::Element.new(:name<published>, :nodes([$.published.Str]));
     }
-    if $.author.defined || %!author-detail {
+    if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
         my $author = XML::Element.new(:name<author>);
         $author.append: XML::Element.new(:name<name>, :nodes([encode-entities(%!author-detail<name>)])) if %!author-detail<name>.defined;
         $author.append: XML::Element.new(:name<email>, :nodes([encode-entities(%!author-detail<email>)])) if %!author-detail<email>.defined;

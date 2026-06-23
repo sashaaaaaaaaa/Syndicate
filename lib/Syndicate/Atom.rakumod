@@ -101,7 +101,9 @@ method XML {
         $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link)), :rel<alternate>}));
     }
     if %!link-self<href>.defined {
-        $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities(%!link-self<href>)), :rel<self>}));
+        my %attr = :href(encode-entities(%!link-self<href>)), :rel<self>;
+        %attr<type> = %!link-self<type> if %!link-self<type>.defined;
+        $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
     }
 
     if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
