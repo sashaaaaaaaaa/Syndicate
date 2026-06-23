@@ -9,7 +9,7 @@ use Syndicate::Extension::DublinCore;
 unit class Syndicate::RSS::V1_0::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
 has Str $.about;
-has @.dc-subjects;
+has @.dc-subjects of Str;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };

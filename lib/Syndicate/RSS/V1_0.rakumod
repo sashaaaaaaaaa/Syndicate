@@ -9,7 +9,7 @@ use Syndicate::Extension::DublinCore;
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.about;
-has %.image;
+has %.image of Str;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };

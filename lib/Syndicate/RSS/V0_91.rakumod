@@ -5,6 +5,8 @@ use Syndicate::RSS::Common;
 use Syndicate::RSS::V0_91::Item;
 use Syndicate::RSS::RFC2822;
 use Syndicate::Utils;
+use Syndicate::Extensions;
+use Syndicate::Extension::DublinCore;
 
 unit class Syndicate::RSS::V0_91:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
@@ -15,10 +17,10 @@ has Str $.rating;
 has Str $.docs;
 has DateTime $.pubDate;
 has DateTime $.lastBuildDate;
-has %.image;
-has %.textInput;
-has @.skipHours;
-has @.skipDays;
+has %.image of Str;
+has %.textInput of Str;
+has @.skipHours of Int;
+has @.skipDays of Str;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };

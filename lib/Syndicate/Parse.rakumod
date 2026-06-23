@@ -70,19 +70,26 @@ sub root-element(Str $input) {
 
         # Skip DOCTYPE declarations — scan for > not inside quotes,
         # since PUBLIC/SYSTEM identifiers may contain >
+        # Uses regex to find next interesting character, avoiding per-char substr
         if $s.substr-eq('<!DOCTYPE', $start) {
             $pos = $start;
             my int ($in-single, $in-double, $paren-depth, $bracket-depth);
             while $pos < $s.chars {
-                my $c = $s.substr($pos, 1);
-                $pos++;
-                if $c eq '"' && !$in-single    { $in-double = !$in-double }
-                elsif $c eq "'" && !$in-double { $in-single = !$in-single }
-                elsif $c eq '(' && !$in-single && !$in-double { $paren-depth++ }
-                elsif $c eq ')' && !$in-single && !$in-double && $paren-depth > 0 { $paren-depth-- }
-                elsif $c eq '[' && !$in-single && !$in-double { $bracket-depth++ }
-                elsif $c eq ']' && !$in-single && !$in-double && $bracket-depth > 0 { $bracket-depth-- }
-                elsif $c eq '>' && !$in-single && !$in-double && $paren-depth == 0 && $bracket-depth == 0 { last }
+                given $s.match(/<["'()\[\]<>]>/, :p($pos)) {
+                    when .defined {
+                        $pos = .pos;
+                        given .Str {
+                            when '"' { $in-double = !$in-double if !$in-single }
+                            when "'" { $in-single = !$in-single if !$in-double }
+                            when '(' { $paren-depth++ if !$in-single && !$in-double }
+                            when ')' { $paren-depth-- if !$in-single && !$in-double && $paren-depth > 0 }
+                            when '[' { $bracket-depth++ if !$in-single && !$in-double }
+                            when ']' { $bracket-depth-- if !$in-single && !$in-double && $bracket-depth > 0 }
+                            when '>' { last if !$in-single && !$in-double && $paren-depth == 0 && $bracket-depth == 0 }
+                        }
+                    }
+                    default { last }
+                }
             }
             next;
         }

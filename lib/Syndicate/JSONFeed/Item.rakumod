@@ -12,8 +12,8 @@ has Str $.image;
 has Str $.banner_image;
 has DateTime $.date_published;
 has DateTime $.date_modified;
-has @.authors;
-has @.tags;
+has @.authors of Hash;
+has @.tags of Str;
 
 method new-from-hash(%h) {
     my $title   = %h<title> // Str;

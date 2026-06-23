@@ -9,15 +9,15 @@ unit class Syndicate::Atom:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 has Str $.id;
 has Str $.subtitle;
 has Str $.author;
-has %.author-detail;
-has @.categories;
+has %.author-detail of Str;
+has @.categories of Str;
 has DateTime $.updated;
 has Str $.rights;
 has Str $.icon;
 has Str $.logo;
-has @.contributors;
-has %.link-self;
-has %.link-alternate;
+has @.contributors of Hash;
+has %.link-self of Str;
+has %.link-alternate of Str;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };

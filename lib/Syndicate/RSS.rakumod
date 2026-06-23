@@ -19,7 +19,7 @@ has DateTime $.lastBuildDate;
 has Str $.category;
 has Str $.docs;
 has Int $.ttl;
-has %.image;
+has %.image of Str;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.atom-self-link;

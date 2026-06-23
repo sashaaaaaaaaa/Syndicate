@@ -6,13 +6,13 @@ use Syndicate::Stats;
 
 unit class Syndicate::Atom::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
-has %.author-detail;
-has @.categories;
+has %.author-detail of Str;
+has @.categories of Str;
 has DateTime $.published;
 has Str $.content-type;
 has Str $.rights;
 has %.source-feed;
-has @.contributors;
+has @.contributors of Hash;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
