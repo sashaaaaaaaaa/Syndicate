@@ -20,10 +20,10 @@ method parse-image($channel --> Hash) {
 method parse-textinput($channel --> Hash) {
     my %textInput;
     with $channel.elements(:TAG<textinput>)[0] {
-        %textInput<title>       = get-text($_, "title");
-        %textInput<description> = get-text($_, "description");
-        %textInput<name>        = get-text($_, "name");
-        %textInput<link>        = get-text($_, "link");
+        %textInput<title>       = get-text-optional($_, "title");
+        %textInput<description> = get-text-optional($_, "description");
+        %textInput<name>        = get-text-optional($_, "name");
+        %textInput<link>        = get-text-optional($_, "link");
     }
     %textInput
 }

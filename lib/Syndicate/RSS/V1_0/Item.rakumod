@@ -9,22 +9,30 @@ use Syndicate::Extension::DublinCore;
 unit class Syndicate::RSS::V1_0::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
 has Str $.about;
+has Bool $.has-dc-creator;
 has @.dc-subjects of Str;
+has @.media-contents of Hash;
+has @.media-thumbnails of Hash;
+has Str $.media-title;
+has Str $.media-description;
+has Str $.itunes-author;
+has Str $.itunes-summary;
+has Str $.itunes-duration;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid RSS 1.0 item XML: $!" unless $doc;
-    self.new-from-xml($doc.root)
+    self.from-xml($doc.root)
 }
 
 multi method new(XML::Element $xml-elem) {
-    self.new-from-xml($xml-elem)
+    self.from-xml($xml-elem)
 }
 
-multi method new-from-xml(XML::Element $item-elem) {
+multi method from-xml(XML::Element $item-elem) {
     my $about   = $item-elem.attribs{'rdf:about'} // $item-elem.attribs<about> // Str;
-    my $title   = get-text($item-elem, "title");
-    my $link    = get-text($item-elem, "link");
+    my $title   = get-text-optional($item-elem, "title");
+    my $link    = get-text-optional($item-elem, "link");
     my $desc    = get-text-optional($item-elem, "description");
 
     my %extra;
@@ -36,14 +44,24 @@ multi method new-from-xml(XML::Element $item-elem) {
         !! Nil;
     my @dc-subjects = @(%extra<dc-subjects> // []);
 
+    my @media-contents    = @(%extra<media-contents>    // []);
+    my @media-thumbnails  = @(%extra<media-thumbnails>  // []);
+    my $media-title       = %extra<media-title>         // Str;
+    my $media-description = %extra<media-description>   // Str;
+
     my $item-id = $about // $link // Str;
     my %bless = :$about, :$title, :$link, :summary($desc),
                 :$author,
                 :id($item-id),
-                :content($desc // Str);
+                :content($desc // Str),
+                :has-dc-creator(%extra<has-dc-creator> // False);
     %bless<updated> = $updated if $updated ~~ DateTime;
     Syndicate::Stats.record-item;
-    self.bless(|%bless, :dc-subjects(@dc-subjects))
+    self.bless(|%bless, :dc-subjects(@dc-subjects),
+        :@media-contents, :@media-thumbnails, :$media-title, :$media-description,
+        :itunes-author(%extra<itunes-author> // Str),
+        :itunes-summary(%extra<itunes-summary> // Str),
+        :itunes-duration(%extra<itunes-duration> // Str))
 }
 
 method XML {

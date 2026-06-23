@@ -3,44 +3,43 @@ use HTTP::Tiny;
 use URI;
 use Syndicate::Parse;
 
-my constant $link-tag = rx/ '<link' [.|\n]*? ['/>' | '>'] /;
-my constant $base-tag = rx/ '<base' [.|\n]*? ['/>' | '>'] /;
+my constant $link-tag = rx/ '<link' <-[>]>* ['/>' | '>'] /;
+my constant $base-tag = rx/ '<base' <-[>]>* ['/>' | '>'] /;
 
 unit class Syndicate::Discovery:ver<0.0.1>:auth<zef:sasha>;
 
+has HTTP::Tiny $.ua is built(False);
+
+submethod BUILD(Int :$max-redirects = 5, Int :$timeout = 30, :$ua) {
+    with $ua { $!ua = $_ }
+    $!ua //= HTTP::Tiny.new(:$max-redirects, :$timeout);
+}
+
 method !decode-response($resp --> Str) {
     my $charset = 'utf-8';
-    with $resp<headers><content-type>[0] {
-        my $ct = .lc;
-        my $i = index($ct, 'charset=');
-        if $i.defined {
-            my $start = $i + 8;
-            my $end = index($ct, ';', $start);
-            $charset = $end.defined
-                ?? $ct.substr($start, $end - $start).trim
-                !! $ct.substr($start).trim;
+    with $resp<headers><content-type>.[0] {
+        for .lc.split(';') {
+            .trim ~~ /^charset\s* \= \s* (<[^\s;]>+)/ and $charset = ~$0;
         }
     }
     $resp<content>.decode($charset)
 }
 
-method fetch(Str $url, Int :$max-redirects = 5, Int :$timeout = 30) {
-    my $ua = HTTP::Tiny.new(:$max-redirects, :$timeout);
-    my $resp = $ua.get($url);
+method fetch(Str $url) {
+    my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason>}" unless $resp<success>;
     my $body = self!decode-response($resp);
     parse-feed($body)
 }
 
-method discover(Str $url, Int :$max-redirects = 5, Int :$timeout = 30) {
-    my $ua = HTTP::Tiny.new(:$max-redirects, :$timeout);
-    my $resp = $ua.get($url);
+method discover(Str $url) {
+    my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason>}" unless $resp<success>;
     my $body = self!decode-response($resp);
 
-    my $format;
-    try { $format = feed-format($body) };
-    return parse-feed($body) if $format.defined;
+    my $feed;
+    try { $feed = parse-feed($body) };
+    return $feed if $feed.defined;
 
     my @feeds = self.find-feeds($body, $url);
     die "No feeds found at $url" unless @feeds;
@@ -66,16 +65,20 @@ method find-feeds(Str $html, Str $base-url --> Array) {
 
 method !parse-attrs(Str $tag --> Map) {
     my %attrs;
-    for $tag.match(/:i (\w+) \s* '=' \s* ( \" <-["]>* \" || \' <-[']>* \' || \S+ ) /, :global) -> $m {
+    for $tag.match(/:i ( <[\w:-]>+ ) \s* [ '=' \s* ( \" <-["]>* \" || \' <-[']>* \' || \S+ ) ]? /, :global) -> $m {
         my $name = ~$m[0];
-        my $raw  = ~$m[1];
-        my $val  = $raw;
-        if $raw.starts-with('"') && $raw.ends-with('"') {
-            $val = $raw.substr(1, $raw.chars - 2);
-        } elsif $raw.starts-with("'") && $raw.ends-with("'") {
-            $val = $raw.substr(1, $raw.chars - 2);
+        if $m[1].defined {
+            my $raw = ~$m[1];
+            my $val = $raw;
+            if $raw.starts-with('"') && $raw.ends-with('"') {
+                $val = $raw.substr(1, $raw.chars - 2);
+            } elsif $raw.starts-with("'") && $raw.ends-with("'") {
+                $val = $raw.substr(1, $raw.chars - 2);
+            }
+            %attrs{$name.lc} = $val;
+        } else {
+            %attrs{$name.lc} = True;
         }
-        %attrs{$name.lc} = $val;
     }
     %attrs
 }
@@ -89,7 +92,7 @@ method base-url(Str $html --> Str) {
 }
 
 method resolve-url(Str $url, Str $base --> Str) {
-    return $url if $url ~~ /^https?\:\/\//;
+    return $url if $url.starts-with('http://') || $url.starts-with('https://');
     my $scheme = $base ~~ /^(https?)/ ?? ~$0 !! 'https';
     return $scheme ~ ':' ~ $url if $url ~~ /^\/\//;
 
@@ -103,6 +106,8 @@ method resolve-url(Str $url, Str $base --> Str) {
     }
     my $result = $b.clone;
     $result.path($rp);
+    $result.query($u.query // "");
+    $result.fragment($u.fragment // "");
     ~$result
 }
 

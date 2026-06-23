@@ -6,7 +6,6 @@ use Syndicate::RSS::V0_91::Item;
 use DateTime::Format::RFC2822;
 my constant $RFC2822 = DateTime::Format::RFC2822.new;
 use Syndicate::Utils;
-use Syndicate::Extensions;
 use Syndicate::Extension::DublinCore;
 
 unit class Syndicate::RSS::V0_91:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
@@ -22,10 +21,13 @@ has %.image of Str;
 has %.textInput of Str;
 has @.skipHours of Int;
 has @.skipDays of Str;
+has Bool $!needs-dc;
 
-multi method new(Str $xml) {
-    my $doc = try { XML::Document.new($xml) };
-    die "Invalid RSS 0.91 XML: $!" unless $doc;
+submethod TWEAK {
+    $!needs-dc = so @!items.first({ .?author.defined });
+}
+
+multi method new(XML::Document $doc) {
     my $rss = $doc.root;
     die "Not an RSS feed" unless $rss.name eq "rss";
     my $ver = $rss.attribs<version> // "";
@@ -53,7 +55,7 @@ multi method new(Str $xml) {
 
     my @items;
     for $channel.elements(:TAG<item>) -> $item-elem {
-        @items.push: Syndicate::RSS::V0_91::Item.new-from-xml($item-elem);
+        @items.push: Syndicate::RSS::V0_91::Item.from-xml($item-elem);
     }
 
     my %bless = :$title, :$link, :description($desc),
@@ -64,6 +66,12 @@ multi method new(Str $xml) {
     %bless<pubDate> = $pd if $pd ~~ DateTime;
     %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
     self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays))
+}
+
+multi method new(Str $xml) {
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid RSS 0.91 XML: $!" unless $doc;
+    self.new($doc)
 }
 
 method XML {
@@ -88,17 +96,21 @@ method XML {
         $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$RFC2822.to-string($.lastBuildDate)]));
     }
 
-    self.build-xml-image($channel, %.image);
-    self.build-xml-textinput($channel, %.textInput);
+    self.build-xml-image($channel, %.image) if %.image<url>.defined || %.image<title>.defined;
+    self.build-xml-textinput($channel, %.textInput) if %.textInput<title>.defined || %.textInput<name>.defined;
     self.build-xml-skip-hours($channel, @.skipHours);
     self.build-xml-skip-days($channel, @.skipDays);
 
+    add-dc-declaration($xml) if $!needs-dc;
     $channel.append: $_.XML for @.items;
 
     return $xml;
 }
 
-method Str { '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML }
+method Str {
+    return $!cached-str if $!cached-str.defined;
+    $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+}
 
 =begin pod
 

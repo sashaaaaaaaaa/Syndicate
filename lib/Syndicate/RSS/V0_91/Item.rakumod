@@ -7,18 +7,27 @@ use Syndicate::Stats;
 
 unit class Syndicate::RSS::V0_91::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
+has Bool $.has-dc-creator;
+has @.media-contents of Hash;
+has @.media-thumbnails of Hash;
+has Str $.media-title;
+has Str $.media-description;
+has Str $.itunes-author;
+has Str $.itunes-summary;
+has Str $.itunes-duration;
+
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid RSS 0.91 item XML: $!" unless $doc;
     die "Not an RSS 0.91 item element" unless $doc.root.name eq "item";
-    self.new-from-xml($doc.root)
+    self.from-xml($doc.root)
 }
 
 multi method new(XML::Element $xml-elem) {
-    self.new-from-xml($xml-elem)
+    self.from-xml($xml-elem)
 }
 
-multi method new-from-xml(XML::Element $item-elem) {
+multi method from-xml(XML::Element $item-elem) {
     my $title = get-text-optional($item-elem, "title");
     my $link  = get-text-optional($item-elem, "link");
     my $desc  = get-text-optional($item-elem, "description");
@@ -27,8 +36,18 @@ multi method new-from-xml(XML::Element $item-elem) {
     run-parsers($item-elem, %extra);
     my $author = %extra<author> // Str;
 
+    my @media-contents    = @(%extra<media-contents>    // []);
+    my @media-thumbnails  = @(%extra<media-thumbnails>  // []);
+    my $media-title       = %extra<media-title>         // Str;
+    my $media-description = %extra<media-description>   // Str;
+
     Syndicate::Stats.record-item;
-    self.bless(:$title, :$link, :summary($desc), :$author, :id($link // Str), :content($desc // Str))
+    self.bless(:$title, :$link, :summary($desc), :$author, :id($link // Str), :content(Str),
+        :has-dc-creator(%extra<has-dc-creator> // False),
+        :@media-contents, :@media-thumbnails, :$media-title, :$media-description,
+        :itunes-author(%extra<itunes-author> // Str),
+        :itunes-summary(%extra<itunes-summary> // Str),
+        :itunes-duration(%extra<itunes-duration> // Str))
 }
 
 method XML {

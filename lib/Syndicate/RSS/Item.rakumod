@@ -11,6 +11,7 @@ unit class Syndicate::RSS::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
 has Str $.guid;
 has Bool $.guid-is-permalink = True;
+has Bool $.has-dc-creator;
 has Str $.category;
 has Str $.comments;
 has %.enclosure of Str;
@@ -27,17 +28,18 @@ multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid RSS item XML: $!" unless $doc;
     die "Not an RSS item element" unless $doc.root.name eq "item";
-    self.new-from-xml($doc.root)
+    self.from-xml($doc.root)
 }
 
 multi method new(XML::Element $xml-elem) {
-    self.new-from-xml($xml-elem)
+    self.from-xml($xml-elem)
 }
 
-multi method new-from-xml(XML::Element $item-elem) {
+multi method from-xml(XML::Element $item-elem) {
     my $title   = get-text-optional($item-elem, "title");
     my $link    = get-text-optional($item-elem, "link");
     my $desc    = get-text-optional($item-elem, "description");
+    my $encoded = get-text-optional($item-elem, "content:encoded");
     my $author  = get-text-optional($item-elem, "author");
     my $cat     = get-text-optional($item-elem, "category");
     my $comment = get-text-optional($item-elem, "comments");
@@ -60,20 +62,22 @@ multi method new-from-xml(XML::Element $item-elem) {
     }
 
     my %extra;
-    %extra<author> = $author if $author.defined;
+    %extra<author> = $author if $author.defined && $author.chars;
     run-parsers($item-elem, %extra);
-    $author //= %extra<author> // Str;
+    $author = %extra<author> // Str;
 
     my @media-contents    = @(%extra<media-contents>    // []);
     my @media-thumbnails  = @(%extra<media-thumbnails>  // []);
     my $media-title       = %extra<media-title>         // Str;
     my $media-description = %extra<media-description>   // Str;
 
+    my $content = $encoded.defined && $encoded.chars ?? $encoded !! $desc;
     my $item-id = $guid // $link // Str;
     my %bless = :$title, :$link, :summary($desc),
         :$author,
         :id($item-id),
-        :content($desc // Str),
+        :$content,
+        :has-dc-creator(%extra<has-dc-creator> // False),
         :$guid, :guid-is-permalink($guid-is-permalink),
         :category($cat), :comments($comment),
         :enclosure(%enclosure), :source($source),
@@ -96,6 +100,7 @@ method XML {
         $xml.append: $guid-elem;
     }
     $xml.append: XML::Element.new(:name<description>, :nodes([encode-entities($.summary)])) if $.summary.defined;
+    $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)])) if $.content.defined && $.content.chars;
     if $.updated.defined {
         $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
     }
@@ -105,8 +110,8 @@ method XML {
     if %.enclosure<url>.defined && %.enclosure<url>.chars {
         my $enc = XML::Element.new(:name<enclosure>);
         $enc.attribs<url>    = %.enclosure<url>;
-        $enc.attribs<length> = %.enclosure<length> // "0";
-        $enc.attribs<type>   = %.enclosure<type>   // "";
+        $enc.attribs<length> = %.enclosure<length> if %.enclosure<length>.defined && %.enclosure<length>.chars;
+        $enc.attribs<type>   = %.enclosure<type>   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
         $xml.append: $enc;
     }
     $xml.append: XML::Element.new(:name<source>, :nodes([encode-entities($.source)])) if $.source.defined;
@@ -164,7 +169,7 @@ An RSS 2.0 item. Does L<C<Syndicate::Item>|rakudoc:Syndicate::Item>.
 
 =item C<new(Str $xml)> - Parse from XML element string
 =item C<new(XML::Element)> - Parse from XML::Element
-=item C<new-from-xml(XML::Element)> - Parse from XML element
+=item C<from-xml(XML::Element)> - Parse from XML element
 =item C<XML> - Returns L<C<XML::Element>|rakudoc:XML::Element>
 =item C<Str> - Returns XML string
 

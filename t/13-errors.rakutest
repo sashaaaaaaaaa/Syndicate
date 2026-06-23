@@ -1,0 +1,40 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate::Parse;
+use Syndicate::RSS;
+use Syndicate::RSS::V0_91;
+use Syndicate::RSS::V1_0;
+use Syndicate::RSS::Item;
+use Syndicate::Atom;
+use Syndicate::Atom::Item;
+use Syndicate::JSONFeed;
+
+plan 13;
+
+# ===== feed-format errors (supplementing t/02-parse) =====
+dies-ok { feed-format('') }, 'empty input dies';
+dies-ok { feed-format('   ') }, 'whitespace-only input dies';
+dies-ok { feed-format('<html></html>') }, 'unknown root element dies';
+dies-ok { feed-format('garbage') }, 'garbage input dies';
+dies-ok { feed-format('{"foo":"bar"}') }, 'JSON without version key dies';
+
+# ===== RSS 2.0 constructor errors =====
+dies-ok { Syndicate::RSS.new('<not-rss/>') }, 'wrong root element dies';
+dies-ok { Syndicate::RSS.new('<rss version="2.0"></rss>') }, 'no channel element dies';
+dies-ok { Syndicate::RSS::V0_91.new('<rss version="2.0"><channel></channel></rss>') }, 'wrong RSS version dies';
+
+# ===== RSS Item errors =====
+dies-ok { Syndicate::RSS::Item.new('<not-item/>') }, 'wrong item root element dies';
+dies-ok { Syndicate::Atom::Item.new('<not-entry/>') }, 'wrong Atom entry root element dies';
+
+# ===== Atom constructor errors =====
+dies-ok { Syndicate::Atom.new('<not-feed/>') }, 'wrong Atom root element dies';
+
+# ===== JSON Feed constructor errors =====
+dies-ok { Syndicate::JSONFeed.new('not json') }, 'invalid JSON dies';
+
+# ===== RSS 1.0 constructor errors =====
+dies-ok { Syndicate::RSS::V1_0.new('<not-rdf/>') }, 'wrong RDF root element dies';
+
+done-testing;

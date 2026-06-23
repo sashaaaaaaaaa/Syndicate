@@ -9,10 +9,12 @@ sub register-ext(:&parse, :&generate) is export {
 }
 
 sub run-parsers($elem, %attrs) is export {
+    return unless @extensions;
     .<parse>($elem, %attrs) for @extensions;
 }
 
 sub run-generators($xml, $item) is export {
+    return unless @extensions;
     .<generate>($xml, $item) for @extensions;
 }
 

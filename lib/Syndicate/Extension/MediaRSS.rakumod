@@ -7,6 +7,7 @@ unit module Syndicate::Extension::MediaRSS:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(
     parse => sub ($elem, %attrs) {
+        return unless $elem.elements.first({ .name.starts-with('media:') });
         my @mc = get-media-contents($elem);
         %attrs<media-contents> = @mc if @mc;
         my @mt = get-media-thumbnails($elem);
@@ -58,6 +59,7 @@ sub get-media-thumbnails($parent --> Array) is export {
         %t<url>    = $e.attribs<url>    // Str;
         %t<width>  = $e.attribs<width>  // Str;
         %t<height> = $e.attribs<height> // Str;
+        %t<time>   = $e.attribs<time>   // Str;
         @thumbs.push: %t;
     }
     @thumbs
@@ -85,6 +87,7 @@ sub add-media-thumbnail-element(XML::Element $parent, %thumb --> Nil) is export 
     $e.attribs<url>    = %thumb<url>    if %thumb<url>.defined;
     $e.attribs<width>  = %thumb<width>  if %thumb<width>.defined;
     $e.attribs<height> = %thumb<height> if %thumb<height>.defined;
+    $e.attribs<time>   = %thumb<time>   if %thumb<time>.defined;
     $parent.append: $e;
 }
 

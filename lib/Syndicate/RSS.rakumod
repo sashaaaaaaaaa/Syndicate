@@ -24,13 +24,16 @@ has %.image of Str;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.atom-self-link;
-has Bool $!needs-dc;
-has Bool $!needs-media;
-has Bool $!needs-itunes;
+    has Bool $!needs-dc;
+    has Bool $!needs-media;
+    has Bool $!needs-content;
+    has Bool $!needs-itunes;
 
-multi method new(Str $xml) {
-    my $doc = try { XML::Document.new($xml) };
-    die "Invalid RSS XML: $!" unless $doc;
+submethod TWEAK {
+    self!set-namespace-flags;
+}
+
+multi method new(XML::Document $doc) {
     my $rss = $doc.root;
     die "Not an RSS feed" unless $rss.name eq "rss";
     my $ver = $rss.attribs<version> // "2.0";
@@ -56,9 +59,17 @@ multi method new(Str $xml) {
 
     my %image = self.parse-image($channel);
 
+    my $atom-self-link = Str;
+    for $channel.elements(:TAG<atom:link>) -> $l {
+        if ($l.attribs<rel> // "") eq "self" {
+            $atom-self-link = $l.attribs<href> // Str;
+            last;
+        }
+    }
+
     my @items;
     for $channel.elements(:TAG<item>) -> $item-elem {
-        @items.push: Syndicate::RSS::Item.new-from-xml($item-elem);
+        @items.push: Syndicate::RSS::Item.from-xml($item-elem);
     }
 
     my %bless = :$title, :$link, :description($desc),
@@ -66,29 +77,45 @@ multi method new(Str $xml) {
         :managingEditor($me), :webMaster($wm),
         :category($cat), :generator($gen), :docs($docs),
         :image(%image),
-        :itunes-author($it-author), :itunes-summary($it-summary);
+        :itunes-author($it-author), :itunes-summary($it-summary),
+        :$atom-self-link;
     %bless<pubDate> = $pd if $pd ~~ DateTime;
     %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
     if $ttl-str.defined && $ttl-str.chars {
         %bless<ttl> = try { $ttl-str.Int };
+        with %bless<ttl> {
+            warn "ttl of $_ minutes exceeds recommended maximum of 10080 (1 week)" if $_ > 10080;
+        }
     }
     self.bless(|%bless, :@items)
 }
 
+multi method new(Str $xml) {
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid RSS XML: $!" unless $doc;
+    self.new($doc)
+}
+
+method !set-namespace-flags {
+    $!needs-dc      = False;
+    $!needs-media   = False;
+    $!needs-content = False;
+    $!needs-itunes  = $!itunes-author.defined || $!itunes-summary.defined;
+    for @!items {
+        $!needs-dc      ||= .?has-dc-creator;
+        $!needs-media   ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
+        $!needs-content ||= ?(.?content.defined && .?content.chars);
+        $!needs-itunes  ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
+        last if $!needs-dc && $!needs-media && $!needs-content && $!needs-itunes;
+    }
+}
+
 method XML {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('2.0')}));
-    $!needs-dc     = False;
-    $!needs-media  = False;
-    $!needs-itunes = $!itunes-author.defined || $!itunes-summary.defined;
-    for @!items {
-        $!needs-dc     ||= .?author.defined;
-        $!needs-media  ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
-        $!needs-itunes ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
-        last if $!needs-dc && $!needs-media && $!needs-itunes;
-    }
     add-dc-declaration($xml)    if $!needs-dc;
     add-media-declaration($xml) if $!needs-media;
     add-itunes-declaration($xml) if $!needs-itunes;
+    $xml.attribs{'xmlns:content'} = 'http://purl.org/rss/1.0/modules/content/' if $!needs-content;
     if $.atom-self-link.defined {
         $xml.attribs{'xmlns:atom'} = 'http://www.w3.org/2005/Atom';
     }
@@ -117,7 +144,7 @@ method XML {
     $channel.append: XML::Element.new(:name<docs>, :nodes([encode-entities($.docs)])) if $.docs.defined;
     $channel.append: XML::Element.new(:name<ttl>, :nodes([encode-entities(~$.ttl)])) if $.ttl.defined;
 
-    self.build-xml-image($channel, %.image);
+    self.build-xml-image($channel, %.image) if %.image<url>.defined || %.image<title>.defined;
 
     if $.atom-self-link.defined {
         $channel.append: XML::Element.new(
@@ -131,7 +158,10 @@ method XML {
     return $xml;
 }
 
-method Str { '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML }
+method Str {
+    return $!cached-str if $!cached-str.defined;
+    $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+}
 
 =begin pod
 

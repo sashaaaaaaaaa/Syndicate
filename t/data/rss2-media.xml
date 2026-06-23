@@ -9,7 +9,7 @@
       <link>http://example.com/video1</link>
       <description>A cool video about syndication</description>
       <media:content url="http://example.com/video.mp4" type="video/mp4" medium="video" duration="120" fileSize="1024000" width="640" height="480"/>
-      <media:thumbnail url="http://example.com/thumb1.jpg" width="320" height="240"/>
+      <media:thumbnail url="http://example.com/thumb1.jpg" width="320" height="240" time="01:23"/>
       <media:title>Video: Syndication Explained</media:title>
       <media:description>An in-depth look at feed syndication formats</media:description>
     </item>

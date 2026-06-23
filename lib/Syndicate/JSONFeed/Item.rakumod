@@ -7,8 +7,9 @@ use Syndicate::Stats;
 unit class Syndicate::JSONFeed::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
 multi method new(Str $json) {
-    my %h = try { from-json($json) };
-    die "Invalid JSON Feed item JSON: $!" unless %h;
+    my %h;
+    try { %h = from-json($json) };
+    die "Invalid JSON Feed item JSON: $!" if $!;
     self.new-from-hash(%h)
 }
 
@@ -27,6 +28,7 @@ method new-from-hash(%h) {
     my $link    = %h<url> // %h<external_url> // Str;
     my $summary = %h<summary> // Str;
     my $id      = %h<id> // $link // Str;
+    die "JSON Feed Item requires id or url" unless $id.defined && $id.chars;
 
     my $dp = parse-date-optional(%h<date_published> // Str);
     my $dm = parse-date-optional(%h<date_modified> // Str);
@@ -70,6 +72,7 @@ method to-hash {
     %h<external_url>   = $.external_url  if $.external_url.defined;
     %h<summary>        = $.summary       if $.summary.defined;
     %h<id>             = $.id            if $.id.defined;
+    %h<author>         = $.author        if $.author.defined;
     %h<content_html>   = $.content_html  if $.content_html.defined;
     %h<content_text>   = $.content_text  if $.content_text.defined;
     %h<image>          = $.image         if $.image.defined;

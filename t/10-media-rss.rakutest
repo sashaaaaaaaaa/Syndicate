@@ -3,7 +3,7 @@ use Test;
 use lib 'lib';
 use Syndicate;
 
-plan 31;
+plan 32;
 
 my $xml = slurp "t/data/rss2-media.xml";
 my $feed = Syndicate::RSS.new($xml);
@@ -31,6 +31,7 @@ is $i0.media-thumbnails.elems, 1, "item 0 has 1 media:thumbnail";
 is $i0.media-thumbnails[0]<url>, "http://example.com/thumb1.jpg", "media:thumbnail url";
 is $i0.media-thumbnails[0]<width>, "320", "media:thumbnail width";
 is $i0.media-thumbnails[0]<height>, "240", "media:thumbnail height";
+is $i0.media-thumbnails[0]<time>, "01:23", "media:thumbnail time";
 
 is $i0.media-title, "Video: Syndication Explained", "media:title";
 is $i0.media-description, "An in-depth look at feed syndication formats", "media:description";

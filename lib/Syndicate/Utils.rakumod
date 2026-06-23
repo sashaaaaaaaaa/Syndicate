@@ -35,14 +35,18 @@ sub get-text-optional($parent, $tag) is export {
     Str
 }
 
+sub parse-datetime(Str $str) is export {
+    datetime-interpret($str)
+}
+
 sub parse-date(Str $str) is export {
     die "Cannot parse date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
-    datetime-interpret($str.trim)
+    parse-datetime($str.trim)
 }
 
 sub parse-date-optional(Str $str) is export {
     return Nil unless $str.defined && $str.trim.chars > 0;
-    datetime-interpret($str.trim) // Nil
+    parse-datetime($str.trim) // Nil
 }
 
 =begin pod

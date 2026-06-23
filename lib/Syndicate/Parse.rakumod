@@ -6,38 +6,63 @@ use Syndicate::RSS::V1_0;
 use Syndicate::Atom;
 use Syndicate::JSONFeed;
 use Syndicate::Stats;
+use JSON::Fast;
 
 unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
 enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 
-sub feed-format(Str $input --> FeedFormat) is export {
+multi sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
     die "Empty input" unless $clean.chars;
 
-    return JSONFeedFmt if $clean.starts-with('{');
-
     my $root = root-element($clean);
-    die "Unknown feed format: cannot find root element" unless $root.defined;
+    if $root {
+        return feed-format($root<name>, $root<ver>);
+    }
 
-    given $root<name> {
+    my $parsed = try { from-json($clean) };
+    die "Unable to detect feed format: input is not valid XML or JSON" unless $parsed ~~ Hash && $parsed<version>.defined;
+    JSONFeedFmt
+}
+
+multi sub feed-format(Str $name, Str $ver) {
+    given $name {
         when 'feed'   { return Atom }
-        when 'rss'    {
-            return $root<ver> eq '0.91' ?? RSS091 !! RSS2
-        }
+        when 'rss'    { return $ver eq '0.91' ?? RSS091 !! RSS2 }
         when 'rdf:RDF' | 'RDF' { return RSS1 }
         default { die "Unknown feed format: <$_>" }
     }
 }
 
+multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
+    my $root = $doc.root;
+    feed-format($root.name, $root.attribs<version> // "")
+}
+
 sub parse-feed(Str $input --> Any) is export {
-    my $feed = do given feed-format($input) {
-        when Atom    { Syndicate::Atom.new($input) }
-        when RSS2    { Syndicate::RSS.new($input) }
-        when RSS091  { Syndicate::RSS::V0_91.new($input) }
-        when RSS1    { Syndicate::RSS::V1_0.new($input) }
-        when JSONFeedFmt { Syndicate::JSONFeed.new($input) }
-        default { die "Unhandled feed format: '$_'" }
+    my $feed;
+    my $doc = try { XML::Document.new($input.trim) };
+    if $doc {
+        my $root = $doc.root;
+        given $root.name {
+            when 'feed' { $feed = Syndicate::Atom.new($doc) }
+            when 'rss' {
+                my $ver = $root.attribs<version> // "";
+                $feed = $ver eq '0.91'
+                    ?? Syndicate::RSS::V0_91.new($doc)
+                    !! Syndicate::RSS.new($doc);
+            }
+            when 'rdf:RDF' | 'RDF' {
+                $feed = Syndicate::RSS::V1_0.new($doc);
+            }
+            default { die "Unknown feed format: <{$root.name}>" }
+        }
+    }
+    else {
+        my $parsed = try { from-json($input.trim) };
+        die "Unable to detect feed format: input is not valid XML or JSON" unless $parsed ~~ Hash && $parsed<version>.defined;
+        $feed = Syndicate::JSONFeed.new($input);
     }
     CATCH {
         Syndicate::Stats.record-error;

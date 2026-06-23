@@ -9,6 +9,7 @@ has Str $.description;
 has Str $.generator;
 has Str $.language;
 has @.items of Syndicate::Item;
+has Str $!cached-str;
 
 =begin pod
 

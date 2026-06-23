@@ -16,13 +16,18 @@ has %.author of Str;
 has Bool $.expired;
 
 multi method new(Str $json) {
-    my %h = try { from-json($json) };
-    die "Invalid JSON: $!" unless %h;
+    my %h;
+    try { %h = from-json($json) };
+    die "Invalid JSON: $!" if $!;
     self.new-from-hash(%h)
 }
 
 multi method new-from-hash(%h) {
+    my $version = %h<version> // "https://jsonfeed.org/version/1.1";
+    die "Invalid JSON Feed version: $version"
+        unless $version.starts-with('https://jsonfeed.org/version/');
     my $title       = %h<title> // Str;
+    die "JSON Feed requires title" unless $title.defined && $title.chars;
     my $link        = %h<home_page_url> // %h<feed_url> // Str;
     my $desc        = %h<description> // Str;
 
@@ -40,7 +45,7 @@ multi method new-from-hash(%h) {
         }
     }
 
-    my %bless = :$title, :$link, :description($desc),
+    my %bless = :$version, :$title, :$link, :description($desc),
         :feed_url(%h<feed_url> // Str),
         :user_comment(%h<user_comment> // Str),
         :next_url(%h<next_url> // Str),
@@ -85,7 +90,10 @@ method to-json {
     to-json $.to-hash
 }
 
-method Str { $.to-json }
+method Str {
+    return $!cached-str if $!cached-str.defined;
+    $!cached-str = $.to-json
+}
 
 =begin pod
 

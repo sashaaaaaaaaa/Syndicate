@@ -17,14 +17,14 @@ has @.contributors of Hash;
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid Atom entry XML: $!" unless $doc;
-    self.new-from-xml($doc.root)
+    self.from-xml($doc.root)
 }
 
 multi method new(XML::Element $xml-elem) {
-    self.new-from-xml($xml-elem)
+    self.from-xml($xml-elem)
 }
 
-multi method new-from-xml(XML::Element $entry-elem) {
+multi method from-xml(XML::Element $entry-elem) {
     my $id       = get-text($entry-elem, "id");
     my $title    = get-text($entry-elem, "title");
     my $summary  = get-text-optional($entry-elem, "summary");
@@ -74,7 +74,7 @@ multi method new-from-xml(XML::Element $entry-elem) {
         with .elements(:TAG<link>)[0] {
             %source-feed<link> = .attribs<href> // "";
         }
-        %source-feed<updated> = parse-date-optional(get-text($_, "updated"));
+        %source-feed<updated> = parse-date-optional(get-text-optional($_, "updated"));
     }
 
     my $author = %author-detail<name> // %author-detail<email> // Str;

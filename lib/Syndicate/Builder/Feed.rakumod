@@ -74,7 +74,7 @@ method rss-feed {
     %bless<description>       = $!description    if $!description.defined;
     %bless<language>          = $!language       if $!language.defined;
     %bless<copyright>         = $!rights         if $!rights.defined;
-    %bless<managingEditor>    = $!author-name    if $!author-name.defined;
+    %bless<managingEditor>    = $!author-email    if $!author-email.defined;
     %bless<generator>         = $!generator      if $!generator.defined;
     %bless<category>          = @!categories[0]  if @!categories;
     %bless<itunes-author>     = $!itunes-author  if $!itunes-author.defined;

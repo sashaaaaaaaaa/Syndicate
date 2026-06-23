@@ -7,9 +7,11 @@ unit module Syndicate::Extension::DublinCore:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(
     parse => sub ($elem, %attrs) {
-        if !%attrs<author>.defined || !%attrs<author>.chars {
-            my $creator = get-dc-text($elem, "creator");
-            %attrs<author> = $creator if $creator.defined && $creator.chars;
+        return unless $elem.elements.first({ .name.starts-with('dc:') });
+        my $creator = get-dc-text($elem, "creator");
+        if $creator.defined && $creator.chars {
+            %attrs<author> = $creator;
+            %attrs<has-dc-creator> = True;
         }
         with get-dc-text($elem, "date") -> $d {
             %attrs<updated> = $d if $d.defined && $d.chars;
@@ -18,7 +20,9 @@ register-ext(
         %attrs<dc-subjects> = @subjects if @subjects;
     },
     generate => sub ($xml, $item) {
-        add-dc-element($xml, "creator", $item.author) if $item.author.defined;
+        my $dc = $item.?has-dc-creator;
+        my $emit = $dc.defined ?? $dc !! True;
+        add-dc-element($xml, "creator", $item.author) if $emit && $item.author.defined;
     }
 );
 

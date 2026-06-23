@@ -18,10 +18,13 @@ has Str $.logo;
 has @.contributors of Hash;
 has %.link-self of Str;
 has %.link-alternate of Str;
+has DateTime $!computed-updated;
 
-multi method new(Str $xml) {
-    my $doc = try { XML::Document.new($xml) };
-    die "Invalid Atom XML: $!" unless $doc;
+submethod TWEAK {
+    self!cache-updated;
+}
+
+multi method new(XML::Document $doc) {
     my $feed = $doc.root;
     die "Not an Atom feed" unless $feed.name eq "feed";
     die "Not an Atom namespace" unless ($feed.nsURI // "") eq "http://www.w3.org/2005/Atom";
@@ -76,7 +79,7 @@ multi method new(Str $xml) {
 
     my @items;
     for $feed.elements(:TAG<entry>) -> $entry-elem {
-        @items.push: Syndicate::Atom::Item.new-from-xml($entry-elem);
+        @items.push: Syndicate::Atom::Item.from-xml($entry-elem);
     }
 
     my $author = %author-detail<name> // %author-detail<email> // Str;
@@ -92,9 +95,26 @@ multi method new(Str $xml) {
     self.bless(|%bless, :@items, :@contributors, :categories(@categories))
 }
 
+multi method new(Str $xml) {
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid Atom XML: $!" unless $doc;
+    self.new($doc)
+}
+
+method !cache-updated {
+    $!computed-updated = $!updated;
+    unless $!computed-updated.defined {
+        for @!items -> $item {
+            with $item.updated {
+                $!computed-updated = $_ if !$!computed-updated.defined || $_ > $!computed-updated;
+            }
+        }
+    }
+}
+
 method XML {
     my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns('http://www.w3.org/2005/Atom')}));
-    $xml.append: XML::Element.new(:name<id>, :nodes([$.id.defined ?? $.id !! $.link])) if $.id.defined || $.link.defined;
+    $xml.append: XML::Element.new(:name<id>, :nodes([encode-entities($.id)])) if $.id.defined;
     $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
     $xml.append: XML::Element.new(:name<subtitle>, :nodes([encode-entities($.subtitle)])) if $.subtitle.defined;
 
@@ -132,15 +152,7 @@ method XML {
         $xml.append: $c;
     }
 
-    my $upd = $!updated;
-    unless $upd.defined {
-        for @.items -> $item {
-            with $item.updated {
-                $upd = $_ if !$upd.defined || $_ > $upd;
-            }
-        }
-        $upd //= DateTime.now;
-    }
+    my $upd = $!computed-updated // $!updated // DateTime.now;
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
 
     $xml.append: $_.XML for @.items;
@@ -148,7 +160,10 @@ method XML {
     return $xml;
 }
 
-method Str { '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML }
+method Str {
+    return $!cached-str if $!cached-str.defined;
+    $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+}
 
 =begin pod
 

@@ -95,7 +95,7 @@ like $rss-str, /'<channel>'/, "RSS output has channel";
 like $rss-str, /"Test Builder Feed"/, "RSS output has feed title";
 like $rss-str, /"en"/, "RSS output has language";
 like $rss-str, /"Copyright 2026"/, "RSS output has copyright";
-like $rss-str, /"Jane Doe"/, "RSS output has managingEditor";
+like $rss-str, /"jane\@example.com"/, "RSS output has managingEditor";
 like $rss-str, /"Syndicate Test"/, "RSS output has generator";
 like $rss-str, /'<item>'/, "RSS output has items";
 

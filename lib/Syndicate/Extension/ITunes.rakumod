@@ -7,6 +7,7 @@ unit module Syndicate::Extension::ITunes:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(
     parse => sub ($elem, %attrs) {
+        return unless $elem.elements.first({ .name.starts-with('itunes:') });
         %attrs<itunes-author>   = get-itunes-text($elem, "author");
         %attrs<itunes-summary>  = get-itunes-text($elem, "summary");
         %attrs<itunes-duration> = get-itunes-duration($elem);
