@@ -7,6 +7,17 @@ use Syndicate::Stats;
 
 unit class Syndicate::RSS::V0_91::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
+multi method new(Str $xml) {
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid RSS 0.91 item XML: $!" unless $doc;
+    die "Not an item element" unless $doc.root.name eq "item";
+    self.new-from-xml($doc.root)
+}
+
+multi method new(XML::Element $xml-elem) {
+    self.new-from-xml($xml-elem)
+}
+
 proto method new-from-xml(|) {*}
 multi method new-from-xml(XML::Element $item-elem) {
     my $title = get-text-optional($item-elem, "title");

@@ -110,7 +110,7 @@ sub root-element(Str $input) {
         my $ver = "";
         if $rest ~~ /:i version \s* '=' \s* (<[\'\"]>) (\S+?) $0/ { $ver = ~$1 }
 
-        return %(:$name, :$ver, :rest($rest))
+        return %(:$name, :$ver)
     }
 }
 
