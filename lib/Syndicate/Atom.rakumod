@@ -94,7 +94,7 @@ multi method new(Str $xml) {
 
 method XML {
     my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns('http://www.w3.org/2005/Atom')}));
-    $xml.append: XML::Element.new(:name<id>, :nodes([$.id // $.link // ""]));
+    $xml.append: XML::Element.new(:name<id>, :nodes([$.id.defined ?? $.id !! $.link])) if $.id.defined || $.link.defined;
     $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
     $xml.append: XML::Element.new(:name<subtitle>, :nodes([encode-entities($.subtitle)])) if $.subtitle.defined;
 

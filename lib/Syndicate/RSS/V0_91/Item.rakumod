@@ -25,7 +25,6 @@ multi method new-from-xml(XML::Element $item-elem) {
     my $desc  = get-text-optional($item-elem, "description");
 
     my %extra;
-    %extra<author> = Str;
     run-parsers($item-elem, %extra);
     my $author = %extra<author> // Str;
 

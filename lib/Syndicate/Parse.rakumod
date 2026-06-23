@@ -24,7 +24,7 @@ sub feed-format(Str $input --> FeedFormat) is export {
         when 'rss'    {
             return $root<ver> eq '0.91' ?? RSS091 !! RSS2
         }
-        when 'rdf:RDF' { return RSS1 }
+        when 'rdf:RDF' | 'RDF' { return RSS1 }
         default { die "Unknown feed format: <$_>" }
     }
 }
