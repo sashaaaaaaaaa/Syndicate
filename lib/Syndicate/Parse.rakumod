@@ -30,18 +30,17 @@ sub feed-format(Str $input --> FeedFormat) is export {
 }
 
 sub parse-feed(Str $input --> Any) is export {
-    my $feed = try {
-        given feed-format($input) {
-            when Atom    { Syndicate::Atom.new($input) }
-            when RSS2    { Syndicate::RSS.new($input) }
-            when RSS091  { Syndicate::RSS::V0_91.new($input) }
-            when RSS1    { Syndicate::RSS::V1_0.new($input) }
-            when JSONFeedFmt { Syndicate::JSONFeed.new($input) }
-        }
-    };
-    if $!.defined {
+    my $feed = do given feed-format($input) {
+        when Atom    { Syndicate::Atom.new($input) }
+        when RSS2    { Syndicate::RSS.new($input) }
+        when RSS091  { Syndicate::RSS::V0_91.new($input) }
+        when RSS1    { Syndicate::RSS::V1_0.new($input) }
+        when JSONFeedFmt { Syndicate::JSONFeed.new($input) }
+        default { die "Unhandled feed format: '$_'" }
+    }
+    CATCH {
         Syndicate::Stats.record-error;
-        die $!;
+        die $_;
     }
     Syndicate::Stats.record-feed;
     $feed
@@ -55,25 +54,28 @@ sub root-element(Str $input) {
         my $start = index($s, '<', $pos);
         return Nil unless $start.defined;
 
-        # Scan past XML comments: find the first '-->' after '<!--'
-        if $s.substr($start) ~~ /^ '<!--' .+? '-->' / {
-            $pos = $start + $/.chars;
+        # Scan past XML comments
+        if $s.substr-eq('<!--', $start) {
+            my $end = index($s, '-->', $start + 4);
+            $pos = $end.defined ?? $end + 3 !! $start + 4;
             next;
         }
 
-        # Scan past CDATA sections: find the first ']]>' after '<![CDATA['
-        if $s.substr($start) ~~ /^ '<![CDATA[' .+? ']]>' / {
-            $pos = $start + $/.chars;
+        # Scan past CDATA sections
+        if $s.substr-eq('<![CDATA[', $start) {
+            my $end = index($s, ']]>', $start + 9);
+            $pos = $end.defined ?? $end + 3 !! $start + 9;
             next;
         }
 
         # Skip DOCTYPE declarations — scan for > not inside quotes,
         # since PUBLIC/SYSTEM identifiers may contain >
-        if $s.substr($start) ~~ /^ '<!DOCTYPE' / {
+        if $s.substr-eq('<!DOCTYPE', $start) {
             $pos = $start;
             my ($in-single, $in-double, $paren-depth);
             while $pos < $s.chars {
-                my $c = $s.substr($pos++, 1);
+                my $c = $s.substr($pos, 1);
+                $pos++;
                 if $c eq '"' && !$in-single    { $in-double = !$in-double }
                 elsif $c eq "'" && !$in-double { $in-single = !$in-single }
                 elsif $c eq '(' && !$in-single && !$in-double { $paren-depth++ }
