@@ -11,6 +11,11 @@ register-ext(
             my $creator = get-dc-text($elem, "creator");
             %attrs<author> = $creator if $creator.defined && $creator.chars;
         }
+        with get-dc-text($elem, "date") -> $d {
+            %attrs<updated> = $d if $d.defined && $d.chars;
+        }
+        my @subjects = get-dc-texts($elem, "subject");
+        %attrs<dc-subjects> = @subjects if @subjects;
     },
     generate => sub ($xml, $item) {
         add-dc-element($xml, "creator", $item.author) if $item.author.defined;

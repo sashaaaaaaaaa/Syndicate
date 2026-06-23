@@ -32,10 +32,10 @@ multi method new-from-xml(XML::Element $item-elem) {
     run-parsers($item-elem, %extra);
     my $author = %extra<author> // Str;
 
-    my $dc-date = get-dc-text($item-elem, "date");
-    my $updated = parse-date-optional($dc-date);
-
-    my @dc-subjects = get-dc-texts($item-elem, "subject");
+    my $updated = %extra<updated>:exists
+        ?? parse-date-optional(%extra<updated>)
+        !! Nil;
+    my @dc-subjects = @(%extra<dc-subjects> // []);
 
     my $item-id = $about // $link // Str;
     my %bless = :$about, :$title, :$link, :summary($desc),

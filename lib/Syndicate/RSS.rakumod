@@ -28,18 +28,6 @@ has Bool $!needs-dc;
 has Bool $!needs-media;
 has Bool $!needs-itunes;
 
-submethod TWEAK {
-    $!needs-dc = False;
-    $!needs-media = False;
-    $!needs-itunes = $!itunes-author.defined || $!itunes-summary.defined;
-    for @!items {
-        $!needs-dc     ||= .?author.defined;
-        $!needs-media  ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
-        $!needs-itunes ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
-        last if $!needs-dc && $!needs-media && $!needs-itunes;
-    }
-}
-
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid RSS XML: $!" unless $doc;
@@ -89,6 +77,15 @@ multi method new(Str $xml) {
 
 method XML {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('2.0')}));
+    $!needs-dc     = False;
+    $!needs-media  = False;
+    $!needs-itunes = $!itunes-author.defined || $!itunes-summary.defined;
+    for @!items {
+        $!needs-dc     ||= .?author.defined;
+        $!needs-media  ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
+        $!needs-itunes ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
+        last if $!needs-dc && $!needs-media && $!needs-itunes;
+    }
     add-dc-declaration($xml)    if $!needs-dc;
     add-media-declaration($xml) if $!needs-media;
     add-itunes-declaration($xml) if $!needs-itunes;

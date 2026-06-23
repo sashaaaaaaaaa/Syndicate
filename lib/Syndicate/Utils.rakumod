@@ -62,6 +62,6 @@ Not typically needed by end users.
 =item C<get-text($parent, $tag)> - Get required text content, dies if element missing
 =item C<get-text-optional($parent, $tag)> - Get optional text content (returns C<Str>)
 =item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>
-=item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Str>
+=item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Nil>
 
 =end pod
