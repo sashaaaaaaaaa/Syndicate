@@ -134,8 +134,12 @@ method XML {
 
     my $upd = $!updated;
     unless $upd.defined {
-        my @dates = @.items.map({$_.updated}).grep(*.defined);
-        $upd = @dates ?? @dates.max !! DateTime.now;
+        for @.items -> $item {
+            with $item.updated {
+                $upd = $_ if !$upd.defined || $_ > $upd;
+            }
+        }
+        $upd //= DateTime.now;
     }
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
 
