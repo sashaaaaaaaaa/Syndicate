@@ -101,12 +101,9 @@ method resolve-url(Str $url, Str $base --> Str) {
         $bp ~~ s/ <-[/]>* $ // unless $bp.ends-with('/');
         $rp = ($bp.chars ?? $bp !! '/') ~ $rp;
     }
-    my $port = $b.port;
-    my $port-str = $port.defined ?? ($port == 80 || $port == 443 ?? "" !! ":$port") !! "";
-    my $result = $b.scheme ~ '://' ~ $b.host ~ $port-str ~ $rp;
-    $result ~= '?' ~ $u.query.Str if $u.query.Str.chars;
-    $result ~= '#' ~ $u.fragment  if $u.fragment.defined && $u.fragment.chars;
-    $result
+    my $result = $b.clone;
+    $result.path($rp);
+    ~$result
 }
 
 =begin pod

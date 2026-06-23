@@ -1,4 +1,5 @@
 use v6.d;
+use XML;
 use Syndicate::RSS;
 use Syndicate::RSS::V0_91;
 use Syndicate::RSS::V1_0;
@@ -47,78 +48,12 @@ sub parse-feed(Str $input --> Any) is export {
 }
 
 sub root-element(Str $input) {
-    my $s = $input.trim;
-    my $pos = 0;
-
-    loop {
-        my $start = index($s, '<', $pos);
-        return Nil unless $start.defined;
-
-        # Scan past XML comments
-        if $s.substr-eq('<!--', $start) {
-            my $end = index($s, '-->', $start + 4);
-            $pos = $end.defined ?? $end + 3 !! $start + 4;
-            next;
-        }
-
-        # Scan past CDATA sections
-        if $s.substr-eq('<![CDATA[', $start) {
-            my $end = index($s, ']]>', $start + 9);
-            $pos = $end.defined ?? $end + 3 !! $start + 9;
-            next;
-        }
-
-        # Skip DOCTYPE declarations — scan for > not inside quotes,
-        # since PUBLIC/SYSTEM identifiers may contain >
-        # Uses regex to find next interesting character, avoiding per-char substr
-        if $s.substr-eq('<!DOCTYPE', $start) {
-            $pos = $start;
-            my int ($in-single, $in-double, $paren-depth, $bracket-depth);
-            while $pos < $s.chars {
-                given $s.match(/<["'()\[\]<>]>/, :p($pos)) {
-                    when .defined {
-                        $pos = .pos;
-                        given .Str {
-                            when '"' { $in-double = !$in-double if !$in-single }
-                            when "'" { $in-single = !$in-single if !$in-double }
-                            when '(' { $paren-depth++ if !$in-single && !$in-double }
-                            when ')' { $paren-depth-- if !$in-single && !$in-double && $paren-depth > 0 }
-                            when '[' { $bracket-depth++ if !$in-single && !$in-double }
-                            when ']' { $bracket-depth-- if !$in-single && !$in-double && $bracket-depth > 0 }
-                            when '>' { last if !$in-single && !$in-double && $paren-depth == 0 && $bracket-depth == 0 }
-                        }
-                    }
-                    default { last }
-                }
-            }
-            next;
-        }
-
-        my $close = index($s, '>', $start);
-        return Nil unless $close.defined;
-
-        my $tag = $s.substr($start, $close - $start + 1);
-        $pos = $close + 1;
-
-        # Skip XML declaration <?xml ...?>
-        next if $tag.starts-with('<?');
-
-        # Skip DOCTYPE <!DOCTYPE ...>
-        next if $tag.starts-with('<!');
-
-        # Extract tag name: <name ...> or <name/>
-        my $inner = $tag.substr(1, $tag.chars - 2).trim;
-        my $name-end = $inner.index(' ') // $inner.index('/') // $inner.index('>') // $inner.chars;
-        my $name = $inner.substr(0, $name-end);
-        next unless $name.chars;
-
-        my $rest = $inner.substr($name-end);
-
-        my $ver = "";
-        if $rest ~~ /:i version \s* '=' \s* (<[\'\"]>) (\S+?) $0/ { $ver = ~$1 }
-
-        return %(:$name, :$ver)
-    }
+    my $doc = try { XML::Document.new($input.trim) };
+    return Nil unless $doc;
+    my $root = $doc.root;
+    my $name = $root.name;
+    my $ver = $root.attribs<version> // "";
+    %(:$name, :$ver)
 }
 
 =begin pod
