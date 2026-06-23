@@ -64,15 +64,27 @@ multi method new(Str $xml) {
         :itunes-author($it-author), :itunes-summary($it-summary);
     %bless<pubDate> = $pd if $pd ~~ DateTime;
     %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
-    %bless<ttl> = $ttl-str.Int if $ttl-str.defined && $ttl-str.chars;
+    if $ttl-str.defined && $ttl-str.chars {
+        %bless<ttl> = try { $ttl-str.Int };
+    }
     self.bless(|%bless, :@items)
 }
 
 method XML {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('2.0')}));
-    add-dc-declaration($xml)    if @.items.first({ .?author.defined });
-    add-media-declaration($xml) if @.items.first({ .?media-contents || .?media-thumbnails || .?media-title.defined || .?media-description.defined });
-    add-itunes-declaration($xml) if $.itunes-author.defined || $.itunes-summary.defined || @.items.first({ .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined });
+    my ($need-dc, $need-media, $need-itunes);
+    $need-itunes = True if $.itunes-author.defined || $.itunes-summary.defined;
+    unless $need-dc && $need-media && $need-itunes {
+        for @.items {
+            $need-dc     ||= .?author.defined;
+            $need-media  ||= .?media-contents || .?media-thumbnails || .?media-title.defined || .?media-description.defined;
+            $need-itunes ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
+            last if $need-dc && $need-media && $need-itunes;
+        }
+    }
+    add-dc-declaration($xml)    if $need-dc;
+    add-media-declaration($xml) if $need-media;
+    add-itunes-declaration($xml) if $need-itunes;
     if $.atom-self-link.defined {
         $xml.attribs{'xmlns:atom'} = 'http://www.w3.org/2005/Atom';
     }
