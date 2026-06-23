@@ -23,7 +23,8 @@ has @.skipHours;
 has @.skipDays;
 
 multi method new(Str $xml) {
-    my $doc = XML::Document.new($xml);
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid RSS 0.91 XML: $!" unless $doc;
     my $rss = $doc.root;
     die "Not an RSS feed" unless $rss.name eq "rss";
     my $ver = $rss.attribs<version> // "";

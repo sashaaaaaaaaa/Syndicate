@@ -3,19 +3,19 @@ use Test;
 use lib 'lib';
 use Syndicate;
 
-plan 5;
+plan 18;
 
-# RSS roundtrip: create → generate → parse → compare
+# --- RSS entity encoding roundtrip ---
 my $rss = Syndicate::RSS.new(
-    :title("Roundtrip RSS"),
-    :link("http://example.com/rss"),
-    :description("Testing roundtrip"),
+    :title("AT&T <Home>"),
+    :link("http://example.com/rss?a=1&b=2"),
+    :description("Testing <roundtrip> with & entities"),
     :language("en"),
     :items([
         Syndicate::RSS::Item.new(
-            :title("Item A"),
+            :title("Item <A> & Co."),
             :link("http://example.com/a"),
-            :summary("Item A summary"),
+            :summary("Item A's summary"),
             :author("a@example.com"),
             :updated(DateTime.new("2025-06-15T10:00:00Z")),
             :guid("http://example.com/a"),
@@ -28,18 +28,24 @@ my $rss = Syndicate::RSS.new(
 );
 
 my $rss-xml = ~$rss;
+like $rss-xml, / 'AT&amp;T' /, "RSS output encodes & in title";
+like $rss-xml, / '&lt;Home&gt;' /, "RSS output encodes <> in title";
+like $rss-xml, / 'a=1&amp;b=2' /, "RSS output encodes & in link";
+like $rss-xml, / '&lt;roundtrip&gt;' /, "RSS output encodes <> in description";
+like $rss-xml, / 'Item &lt;A&gt; &amp; Co.' /, "RSS output encodes item title";
+
 my $parsed-rss = Syndicate::RSS.new($rss-xml);
-
-is $parsed-rss.title, "Roundtrip RSS", "RSS roundtrip title";
+is $parsed-rss.title, "AT&T <Home>", "RSS entity roundtrip title";
+is $parsed-rss.items[0].title, "Item <A> & Co.", "RSS entity roundtrip item title";
 is $parsed-rss.items.elems, 2, "RSS roundtrip item count";
-is $parsed-rss.items[0].title, "Item A", "RSS roundtrip first item title";
 
-# Atom roundtrip
+# --- Atom self-link type roundtrip ---
 my $atom = Syndicate::Atom.new(
     :title("Roundtrip Atom"),
     :id("http://example.com/atom"),
     :description("Testing atom roundtrip"),
     :updated(DateTime.new("2025-06-15T10:00:00Z")),
+    :link-self({ href => "http://example.com/atom", type => "application/atom+xml" }),
     :items([
         Syndicate::Atom::Item.new(
             :title("Entry 1"),
@@ -51,9 +57,40 @@ my $atom = Syndicate::Atom.new(
 );
 
 my $atom-xml = ~$atom;
-my $parsed-atom = Syndicate::Atom.new($atom-xml);
+like $atom-xml, / 'type="application/atom+xml"' /, "Atom self-link type preserved in output";
 
+my $parsed-atom = Syndicate::Atom.new($atom-xml);
 is $parsed-atom.title, "Roundtrip Atom", "Atom roundtrip title";
+is $parsed-atom.link-self<type>, "application/atom+xml", "Atom self-link type roundtrips";
 is $parsed-atom.items.elems, 1, "Atom roundtrip item count";
+
+# --- RSS 0.91 skipHours/skipDays/textInput roundtrip ---
+my $rss091 = Syndicate::RSS::V0_91.new(
+    :title("RSS 0.91"),
+    :link("http://example.com/091"),
+    :description("0.91 test"),
+    :language("en"),
+    :image({ url => "http://example.com/img.png", title => "Img", link => "http://example.com" }),
+    :textInput({ title => "Search", description => "Search site", name => "q", link => "http://example.com/search" }),
+    :skipHours([0, 6, 12, 18]),
+    :skipDays(["Monday", "Wednesday"]),
+    :items([
+        Syndicate::RSS::V0_91::Item.new(
+            :title("Item 1"),
+            :link("http://example.com/1"),
+            :summary("First item"),
+        ),
+    ]),
+);
+
+my $rss091-xml = ~$rss091;
+my $parsed-rss091 = Syndicate::RSS::V0_91.new($rss091-xml);
+
+is $parsed-rss091.title, "RSS 0.91", "RSS 0.91 roundtrip title";
+is $parsed-rss091.image<url>, "http://example.com/img.png", "RSS 0.91 image roundtrip";
+is $parsed-rss091.textInput<title>, "Search", "RSS 0.91 textInput roundtrip";
+is $parsed-rss091.skipHours.elems, 4, "RSS 0.91 skipHours count";
+is $parsed-rss091.skipDays.elems, 2, "RSS 0.91 skipDays count";
+is $parsed-rss091.items.elems, 1, "RSS 0.91 item count";
 
 done-testing;

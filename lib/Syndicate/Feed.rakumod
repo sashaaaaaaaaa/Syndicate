@@ -1,4 +1,5 @@
 use v6.d;
+use Syndicate::Item;
 
 unit role Syndicate::Feed:ver<0.0.1>:auth<zef:sasha>;
 
@@ -7,7 +8,7 @@ has Str $.link;
 has Str $.description;
 has Str $.generator;
 has Str $.language;
-has @.items;
+has @.items of Syndicate::Item;
 
 =begin pod
 

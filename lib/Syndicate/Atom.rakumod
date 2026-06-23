@@ -20,7 +20,8 @@ has %.link-self;
 has %.link-alternate;
 
 multi method new(Str $xml) {
-    my $doc = XML::Document.new($xml);
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid Atom XML: $!" unless $doc;
     my $feed = $doc.root;
     die "Not an Atom feed" unless $feed.name eq "feed";
     die "Not an Atom namespace" unless ($feed.nsURI // "") eq "http://www.w3.org/2005/Atom";

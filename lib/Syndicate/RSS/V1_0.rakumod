@@ -11,7 +11,8 @@ has Str $.about;
 has %.image;
 
 multi method new(Str $xml) {
-    my $doc = XML::Document.new($xml);
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid RSS 1.0 XML: $!" unless $doc;
     my $root = $doc.root;
     die "Not RSS 1.0" unless $root.name eq "rdf:RDF" || $root.name eq "RDF";
     my $channel = $root.elements(:TAG<channel>)[0];

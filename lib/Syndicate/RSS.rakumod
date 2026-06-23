@@ -27,9 +27,12 @@ has Str $.itunes-summary;
 has Str $.atom-self-link;
 
 multi method new(Str $xml) {
-    my $doc = XML::Document.new($xml);
+    my $doc = try { XML::Document.new($xml) };
+    die "Invalid RSS XML: $!" unless $doc;
     my $rss = $doc.root;
     die "Not an RSS feed" unless $rss.name eq "rss";
+    my $ver = $rss.attribs<version> // "2.0";
+    die "Unsupported RSS version: $ver" unless $ver eq "2.0";
     my $channel = $rss.elements(:TAG<channel>)[0];
     die "No channel element" unless $channel;
 
