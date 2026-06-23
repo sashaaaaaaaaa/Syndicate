@@ -52,7 +52,7 @@ method XML {
     }));
     add-dc-declaration($root) if $.language.defined
         || @.items.first({ .?author.defined || .?updated.defined
-            || ( .?dc-subjects && .?dc-subjects.elems > 0 ) });
+            || ( .?dc-subjects.defined && .?dc-subjects.elems > 0 ) });
 
     my $channel = XML::Element.new(:name<channel>);
     $channel.attribs{'rdf:about'} = $.about if $.about.defined;

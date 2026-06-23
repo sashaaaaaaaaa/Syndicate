@@ -2,7 +2,7 @@ use v6.d;
 use Test;
 use lib 'lib';
 
-plan 8;
+plan 10;
 
 use-ok "Syndicate";
 use Syndicate;
@@ -29,5 +29,11 @@ like ~$rss-feed, /"<rss"/, "RSS feed Str contains rss tag";
 like ~$rss-feed, /"<channel>"/, "RSS feed contains channel tag";
 like ~$rss-feed, /"My Title"/, "RSS feed contains title text";
 like ~$rss-feed, /"<item>"/, "RSS feed contains item tag";
+
+# RSS::Item.new(Str) constructor
+my $item-xml = '<item><title>XML Item</title><link>http://x.com</link><description>D</description></item>';
+my $parsed-item = Syndicate::RSS::Item.new($item-xml);
+isa-ok $parsed-item, Syndicate::RSS::Item, "RSS::Item.new(Str) parses item XML";
+is $parsed-item.title, "XML Item", "RSS::Item.new(Str) title";
 
 done-testing;

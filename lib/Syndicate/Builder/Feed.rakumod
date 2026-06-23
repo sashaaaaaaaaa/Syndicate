@@ -18,6 +18,7 @@ has Str $.generator = "Syndicate";
 has DateTime $.updated;
 has Str $.icon;
 has Str $.feed-url;
+has Str $.version;
 has Str $.logo;
 has Str $!author-name;
 has Str $!author-email;
@@ -39,6 +40,7 @@ method updated(DateTime $v?) { $!updated = $v if $v.defined; $!updated }
 method icon(Str $v?)        { $!icon = $v if $v.defined; $!icon }
 method logo(Str $v?)        { $!logo = $v if $v.defined; $!logo }
 method feed-url(Str $v?)    { $!feed-url = $v if $v.defined; $!feed-url }
+method version(Str $v?)     { $!version = $v if $v.defined; $!version }
 
 method author(Str :$name, Str :$email, Str :$uri) {
     $!author-name  = $name  if $name.defined;
@@ -123,6 +125,7 @@ method json-feed {
     my %bless = :title($!title // Str), :link($!link // Str),
         :description($!description // Str),
         :feed_url($!feed-url // Str),
+        :version($!version // Str),
         :language($!language // Str),
         :generator($!generator // Str),
         :icon($!icon // Str),

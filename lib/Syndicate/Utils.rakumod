@@ -36,14 +36,6 @@ sub get-text-optional($parent, $tag) is export {
     Str
 }
 
-sub get-attrib($parent, $tag, $attr) is export {
-    with $parent.elements(:TAG($tag))[0] -> $e {
-        my $a = $e.attribs{$attr} // Str;
-        return $a;
-    }
-    Str
-}
-
 sub parse-date(Str $str) is export {
     die "Cannot parse date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
     datetime-interpret($str.trim)
@@ -70,7 +62,6 @@ Not typically needed by end users.
 =item C<decode-entities(Str)>, C<encode-entities(Str)> - XML entity handling
 =item C<get-text($parent, $tag)> - Get required text content, dies if element missing
 =item C<get-text-optional($parent, $tag)> - Get optional text content (returns C<Str>)
-=item C<get-attrib($parent, $tag, $attr)> - Get an attribute value from a child element
 =item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>
 =item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Str>
 

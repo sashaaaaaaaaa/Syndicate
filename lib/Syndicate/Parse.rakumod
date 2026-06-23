@@ -106,8 +106,7 @@ sub root-element(Str $input) {
         my $rest = $inner.substr($name-end);
 
         my $ver = "";
-        if $rest ~~ /version\s*\=\s*\"(\S+?)\"/ { $ver = ~$0 }
-        elsif $rest ~~ /version\s*\=\s*\'(\S+?)\'/ { $ver = ~$0 }
+        if $rest ~~ /:i version \s* '=' \s* (<[\'\"]>) (\S+?) $0/ { $ver = ~$1 }
 
         return %(:$name, :$ver, :rest($rest))
     }
