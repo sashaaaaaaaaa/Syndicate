@@ -72,7 +72,7 @@ sub root-element(Str $input) {
         # since PUBLIC/SYSTEM identifiers may contain >
         if $s.substr-eq('<!DOCTYPE', $start) {
             $pos = $start;
-            my ($in-single, $in-double, $paren-depth);
+            my ($in-single, $in-double, $paren-depth, $bracket-depth);
             while $pos < $s.chars {
                 my $c = $s.substr($pos, 1);
                 $pos++;
@@ -80,7 +80,9 @@ sub root-element(Str $input) {
                 elsif $c eq "'" && !$in-double { $in-single = !$in-single }
                 elsif $c eq '(' && !$in-single && !$in-double { $paren-depth++ }
                 elsif $c eq ')' && !$in-single && !$in-double && $paren-depth > 0 { $paren-depth-- }
-                elsif $c eq '>' && !$in-single && !$in-double && $paren-depth == 0 { last }
+                elsif $c eq '[' && !$in-single && !$in-double { $bracket-depth++ }
+                elsif $c eq ']' && !$in-single && !$in-double && $bracket-depth > 0 { $bracket-depth-- }
+                elsif $c eq '>' && !$in-single && !$in-double && $paren-depth == 0 && $bracket-depth == 0 { last }
             }
             next;
         }
