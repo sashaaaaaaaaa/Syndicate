@@ -7,9 +7,9 @@ unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
 method parse-image($channel --> Hash) {
     my %image;
     with $channel.elements(:TAG<image>)[0] {
-        %image<url>         = get-text($_, "url");
-        %image<title>       = get-text($_, "title");
-        %image<link>        = get-text($_, "link");
+        %image<url>         = get-text-optional($_, "url");
+        %image<title>       = get-text-optional($_, "title");
+        %image<link>        = get-text-optional($_, "link");
         %image<width>       = get-text-optional($_, "width");
         %image<height>      = get-text-optional($_, "height");
         %image<description> = get-text-optional($_, "description");

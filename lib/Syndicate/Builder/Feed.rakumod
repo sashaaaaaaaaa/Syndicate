@@ -17,6 +17,7 @@ has Str $.rights;
 has Str $.generator = "Syndicate";
 has DateTime $.updated;
 has Str $.icon;
+has Str $.feed-url;
 has Str $.logo;
 has Str $!author-name;
 has Str $!author-email;
@@ -37,6 +38,7 @@ method generator(Str $v?)   { $!generator = $v if $v.defined; $!generator }
 method updated(DateTime $v?) { $!updated = $v if $v.defined; $!updated }
 method icon(Str $v?)        { $!icon = $v if $v.defined; $!icon }
 method logo(Str $v?)        { $!logo = $v if $v.defined; $!logo }
+method feed-url(Str $v?)    { $!feed-url = $v if $v.defined; $!feed-url }
 
 method author(Str :$name, Str :$email, Str :$uri) {
     $!author-name  = $name  if $name.defined;
@@ -118,10 +120,9 @@ method json-feed {
     my %author;
     %author<name> = $!author-name if $!author-name.defined;
     # JSON Feed author object has no 'email' field, so skip it
-    my $feed-id = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :description($!description // Str),
-        :feed_url($feed-id),
+        :feed_url($!feed-url // Str),
         :language($!language // Str),
         :generator($!generator // Str),
         :icon($!icon // Str),

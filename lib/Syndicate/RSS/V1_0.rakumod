@@ -28,9 +28,9 @@ multi method new(Str $xml) {
 
     my %image;
     with $root.elements(:TAG<image>)[0] -> $img {
-        %image<url>   = get-text($img, "url");
-        %image<title> = get-text($img, "title");
-        %image<link>  = get-text($img, "link");
+        %image<url>   = get-text-optional($img, "url");
+        %image<title> = get-text-optional($img, "title");
+        %image<link>  = get-text-optional($img, "link");
         %image<about> = $img.attribs{'rdf:about'} // $img.attribs<about> // Str;
     }
 

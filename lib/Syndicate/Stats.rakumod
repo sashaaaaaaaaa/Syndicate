@@ -6,9 +6,9 @@ my atomicint $feeds-parsed = 0;
 my atomicint $items-parsed = 0;
 my atomicint $errors = 0;
 
-method feeds-parsed { $feeds-parsed.Int }
-method items-parsed { $items-parsed.Int }
-method errors { $errors.Int }
+method feeds-parsed { ⚛$feeds-parsed }
+method items-parsed { ⚛$items-parsed }
+method errors { ⚛$errors }
 
 method record-feed { $feeds-parsed⚛++ }
 method record-item { $items-parsed⚛++ }
