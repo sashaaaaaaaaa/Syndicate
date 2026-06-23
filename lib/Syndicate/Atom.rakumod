@@ -109,9 +109,9 @@ method XML {
 
     if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
         my $author = XML::Element.new(:name<author>);
-        $author.append: XML::Element.new(:name<name>, :nodes([%!author-detail<name>])) if %!author-detail<name>.defined;
-        $author.append: XML::Element.new(:name<email>, :nodes([%!author-detail<email>])) if %!author-detail<email>.defined;
-        $author.append: XML::Element.new(:name<uri>, :nodes([%!author-detail<uri>])) if %!author-detail<uri>.defined;
+        $author.append: XML::Element.new(:name<name>, :nodes([encode-entities(%!author-detail<name>)])) if %!author-detail<name>.defined;
+        $author.append: XML::Element.new(:name<email>, :nodes([encode-entities(%!author-detail<email>)])) if %!author-detail<email>.defined;
+        $author.append: XML::Element.new(:name<uri>, :nodes([encode-entities(%!author-detail<uri>)])) if %!author-detail<uri>.defined;
         $xml.append: $author;
     }
 
@@ -126,9 +126,9 @@ method XML {
 
     for @.contributors -> %c {
         my $c = XML::Element.new(:name<contributor>);
-        $c.append: XML::Element.new(:name<name>, :nodes([%c<name>])) if %c<name>.defined;
-        $c.append: XML::Element.new(:name<email>, :nodes([%c<email>])) if %c<email>.defined;
-        $c.append: XML::Element.new(:name<uri>, :nodes([%c<uri>])) if %c<uri>.defined;
+        $c.append: XML::Element.new(:name<name>, :nodes([encode-entities(%c<name>)])) if %c<name>.defined;
+        $c.append: XML::Element.new(:name<email>, :nodes([encode-entities(%c<email>)])) if %c<email>.defined;
+        $c.append: XML::Element.new(:name<uri>, :nodes([encode-entities(%c<uri>)])) if %c<uri>.defined;
         $xml.append: $c;
     }
 
