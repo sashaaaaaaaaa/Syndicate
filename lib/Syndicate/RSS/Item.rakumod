@@ -88,20 +88,20 @@ multi method new-from-xml(XML::Element $item-elem) {
 
 method XML {
     my $xml = XML::Element.new(:name<item>);
-    $xml.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
-    $xml.append: XML::Element.new(:name<link>, :nodes([$.link])) if $.link.defined;
+    $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
+    $xml.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
     if $.guid.defined {
-        my $guid-elem = XML::Element.new(:name<guid>, :nodes([$.guid]));
+        my $guid-elem = XML::Element.new(:name<guid>, :nodes([encode-entities($.guid)]));
         $guid-elem.attribs<isPermaLink> = $.guid-is-permalink ?? "true" !! "false";
         $xml.append: $guid-elem;
     }
-    $xml.append: XML::Element.new(:name<description>, :nodes([$.summary])) if $.summary.defined;
+    $xml.append: XML::Element.new(:name<description>, :nodes([encode-entities($.summary)])) if $.summary.defined;
     if $.updated.defined {
         $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
     }
-    $xml.append: XML::Element.new(:name<author>, :nodes([$.author])) if $.author.defined;
-    $xml.append: XML::Element.new(:name<category>, :nodes([$.category])) if $.category.defined;
-    $xml.append: XML::Element.new(:name<comments>, :nodes([$.comments])) if $.comments.defined;
+    $xml.append: XML::Element.new(:name<author>, :nodes([encode-entities($.author)])) if $.author.defined;
+    $xml.append: XML::Element.new(:name<category>, :nodes([encode-entities($.category)])) if $.category.defined;
+    $xml.append: XML::Element.new(:name<comments>, :nodes([encode-entities($.comments)])) if $.comments.defined;
     if %.enclosure<url>.defined && %.enclosure<url>.chars {
         my $enc = XML::Element.new(:name<enclosure>);
         $enc.attribs<url>    = %.enclosure<url>;
@@ -109,7 +109,7 @@ method XML {
         $enc.attribs<type>   = %.enclosure<type>   // "";
         $xml.append: $enc;
     }
-    $xml.append: XML::Element.new(:name<source>, :nodes([$.source])) if $.source.defined;
+    $xml.append: XML::Element.new(:name<source>, :nodes([encode-entities($.source)])) if $.source.defined;
 
     run-generators($xml, self);
 

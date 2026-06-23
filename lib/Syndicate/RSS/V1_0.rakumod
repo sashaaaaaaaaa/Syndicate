@@ -56,10 +56,10 @@ method XML {
     $channel.attribs{'rdf:about'} = $.about if $.about.defined;
     $root.append: $channel;
 
-    $channel.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
-    $channel.append: XML::Element.new(:name<link>, :nodes([$.link])) if $.link.defined;
-    $channel.append: XML::Element.new(:name<description>, :nodes([$.description])) if $.description.defined;
-    $channel.append: XML::Element.new(:name<generator>, :nodes([$.generator])) if $.generator.defined;
+    $channel.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
+    $channel.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
+    $channel.append: XML::Element.new(:name<description>, :nodes([encode-entities($.description)])) if $.description.defined;
+    $channel.append: XML::Element.new(:name<generator>, :nodes([encode-entities($.generator)])) if $.generator.defined;
     add-dc-element($channel, "language", $.language) if $.language.defined;
 
     if %.image<about>.defined {
@@ -82,9 +82,9 @@ method XML {
     if %.image<url>.defined || %.image<title>.defined {
         my $img = XML::Element.new(:name<image>);
         $img.attribs{'rdf:about'} = %.image<about> if %.image<about>.defined;
-        $img.append: XML::Element.new(:name<title>, :nodes([%.image<title>])) if %.image<title>.defined;
-        $img.append: XML::Element.new(:name<url>, :nodes([%.image<url>])) if %.image<url>.defined;
-        $img.append: XML::Element.new(:name<link>, :nodes([%.image<link>])) if %.image<link>.defined;
+        $img.append: XML::Element.new(:name<title>, :nodes([encode-entities(%.image<title>)])) if %.image<title>.defined;
+        $img.append: XML::Element.new(:name<url>, :nodes([encode-entities(%.image<url>)])) if %.image<url>.defined;
+        $img.append: XML::Element.new(:name<link>, :nodes([encode-entities(%.image<link>)])) if %.image<link>.defined;
         $root.append: $img;
     }
 

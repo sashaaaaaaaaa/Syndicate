@@ -1,6 +1,7 @@
 use v6.d;
 use XML;
 use Syndicate::Extensions;
+use Syndicate::Utils;
 
 unit module Syndicate::Extension::DublinCore:ver<0.0.1>:auth<zef:sasha>;
 
@@ -42,7 +43,7 @@ sub add-dc-declaration(XML::Element $root --> Nil) is export {
 
 sub add-dc-element(XML::Element $parent, Str $tag, Str $content --> Nil) is export {
     return unless $content.defined && $content.chars;
-    $parent.append: XML::Element.new(:name("dc:$tag"), :nodes([$content]));
+    $parent.append: XML::Element.new(:name("dc:$tag"), :nodes([encode-entities($content)]));
 }
 
 =begin pod

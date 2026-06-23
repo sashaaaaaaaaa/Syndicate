@@ -1,6 +1,7 @@
 use v6.d;
 use XML;
 use Syndicate::Extensions;
+use Syndicate::Utils;
 
 unit module Syndicate::Extension::MediaRSS:ver<0.0.1>:auth<zef:sasha>;
 
@@ -17,10 +18,10 @@ register-ext(
         add-media-content-element($xml, $_) for @($item.?media-contents // []);
         add-media-thumbnail-element($xml, $_) for @($item.?media-thumbnails // []);
         with $item.?media-title {
-            $xml.append: XML::Element.new(:name<media:title>, :nodes([$_]));
+            $xml.append: XML::Element.new(:name<media:title>, :nodes([encode-entities($_)]));
         }
         with $item.?media-description {
-            $xml.append: XML::Element.new(:name<media:description>, :nodes([$_]));
+            $xml.append: XML::Element.new(:name<media:description>, :nodes([encode-entities($_)]));
         }
     }
 );

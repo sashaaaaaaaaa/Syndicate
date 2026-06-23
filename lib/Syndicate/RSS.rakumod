@@ -79,13 +79,13 @@ method XML {
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;
 
-    $channel.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
-    $channel.append: XML::Element.new(:name<link>, :nodes([$.link])) if $.link.defined;
-    $channel.append: XML::Element.new(:name<description>, :nodes([$.description])) if $.description.defined;
-    $channel.append: XML::Element.new(:name<language>, :nodes([$.language])) if $.language.defined;
-    $channel.append: XML::Element.new(:name<copyright>, :nodes([$.copyright])) if $.copyright.defined;
-    $channel.append: XML::Element.new(:name<managingEditor>, :nodes([$.managingEditor])) if $.managingEditor.defined;
-    $channel.append: XML::Element.new(:name<webMaster>, :nodes([$.webMaster])) if $.webMaster.defined;
+    $channel.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
+    $channel.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
+    $channel.append: XML::Element.new(:name<description>, :nodes([encode-entities($.description)])) if $.description.defined;
+    $channel.append: XML::Element.new(:name<language>, :nodes([encode-entities($.language)])) if $.language.defined;
+    $channel.append: XML::Element.new(:name<copyright>, :nodes([encode-entities($.copyright)])) if $.copyright.defined;
+    $channel.append: XML::Element.new(:name<managingEditor>, :nodes([encode-entities($.managingEditor)])) if $.managingEditor.defined;
+    $channel.append: XML::Element.new(:name<webMaster>, :nodes([encode-entities($.webMaster)])) if $.webMaster.defined;
     add-itunes-element($channel, "author", $.itunes-author) if $.itunes-author.defined;
     add-itunes-element($channel, "summary", $.itunes-summary) if $.itunes-summary.defined;
 
@@ -96,17 +96,17 @@ method XML {
         $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$RFC2822.to-string($.lastBuildDate)]));
     }
 
-    $channel.append: XML::Element.new(:name<category>, :nodes([$.category])) if $.category.defined;
-    $channel.append: XML::Element.new(:name<generator>, :nodes([$.generator])) if $.generator.defined;
-    $channel.append: XML::Element.new(:name<docs>, :nodes([$.docs])) if $.docs.defined;
-    $channel.append: XML::Element.new(:name<ttl>, :nodes([~$.ttl])) if $.ttl.defined;
+    $channel.append: XML::Element.new(:name<category>, :nodes([encode-entities($.category)])) if $.category.defined;
+    $channel.append: XML::Element.new(:name<generator>, :nodes([encode-entities($.generator)])) if $.generator.defined;
+    $channel.append: XML::Element.new(:name<docs>, :nodes([encode-entities($.docs)])) if $.docs.defined;
+    $channel.append: XML::Element.new(:name<ttl>, :nodes([encode-entities(~$.ttl)])) if $.ttl.defined;
 
     self.build-xml-image($channel, %.image);
 
     if $.atom-self-link.defined {
         $channel.append: XML::Element.new(
             :name<atom:link>,
-            :attribs({ :href($.atom-self-link), :rel<self>, :type('application/rss+xml') })
+            :attribs({ :href(encode-entities($.atom-self-link)), :rel<self>, :type('application/rss+xml') })
         );
     }
 

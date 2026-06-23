@@ -47,9 +47,9 @@ multi method new-from-xml(XML::Element $item-elem) {
 method XML {
     my $xml = XML::Element.new(:name<item>);
     $xml.attribs{'rdf:about'} = $.about if $.about.defined;
-    $xml.append: XML::Element.new(:name<title>, :nodes([$.title])) if $.title.defined;
-    $xml.append: XML::Element.new(:name<link>, :nodes([$.link])) if $.link.defined;
-    $xml.append: XML::Element.new(:name<description>, :nodes([$.summary])) if $.summary.defined;
+    $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
+    $xml.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
+    $xml.append: XML::Element.new(:name<description>, :nodes([encode-entities($.summary)])) if $.summary.defined;
 
     add-dc-element($xml, "creator", $.author) if $.author.defined;
     if $.updated.defined {
