@@ -23,6 +23,7 @@ multi method new(Str $xml) {
     my $desc  = get-text($channel, "description");
     my $gen   = get-text-optional($channel, "generator");
     my $lang  = get-text-optional($channel, "language");
+    $lang //= get-dc-text($channel, "language");
 
     my %image;
     with $root.elements(:TAG<image>)[0] -> $img {
