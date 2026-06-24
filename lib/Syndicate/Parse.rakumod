@@ -52,7 +52,7 @@ multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
             Syndicate::Stats.record-error;
             .rethrow;
         }
-        my $feed = Syndicate::JSONFeed.new($input);
+        my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed);
         Syndicate::Stats.record-feed;
         return $feed;
     }

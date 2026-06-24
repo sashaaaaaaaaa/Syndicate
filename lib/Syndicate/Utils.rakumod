@@ -41,7 +41,7 @@ sub parse-datetime(Str $str) is export {
 
 sub parse-date(Str $str) is export {
     die "Cannot parse date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
-    parse-datetime($str.trim)
+    parse-datetime($str.trim) // die "Cannot parse date: $str"
 }
 
 sub parse-date-optional(Str $str) is export {

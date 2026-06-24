@@ -162,8 +162,7 @@ method XML {
         $xml.append: $c;
     }
 
-    $!computed-updated //= $!updated // DateTime.now;
-    my $upd = $!computed-updated;
+    my $upd = $!computed-updated // $!updated // DateTime.now;
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
 
     $xml.append: $_.XML for @.items;
