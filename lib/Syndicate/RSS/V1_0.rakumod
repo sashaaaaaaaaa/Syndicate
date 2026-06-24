@@ -5,6 +5,8 @@ use Syndicate::RSS::Common;
 use Syndicate::RSS::V1_0::Item;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
+use Syndicate::Extension::MediaRSS;
+use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
@@ -12,6 +14,8 @@ unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed 
 has Str $.about;
 has %.image of Str;
 has Bool $!needs-dc;
+has Bool $!needs-media;
+has Bool $!needs-itunes;
 has Bool $!lang-from-dc is built;
 
 submethod TWEAK {
@@ -19,6 +23,13 @@ submethod TWEAK {
     $!needs-dc = so ($!lang-from-dc
         || @!items.first({ .?author.defined || .?updated.defined
             || ( .?dc-subjects.defined && .?dc-subjects.elems > 0 ) }));
+    $!needs-media = so @!items.first({
+        ?(.?media-contents) || ?(.?media-thumbnails)
+        || .?media-title.defined || .?media-description.defined
+    });
+    $!needs-itunes = so @!items.first({
+        .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined
+    });
 }
 
 multi method new(XML::Document $doc) {
@@ -80,7 +91,9 @@ method XML {
         'xmlns:rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
         'xmlns'     => 'http://purl.org/rss/1.0/'
     }));
-    add-dc-declaration($root) if $!needs-dc;
+    add-dc-declaration($root)    if $!needs-dc;
+    add-media-declaration($root) if $!needs-media;
+    add-itunes-declaration($root) if $!needs-itunes;
 
     my $channel = XML::Element.new(:name<channel>);
     $channel.attribs{'rdf:about'} = $.about if $.about.defined;

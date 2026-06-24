@@ -7,6 +7,8 @@ use DateTime::Format::RFC2822;
 my constant $RFC2822 = DateTime::Format::RFC2822.new;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
+use Syndicate::Extension::MediaRSS;
+use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 
 unit class Syndicate::RSS::V0_91:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
@@ -23,9 +25,18 @@ has %.textInput of Str;
 has @.skipHours of Int;
 has @.skipDays of Str;
 has Bool $!needs-dc;
+has Bool $!needs-media;
+has Bool $!needs-itunes;
 
 submethod TWEAK {
-    $!needs-dc = so @!items.first({ .?author.defined });
+    $!needs-dc    = so @!items.first({ .?author.defined });
+    $!needs-media = so @!items.first({
+        ?(.?media-contents) || ?(.?media-thumbnails)
+        || .?media-title.defined || .?media-description.defined
+    });
+    $!needs-itunes = so @!items.first({
+        .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined
+    });
 }
 
 multi method new(XML::Document $doc) {
@@ -110,7 +121,9 @@ method XML {
     self.build-xml-skip-hours($channel, @.skipHours);
     self.build-xml-skip-days($channel, @.skipDays);
 
-    add-dc-declaration($xml) if $!needs-dc;
+    add-dc-declaration($xml)    if $!needs-dc;
+    add-media-declaration($xml) if $!needs-media;
+    add-itunes-declaration($xml) if $!needs-itunes;
     $channel.append: $_.XML for @.items;
 
     return $xml;
