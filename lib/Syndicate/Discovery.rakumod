@@ -27,14 +27,14 @@ method !decode-response($resp --> Str) {
 
 method fetch(Str $url) {
     my $resp = $.ua.get($url);
-    die "HTTP {$resp<status>} - {$resp<reason>}" unless $resp<success>;
+    die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $body = self!decode-response($resp);
     parse-feed($body)
 }
 
 method discover(Str $url) {
     my $resp = $.ua.get($url);
-    die "HTTP {$resp<status>} - {$resp<reason>}" unless $resp<success>;
+    die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $body = self!decode-response($resp);
 
     my $feed;

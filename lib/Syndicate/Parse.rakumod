@@ -40,7 +40,7 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
     feed-format($root.name, $root.attribs<version> // "")
 }
 
-multi sub parse-feed(Str $input --> Any) is export {
+multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $doc = try { XML::Document.new($input.trim) };
     if $doc {
         return parse-feed($doc);
@@ -56,7 +56,7 @@ multi sub parse-feed(Str $input --> Any) is export {
     $feed
 }
 
-multi sub parse-feed(XML::Document $doc --> Any) is export {
+multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
     my $root = $doc.root;
     my $feed;
     given $root.name {

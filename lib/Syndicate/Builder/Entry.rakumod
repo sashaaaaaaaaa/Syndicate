@@ -43,7 +43,7 @@ method media-title(Str $v?) { $!media-title = $v if $v.defined; $!media-title }
 
 method media-description(Str $v?) { $!media-description = $v if $v.defined; $!media-description }
 
-method media-content(Str :$url, Str :$type, Str :$width, Str :$height, Str :$duration) {
+method media-content(Str :$url, Str :$type, :$width, :$height, :$duration) {
     my %mc = :$url, :$type;
     %mc<width>    = $width    if $width.defined;
     %mc<height>   = $height   if $height.defined;
@@ -52,7 +52,7 @@ method media-content(Str :$url, Str :$type, Str :$width, Str :$height, Str :$dur
     @!media-contents
 }
 
-method media-thumbnail(Str :$url, Str :$width, Str :$height, Str :$time) {
+method media-thumbnail(Str :$url, :$width, :$height, :$time) {
     my %mt = :$url;
     %mt<width>  = $width  if $width.defined;
     %mt<height> = $height if $height.defined;
