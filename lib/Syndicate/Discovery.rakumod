@@ -2,6 +2,7 @@ use v6.d;
 use HTTP::Tiny;
 use URI;
 use Syndicate::Parse;
+use Syndicate::Utils;
 
 my constant $link-tag = rx/ '<link' <-[>]>* ['/>' | '>'] /;
 my constant $base-tag = rx/ '<base' <-[>]>* ['/>' | '>'] /;
@@ -19,7 +20,7 @@ method !decode-response($resp --> Str) {
     my $charset = 'utf-8';
     with $resp<headers><content-type>.[0] {
         for .lc.split(';') {
-            .trim ~~ /^charset\s* \= \s* (<[^\s;]>+)/ and $charset = ~$0;
+            .trim ~~ /^charset\s* \= \s* (<[^\s;]>+)/ and $charset = ~$0.subst(/<[\'\"]>/, '', :g);
         }
     }
     $resp<content>.decode($charset)
@@ -75,7 +76,7 @@ method !parse-attrs(Str $tag --> Map) {
             } elsif $raw.starts-with("'") && $raw.ends-with("'") {
                 $val = $raw.substr(1, $raw.chars - 2);
             }
-            %attrs{$name.lc} = $val;
+            %attrs{$name.lc} = decode-entities($val);
         } else {
             %attrs{$name.lc} = True;
         }

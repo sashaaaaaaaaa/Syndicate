@@ -8,8 +8,8 @@ unit class Syndicate::JSONFeed::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::
 
 multi method new(Str $json) {
     my %h;
-    try { %h = from-json($json) };
-    die "Invalid JSON Feed item JSON: $!" if $!;
+    my $ok = try { %h = from-json($json); True };
+    die "Invalid JSON Feed item JSON: $!" without $ok;
     self.new-from-hash(%h)
 }
 
