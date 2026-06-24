@@ -44,11 +44,10 @@ multi method from-xml(XML::Element $item-elem) {
     my @categories;
     for $item-elem.elements(:TAG<category>) -> $c {
         with $c.contents[0] -> $t {
-            my $text = $t.?text // Str;
-            @categories.push: $text.defined && $text.chars ?? decode-entities($text) !! Str;
+            my $text = $t.?text // "";
+            @categories.push: decode-entities($text) if $text.chars;
         }
     }
-    @categories .= grep(*.defined);
     my $comment = get-text-optional($item-elem, "comments");
     my $pubdate = parse-date-optional(get-text-optional($item-elem, "pubDate"));
     my $source  = get-text-optional($item-elem, "source");

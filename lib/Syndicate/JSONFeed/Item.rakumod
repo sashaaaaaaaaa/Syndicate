@@ -25,7 +25,7 @@ has @.tags of Str;
 
 method new-from-hash(%h) {
     my $title   = %h<title> // Str;
-    my $link    = %h<url> // %h<external_url> // Str;
+    my $link    = %h<url> // Str;
     my $summary = %h<summary> // Str;
     my $id      = %h<id> // $link // Str;
     die "JSON Feed Item requires id or url" unless $id.defined && $id.chars;
@@ -79,7 +79,7 @@ method to-hash {
     %h<author>         = $.author        if $.author.defined;
     %h<content_html>   = $.content_html  if $.content_html.defined;
     %h<content_text>   = $.content_text  if $.content_text.defined;
-    %h<content_text>   = $.content       if $.content.defined && !$.content_html.defined && !$.content_text.defined;
+    %h<content_html>   = $.content       if $.content.defined && !$.content_html.defined && !$.content_text.defined;
     %h<image>          = $.image         if $.image.defined;
     %h<banner_image>   = $.banner_image  if $.banner_image.defined;
     %h<date_published> = $.date_published.Str if $.date_published.defined;
