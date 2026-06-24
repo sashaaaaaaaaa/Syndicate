@@ -77,6 +77,7 @@ multi method new(XML::Document $doc) {
             $primary-link = $href unless $primary-link;
         }
     }
+    $primary-link ||= %link-self<href>;
 
     my @items;
     for $feed.elements(:TAG<entry>) -> $entry-elem {

@@ -41,9 +41,9 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
 }
 
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
-    my $doc = try { XML::Document.new($input.trim) };
-    if $doc {
-        return parse-feed($doc);
+    my $root-info = root-element($input.trim);
+    if $root-info {
+        return parse-feed($root-info<doc>);
     }
     my $parsed = try { from-json($input.trim) };
     die "Unable to detect feed format: input is not valid XML or JSON" unless $parsed ~~ Hash && $parsed<version>.defined;
@@ -86,7 +86,7 @@ sub root-element(Str $input) {
     my $root = $doc.root;
     my $name = $root.name;
     my $ver = $root.attribs<version> // "";
-    %(:$name, :$ver)
+    %(:$name, :$ver, :$doc)
 }
 
 =begin pod

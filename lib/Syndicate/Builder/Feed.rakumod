@@ -125,6 +125,7 @@ method json-feed {
     my @items = @!entries.map(*.build-json-item);
     my %author;
     %author<name> = $!author-name if $!author-name.defined;
+    %author<url>  = $!author-uri  if $!author-uri.defined;
     # JSON Feed author object has no 'email' field, so skip it
     my %bless;
     %bless<title>       = $!title       if $!title.defined;

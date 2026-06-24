@@ -11,14 +11,16 @@ sub register-ext(:&parse, :&generate) is export {
 sub run-parsers($elem, %attrs) is export {
     return unless @extensions;
     for @extensions -> %ext {
-        try %ext<parse>($elem, %attrs);
+        my $ok = try { %ext<parse>($elem, %attrs); True };
+        warn "Extension parse callback failed: $!" without $ok;
     }
 }
 
 sub run-generators($xml, $item) is export {
     return unless @extensions;
     for @extensions -> %ext {
-        try %ext<generate>($xml, $item);
+        my $ok = try { %ext<generate>($xml, $item); True };
+        warn "Extension generate callback failed: $!" without $ok;
     }
 }
 
