@@ -115,7 +115,7 @@ method rss091-feed {
     %bless<description>     = $!description  if $!description.defined;
     %bless<language>        = $!language     if $!language.defined;
     %bless<copyright>       = $!rights       if $!rights.defined;
-    %bless<managingEditor>  = $!author-name  if $!author-name.defined;
+    %bless<managingEditor>  = $!author-email if $!author-email.defined;
     %bless<generator>       = $!generator    if $!generator.defined;
     %bless<pubDate>         = $!updated      if $!updated ~~ DateTime;
     Syndicate::RSS::V0_91.new(|%bless, :@items)

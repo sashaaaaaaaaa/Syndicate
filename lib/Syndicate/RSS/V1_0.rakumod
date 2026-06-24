@@ -20,16 +20,16 @@ has Bool $!lang-from-dc is built;
 
 submethod TWEAK {
     $!lang-from-dc //= False;
-    $!needs-dc = so ($!lang-from-dc
-        || @!items.first({ .?author.defined || .?updated.defined
-            || ( .?dc-subjects.defined && .?dc-subjects.elems > 0 ) }));
-    $!needs-media = so @!items.first({
-        ?(.?media-contents) || ?(.?media-thumbnails)
-        || .?media-title.defined || .?media-description.defined
-    });
-    $!needs-itunes = so @!items.first({
-        .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined
-    });
+    $!needs-dc    = $!lang-from-dc;
+    $!needs-media = False;
+    $!needs-itunes = False;
+    for @!items {
+        $!needs-dc      ||= .?has-dc-creator || .?updated.defined
+                         || ( .?dc-subjects.defined && .?dc-subjects.elems > 0 );
+        $!needs-media   ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
+        $!needs-itunes  ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
+        last if $!needs-dc && $!needs-media && $!needs-itunes;
+    }
 }
 
 multi method new(XML::Document $doc) {

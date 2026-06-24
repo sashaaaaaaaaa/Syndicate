@@ -106,7 +106,10 @@ method XML {
         $xml.append: $guid-elem;
     }
     $xml.append: XML::Element.new(:name<description>, :nodes([encode-entities($.summary)])) if $.summary.defined;
-    $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)])) if $.content.defined && $.content.chars;
+    if $.content.defined && $.content.chars {
+        $xml.attribs{'xmlns:content'} = 'http://purl.org/rss/1.0/modules/content/';
+        $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
+    }
     if $.updated.defined {
         $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
     }
@@ -115,7 +118,7 @@ method XML {
     $xml.append: XML::Element.new(:name<comments>, :nodes([encode-entities($.comments)])) if $.comments.defined;
     if %.enclosure<url>.defined && %.enclosure<url>.chars {
         my $enc = XML::Element.new(:name<enclosure>);
-        $enc.attribs<url>    = %.enclosure<url>;
+        $enc.attribs<url> = encode-entities(%.enclosure<url>);
         $enc.attribs<length> = %.enclosure<length> if %.enclosure<length>.defined && %.enclosure<length>.chars;
         $enc.attribs<type>   = %.enclosure<type>   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
         $xml.append: $enc;

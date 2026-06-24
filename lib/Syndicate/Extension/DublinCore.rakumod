@@ -20,9 +20,9 @@ register-ext(
         %attrs<dc-subjects> = @subjects if @subjects;
     },
     generate => sub ($xml, $item) {
-        my $dc = $item.?has-dc-creator;
-        my $emit = $dc.defined ?? $dc !! True;
-        add-dc-element($xml, "creator", $item.author) if $emit && $item.author.defined;
+        with $item.?has-dc-creator {
+            add-dc-element($xml, "creator", $item.author) if $_ && $item.author.defined;
+        }
     }
 );
 

@@ -29,14 +29,15 @@ has Bool $!needs-media;
 has Bool $!needs-itunes;
 
 submethod TWEAK {
-    $!needs-dc    = so @!items.first({ .?author.defined });
-    $!needs-media = so @!items.first({
-        ?(.?media-contents) || ?(.?media-thumbnails)
-        || .?media-title.defined || .?media-description.defined
-    });
-    $!needs-itunes = so @!items.first({
-        .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined
-    });
+    $!needs-dc    = False;
+    $!needs-media = False;
+    $!needs-itunes = False;
+    for @!items {
+        $!needs-dc      ||= .?has-dc-creator;
+        $!needs-media   ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
+        $!needs-itunes  ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
+        last if $!needs-dc && $!needs-media && $!needs-itunes;
+    }
 }
 
 multi method new(XML::Document $doc) {

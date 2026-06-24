@@ -174,12 +174,12 @@ like $atom-empty, /"Empty Feed"/, "empty Atom has title";
 # ===== RSS 0.91 builder output =====
 my $rss091-str = $fb.rss091-str;
 ok $rss091-str.chars > 0, "rss091-str generates output";
-like $rss091-str, /'<rss version="0.91">'/, "RSS 0.91 output has version 0.91";
+like $rss091-str, /version\=\"0.91\"/, "RSS 0.91 output has version 0.91";
 like $rss091-str, /'<channel>'/, "RSS 0.91 output has channel";
 like $rss091-str, /"Test Builder Feed"/, "RSS 0.91 output has feed title";
 like $rss091-str, /"en"/, "RSS 0.91 output has language";
 like $rss091-str, /"Copyright 2026"/, "RSS 0.91 output has copyright";
-like $rss091-str, /"Jane Doe"/, "RSS 0.91 output has managingEditor";
+like $rss091-str, /"jane\@example.com"/, "RSS 0.91 output has managingEditor";
 like $rss091-str, /'<item>'/, "RSS 0.91 output has items";
 
 my $rss091-feed = $fb.rss091-feed;

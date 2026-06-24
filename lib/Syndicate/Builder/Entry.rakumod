@@ -96,6 +96,10 @@ method build-v0_91-item {
         :summary($!summary // Str),
         :id($item-id),
         :content($!content // Str);
+    if $!author-name.defined {
+        %bless<author> = $!author-name;
+        %bless<has-dc-creator> = True;
+    }
     # id and content are passed for role-interface consistency
     # but V0_91::Item ignores them (format has no guid/content element)
     Syndicate::RSS::V0_91::Item.new(|%bless)
@@ -135,7 +139,8 @@ method build-v1_0-item {
         :id($item-id),
         :content($!content // Str),
         :$about,
-        :author($!author-name // Str);
+        :author($!author-name // Str),
+        :has-dc-creator($!author-name.defined);
     %bless<updated> = $!updated if $!updated ~~ DateTime;
     my @dc-subjects = @!categories;
     Syndicate::RSS::V1_0::Item.new(|%bless, :@dc-subjects)
