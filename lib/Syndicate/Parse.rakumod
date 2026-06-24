@@ -104,7 +104,8 @@ Syndicate::Parse - Feed format detection and parsing dispatcher
 use Syndicate::Parse;
 
 my $format = feed-format($input);       # Detect format
-my $feed   = parse-feed($input);        # Parse any format
+my $feed   = parse-feed($input);        # Parse any format (from string)
+my $feed   = parse-file("feed.xml");    # Parse from file path (Str or IO::Path)
 =end code
 
 =head1 DESCRIPTION
@@ -132,5 +133,14 @@ JSON feeds starting with C<{>, XML feeds by root element name and version attrib
 Detects format and returns an object of the appropriate class
 (C<Syndicate::Atom>, C<Syndicate::RSS>, C<Syndicate::RSS::V0_91>,
 C<Syndicate::RSS::V1_0>, or C<Syndicate::JSONFeed>).
+
+=head2 C<parse-file(Str $path)> / C<parse-file(IO::Path $path)>
+
+Reads a file from disk and parses it as a feed (auto-detected format).
+Throws if the file cannot be read or is not valid feed content.
+
+=for code :lang<raku>
+my $feed = parse-file("feed.xml");
+my $feed = parse-file("feed.xml".IO);
 
 =end pod

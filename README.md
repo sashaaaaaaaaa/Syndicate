@@ -95,6 +95,15 @@ The parser detects the format automatically:
 - `<rss` → RSS 2.0
 - `<rdf:RDF` → RSS 1.0
 
+### Parse from a file
+
+```raku
+use Syndicate::Parse;
+
+my $feed = parse-file("feed.xml");       # Str path
+my $feed = parse-file("feed.xml".IO);    # IO::Path also works
+```
+
 ### Explicit format parsing
 
 ```raku
