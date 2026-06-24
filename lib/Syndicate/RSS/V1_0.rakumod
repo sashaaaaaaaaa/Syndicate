@@ -22,7 +22,7 @@ has Bool $!lang-from-dc is built;
 
 submethod TWEAK {
     $!lang-from-dc //= False;
-    $!needs-dc    = $!lang-from-dc;
+    $!needs-dc    = $!lang-from-dc || $!language.defined;
     $!needs-media = False;
     $!needs-itunes = False;
     for @!items {
@@ -104,7 +104,7 @@ method XML {
     $channel.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
     $channel.append: XML::Element.new(:name<description>, :nodes([encode-entities($.description)])) if $.description.defined;
     $channel.append: XML::Element.new(:name<generator>, :nodes([encode-entities($.generator)])) if $.generator.defined;
-    add-dc-element($channel, "language", $.language) if $!lang-from-dc;
+    add-dc-element($channel, "language", $.language) if $.language.defined;
 
     if %.image<about>.defined {
         my $img-ref = XML::Element.new(:name<image>);
