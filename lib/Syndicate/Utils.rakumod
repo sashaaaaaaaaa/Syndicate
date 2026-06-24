@@ -20,7 +20,9 @@ sub get-text($parent, $tag) is export {
     my $e = $parent.elements(:TAG($tag))[0];
     die "Missing required element <$tag>" without $e;
     with $e.contents[0] -> $t {
-        return decode-entities($t.?text // "");
+        my $text = $t.?text // "";
+        die "Empty required element <$tag>" unless $text.chars;
+        return decode-entities($text);
     }
     die "Empty required element <$tag>"
 }
