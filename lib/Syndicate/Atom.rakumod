@@ -30,10 +30,10 @@ multi method new(XML::Document $doc) {
     die "Not an Atom feed" unless $feed.name eq "feed";
     die "Not an Atom namespace" unless ($feed.nsURI // "") eq "http://www.w3.org/2005/Atom";
 
-    my $id       = get-text($feed, "id");
-    my $title    = get-text($feed, "title");
-    my $subtitle = get-text-optional($feed, "subtitle");
-    my $rights   = get-text-optional($feed, "rights");
+    my $id    = get-text($feed, "id");
+    my $title = get-text($feed, "title");
+    my $desc  = get-text-optional($feed, "subtitle");
+    my $rights = get-text-optional($feed, "rights");
     my $gen      = get-text-optional($feed, "generator");
     my $icon     = get-text-optional($feed, "icon");
     my $logo     = get-text-optional($feed, "logo");
@@ -84,8 +84,8 @@ multi method new(XML::Document $doc) {
     my $author = %author-detail<name> // %author-detail<email> // Str;
 
     my %bless = :$id, :$title, :link($primary-link),
-        :description($subtitle),
-        :$subtitle, :$rights,
+        :description($desc),
+        :subtitle($desc), :$rights,
         :$author,
         :generator($gen), :$icon, :$logo,
         :author-detail(%author-detail),
