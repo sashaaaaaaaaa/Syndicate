@@ -87,11 +87,10 @@ multi method new(XML::Document $doc) {
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
-    CATCH {
+    unless $doc {
         Syndicate::Stats.record-error;
-        .rethrow;
+        die "Invalid RSS 0.91 XML: $!";
     }
-    die "Invalid RSS 0.91 XML: $!" unless $doc;
     self.new($doc)
 }
 

@@ -46,16 +46,13 @@ multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
         return parse-feed($root-info<doc>);
     }
     my $parsed = try { from-json($input.trim) };
-    die "Unable to detect feed format: input is not valid XML or JSON" unless $parsed ~~ Hash && $parsed<version>.defined;
-    {
-        CATCH {
-            Syndicate::Stats.record-error;
-            .rethrow;
-        }
-        my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed);
-        Syndicate::Stats.record-feed;
-        return $feed;
+    unless $parsed ~~ Hash && $parsed<version>.defined {
+        Syndicate::Stats.record-error;
+        die "Unable to detect feed format: input is not valid XML or JSON";
     }
+    my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed);
+    Syndicate::Stats.record-feed;
+    return $feed;
 }
 
 multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
@@ -73,10 +70,6 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
             $feed = Syndicate::RSS::V1_0.new($doc);
         }
         default { die "Unknown feed format: <{$root.name}>" }
-    }
-    CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
     }
     Syndicate::Stats.record-feed;
     $feed
