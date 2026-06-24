@@ -82,6 +82,11 @@ Atom 1.0, and JSON Feed 1.1. Provides a uniform API via L<C<Syndicate::Feed>|rak
 and L<C<Syndicate::Item>|rakudoc:Syndicate::Item> roles, a format-agnostic builder, feed discovery,
 and extension support (Dublin Core, Media RSS, iTunes).
 
+B<Security note:> The underlying C<XML> module (v0.3.6) does not process
+DTD entity declarations or resolve external entities, so XXE attacks
+are not applicable. Feed URLs fetched via L<C<Syndicate::Discovery>|rakudoc:Syndicate::Discovery>
+are restricted to http/https schemes.
+
 =head1 EXPORTED SUBS
 
 =head2 C<parse(Str $input)>

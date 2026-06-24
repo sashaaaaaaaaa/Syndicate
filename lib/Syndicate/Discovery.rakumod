@@ -29,7 +29,13 @@ method !decode-response($resp --> Str) {
     $resp<content>.decode($charset)
 }
 
+method !validate-url(Str $url) {
+    die "Blocked URL scheme — only http and https are permitted"
+        unless $url.starts-with('http://') || $url.starts-with('https://');
+}
+
 method fetch(Str $url) {
+    self!validate-url($url);
     my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $body = self!decode-response($resp);
@@ -37,6 +43,7 @@ method fetch(Str $url) {
 }
 
 method discover(Str $url) {
+    self!validate-url($url);
     my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $body = self!decode-response($resp);
