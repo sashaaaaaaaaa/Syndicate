@@ -116,12 +116,9 @@ method !set-namespace-flags {
     $!needs-media   = False;
     $!needs-content = False;
     $!needs-itunes  = $!itunes-author.defined || $!itunes-summary.defined;
-    for @!items {
-        $!needs-dc      ||= .?has-dc-creator;
-        $!needs-media   ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
-        $!needs-content ||= ?(.?content.defined && .?content.chars);
-        $!needs-itunes  ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
-        last if $!needs-dc && $!needs-media && $!needs-content && $!needs-itunes;
+    self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes);
+    for self.items -> $item {
+        $!needs-content ||= ?($item.?content.defined && $item.?content.chars);
     }
 }
 

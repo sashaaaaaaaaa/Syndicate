@@ -34,12 +34,7 @@ submethod TWEAK {
     $!needs-dc    = False;
     $!needs-media = False;
     $!needs-itunes = $!itunes-author.defined || $!itunes-summary.defined;
-    for @!items {
-        $!needs-dc      ||= .?has-dc-creator;
-        $!needs-media   ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
-        $!needs-itunes  ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
-        last if $!needs-dc && $!needs-media && $!needs-itunes;
-    }
+    self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes);
 }
 
 multi method new(XML::Document $doc) {

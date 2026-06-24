@@ -27,13 +27,11 @@ submethod TWEAK {
     $!needs-media = False;
     $!needs-content = False;
     $!needs-itunes = False;
-    for @!items {
-        $!needs-dc      ||= .?has-dc-creator || .?updated.defined
-                         || ( .?dc-subjects.defined && .?dc-subjects.elems > 0 );
-        $!needs-media   ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
-        $!needs-content ||= ?(.?content.defined && .?content.chars);
-        $!needs-itunes  ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
-        last if $!needs-dc && $!needs-media && $!needs-content && $!needs-itunes;
+    self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes);
+    for self.items -> $item {
+        $!needs-dc      ||= $item.?updated.defined
+                         || ( $item.?dc-subjects.defined && $item.?dc-subjects.elems > 0 );
+        $!needs-content ||= ?($item.?content.defined && $item.?content.chars);
     }
 }
 
@@ -51,7 +49,6 @@ multi method new(XML::Document $doc) {
     my $lang  = get-text-optional($channel, "language");
     my $lang-from-dc = False;
     if $lang.defined {
-        $lang-from-dc = False;
     } else {
         $lang = get-dc-text($channel, "language");
         $lang-from-dc = True if $lang.defined;

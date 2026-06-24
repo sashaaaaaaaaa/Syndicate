@@ -4,6 +4,14 @@ use Syndicate::Utils;
 
 unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
 
+method !set-item-flags($dc is rw, $media is rw, $itunes is rw) {
+    for self.items -> $item {
+        $dc     ||= $item.?has-dc-creator;
+        $media  ||= ?($item.?media-contents) || ?($item.?media-thumbnails) || $item.?media-title.defined || $item.?media-description.defined;
+        $itunes ||= $item.?itunes-author.defined || $item.?itunes-summary.defined || $item.?itunes-duration.defined;
+    }
+}
+
 method parse-image($channel --> Hash) {
     my %image;
     with $channel.elements(:TAG<image>)[0] {
