@@ -1,4 +1,5 @@
 use v6.d;
+use Syndicate::Stats;
 
 unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
 
@@ -15,7 +16,10 @@ sub run-parsers($elem, %attrs) is export {
     return unless @extensions;
     for @extensions -> %ext {
         my $ok = try { %ext<parse>($elem, %attrs); True };
-        warn "Extension parse callback failed: $!" without $ok;
+        unless $ok {
+            Syndicate::Stats.record-error;
+            note "Extension parse callback failed: $!";
+        }
     }
 }
 
@@ -23,7 +27,10 @@ sub run-generators($xml, $item) is export {
     return unless @extensions;
     for @extensions -> %ext {
         my $ok = try { %ext<generate>($xml, $item); True };
-        warn "Extension generate callback failed: $!" without $ok;
+        unless $ok {
+            Syndicate::Stats.record-error;
+            note "Extension generate callback failed: $!";
+        }
     }
 }
 

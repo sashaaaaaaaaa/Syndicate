@@ -24,6 +24,8 @@ has %.image of Str;
 has %.textInput of Str;
 has @.skipHours of Int;
 has @.skipDays of Str;
+has Str $.itunes-author;
+has Str $.itunes-summary;
 has Bool $!needs-dc;
 has Bool $!needs-media;
 has Bool $!needs-itunes;
@@ -31,7 +33,7 @@ has Bool $!needs-itunes;
 submethod TWEAK {
     $!needs-dc    = False;
     $!needs-media = False;
-    $!needs-itunes = False;
+    $!needs-itunes = $!itunes-author.defined || $!itunes-summary.defined;
     for @!items {
         $!needs-dc      ||= .?has-dc-creator;
         $!needs-media   ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
@@ -66,6 +68,9 @@ multi method new(XML::Document $doc) {
     my @skipHours = self.parse-skip-hours($channel);
     my @skipDays  = self.parse-skip-days($channel);
 
+    my $it-author  = get-itunes-text($channel, "author");
+    my $it-summary = get-itunes-text($channel, "summary");
+
     my @items;
     for $channel.elements(:TAG<item>) -> $item-elem {
         @items.push: Syndicate::RSS::V0_91::Item.from-xml($item-elem);
@@ -78,6 +83,8 @@ multi method new(XML::Document $doc) {
         :image(%image), :textInput(%textInput);
     %bless<pubDate> = $pd if $pd ~~ DateTime;
     %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
+    %bless<itunes-author> = $it-author if $it-author.defined;
+    %bless<itunes-summary> = $it-summary if $it-summary.defined;
     CATCH {
         Syndicate::Stats.record-error;
         .rethrow;
@@ -120,6 +127,9 @@ method XML {
     self.build-xml-textinput($channel, %.textInput) if %.textInput<title>.defined || %.textInput<name>.defined;
     self.build-xml-skip-hours($channel, @.skipHours);
     self.build-xml-skip-days($channel, @.skipDays);
+
+    add-itunes-element($channel, "author", $.itunes-author) if $.itunes-author.defined;
+    add-itunes-element($channel, "summary", $.itunes-summary) if $.itunes-summary.defined;
 
     add-dc-declaration($xml)    if $!needs-dc;
     add-media-declaration($xml) if $!needs-media;
