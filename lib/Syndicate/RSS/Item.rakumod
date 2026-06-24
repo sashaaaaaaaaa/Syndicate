@@ -111,7 +111,6 @@ method XML {
     }
     $xml.append: XML::Element.new(:name<description>, :nodes([encode-entities($.summary)])) if $.summary.defined;
     if $.content.defined && $.content.chars {
-        $xml.attribs{'xmlns:content'} = 'http://purl.org/rss/1.0/modules/content/';
         $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
     }
     if $.updated.defined {
