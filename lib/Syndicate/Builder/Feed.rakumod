@@ -76,12 +76,11 @@ method rss-feed {
     %bless<copyright>         = $!rights         if $!rights.defined;
     %bless<managingEditor>    = $!author-email    if $!author-email.defined;
     %bless<generator>         = $!generator      if $!generator.defined;
-    %bless<category>          = @!categories[0]  if @!categories;
     %bless<itunes-author>     = $!itunes-author  if $!itunes-author.defined;
     %bless<itunes-summary>    = $!itunes-summary if $!itunes-summary.defined;
     %bless<atom-self-link>    = $!atom-self-link if $!atom-self-link.defined;
     %bless<pubDate>           = $!updated        if $!updated ~~ DateTime;
-    Syndicate::RSS.new(|%bless, :@items)
+    Syndicate::RSS.new(|%bless, :categories(@!categories), :@items)
 }
 
 method atom-feed {

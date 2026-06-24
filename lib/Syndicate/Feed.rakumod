@@ -8,8 +8,9 @@ has Str $.link;
 has Str $.description;
 has Str $.generator;
 has Str $.language;
-has @.items of Syndicate::Item;
+has @.items of Syndicate::Item is readonly;
 has Str $!cached-str;
+has Lock $!str-lock = Lock.new;
 
 =begin pod
 

@@ -84,8 +84,8 @@ method build-rss-item {
         :media-title($!media-title // Str),
         :media-description($!media-description // Str);
     %bless<updated> = $!updated if $!updated ~~ DateTime;
-    %bless<category> = @!categories[0] if @!categories;
     Syndicate::RSS::Item.new(|%bless,
+        :categories(@!categories),
         :media-contents(@!media-contents),
         :media-thumbnails(@!media-thumbnails))
 }

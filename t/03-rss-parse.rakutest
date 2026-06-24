@@ -18,7 +18,7 @@ is $feed.language, "en-us", "channel language";
 is $feed.copyright, "Copyright 2025 Example Corp", "channel copyright";
 is $feed.managingEditor, "editor@example.com", "channel managingEditor";
 is $feed.webMaster, "webmaster@example.com", "channel webMaster";
-is $feed.category, "Technology", "channel category";
+is $feed.categories[0], "Technology", "channel category";
 is $feed.generator, "Syndicate", "channel generator";
 is $feed.docs, "http://www.rssboard.org/rss-specification", "channel docs";
 is $feed.ttl, 60, "channel ttl";

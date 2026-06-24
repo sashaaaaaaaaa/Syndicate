@@ -10,12 +10,16 @@ sub register-ext(:&parse, :&generate) is export {
 
 sub run-parsers($elem, %attrs) is export {
     return unless @extensions;
-    .<parse>($elem, %attrs) for @extensions;
+    for @extensions -> %ext {
+        try %ext<parse>($elem, %attrs);
+    }
 }
 
 sub run-generators($xml, $item) is export {
     return unless @extensions;
-    .<generate>($xml, $item) for @extensions;
+    for @extensions -> %ext {
+        try %ext<generate>($xml, $item);
+    }
 }
 
 =begin pod

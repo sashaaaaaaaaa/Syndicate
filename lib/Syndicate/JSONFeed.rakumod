@@ -3,6 +3,7 @@ use JSON::Fast;
 use Syndicate::Feed;
 use Syndicate::JSONFeed::Item;
 use Syndicate::Utils;
+use Syndicate::Stats;
 
 unit class Syndicate::JSONFeed:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 
@@ -18,6 +19,10 @@ has Bool $.expired;
 multi method new(Str $json) {
     my %h;
     try { %h = from-json($json) };
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     die "Invalid JSON: $!" if $!;
     self.new-from-hash(%h)
 }
@@ -54,6 +59,10 @@ multi method new-from-hash(%h) {
         :author(%author),
         :language(%h<language> // Str);
     %bless<expired> = %h<expired> if %h<expired>:exists;
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     self.bless(|%bless, :@items)
 }
 
@@ -91,8 +100,12 @@ method to-json {
 }
 
 method Str {
-    return $!cached-str if $!cached-str.defined;
-    $!cached-str = $.to-json
+    $!str-lock.protect: {
+        unless $!cached-str.defined {
+            $!cached-str = $.to-json
+        }
+    }
+    $!cached-str
 }
 
 =begin pod

@@ -5,6 +5,7 @@ use Syndicate::RSS::Common;
 use Syndicate::RSS::V1_0::Item;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
+use Syndicate::Stats;
 
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
@@ -53,6 +54,10 @@ multi method new(XML::Document $doc) {
         @items.push: Syndicate::RSS::V1_0::Item.from-xml($item-elem);
     }
 
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     self.bless(:$about, :$title, :$link, :description($desc),
                :generator($gen), :language($lang),
                :image(%image),
@@ -62,6 +67,10 @@ multi method new(XML::Document $doc) {
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     die "Invalid RSS 1.0 XML: $!" unless $doc;
     self.new($doc)
 }
@@ -95,7 +104,7 @@ method XML {
     $items-wrapper.append: $seq;
     for @.items -> $item {
         my $li = XML::Element.new(:name<rdf:li>);
-        my $resource = $item.link // $item.?about // Str;
+        my $resource = $item.?about // $item.link // Str;
         $li.attribs{'rdf:resource'} = $resource if $resource.defined && $resource.chars;
         $seq.append: $li;
     }
@@ -108,8 +117,12 @@ method XML {
 }
 
 method Str {
-    return $!cached-str if $!cached-str.defined;
-    $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+    $!str-lock.protect: {
+        unless $!cached-str.defined {
+            $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+        }
+    }
+    $!cached-str
 }
 
 =begin pod

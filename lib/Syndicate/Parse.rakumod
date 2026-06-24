@@ -40,33 +40,41 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
     feed-format($root.name, $root.attribs<version> // "")
 }
 
-sub parse-feed(Str $input --> Any) is export {
-    my $feed;
+multi sub parse-feed(Str $input --> Any) is export {
     my $doc = try { XML::Document.new($input.trim) };
     if $doc {
-        my $root = $doc.root;
-        given $root.name {
-            when 'feed' { $feed = Syndicate::Atom.new($doc) }
-            when 'rss' {
-                my $ver = $root.attribs<version> // "";
-                $feed = $ver eq '0.91'
-                    ?? Syndicate::RSS::V0_91.new($doc)
-                    !! Syndicate::RSS.new($doc);
-            }
-            when 'rdf:RDF' | 'RDF' {
-                $feed = Syndicate::RSS::V1_0.new($doc);
-            }
-            default { die "Unknown feed format: <{$root.name}>" }
-        }
+        return parse-feed($doc);
     }
-    else {
-        my $parsed = try { from-json($input.trim) };
-        die "Unable to detect feed format: input is not valid XML or JSON" unless $parsed ~~ Hash && $parsed<version>.defined;
-        $feed = Syndicate::JSONFeed.new($input);
+    my $parsed = try { from-json($input.trim) };
+    die "Unable to detect feed format: input is not valid XML or JSON" unless $parsed ~~ Hash && $parsed<version>.defined;
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
+    my $feed = Syndicate::JSONFeed.new($input);
+    Syndicate::Stats.record-feed;
+    $feed
+}
+
+multi sub parse-feed(XML::Document $doc --> Any) is export {
+    my $root = $doc.root;
+    my $feed;
+    given $root.name {
+        when 'feed' { $feed = Syndicate::Atom.new($doc) }
+        when 'rss' {
+            my $ver = $root.attribs<version> // "";
+            $feed = $ver eq '0.91'
+                ?? Syndicate::RSS::V0_91.new($doc)
+                !! Syndicate::RSS.new($doc);
+        }
+        when 'rdf:RDF' | 'RDF' {
+            $feed = Syndicate::RSS::V1_0.new($doc);
+        }
+        default { die "Unknown feed format: <{$root.name}>" }
     }
     CATCH {
         Syndicate::Stats.record-error;
-        die $_;
+        .rethrow;
     }
     Syndicate::Stats.record-feed;
     $feed

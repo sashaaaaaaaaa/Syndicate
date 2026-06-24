@@ -7,6 +7,7 @@ use DateTime::Format::RFC2822;
 my constant $RFC2822 = DateTime::Format::RFC2822.new;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
+use Syndicate::Stats;
 
 unit class Syndicate::RSS::V0_91:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
@@ -65,11 +66,19 @@ multi method new(XML::Document $doc) {
         :image(%image), :textInput(%textInput);
     %bless<pubDate> = $pd if $pd ~~ DateTime;
     %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays))
 }
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     die "Invalid RSS 0.91 XML: $!" unless $doc;
     self.new($doc)
 }
@@ -108,8 +117,12 @@ method XML {
 }
 
 method Str {
-    return $!cached-str if $!cached-str.defined;
-    $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+    $!str-lock.protect: {
+        unless $!cached-str.defined {
+            $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+        }
+    }
+    $!cached-str
 }
 
 =begin pod

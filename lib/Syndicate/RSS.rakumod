@@ -9,6 +9,7 @@ use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
+use Syndicate::Stats;
 
 unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
@@ -17,17 +18,17 @@ has Str $.managingEditor;
 has Str $.webMaster;
 has DateTime $.pubDate;
 has DateTime $.lastBuildDate;
-has Str $.category;
+has @.categories of Str;
 has Str $.docs;
 has Int $.ttl;
 has %.image of Str;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.atom-self-link;
-    has Bool $!needs-dc;
-    has Bool $!needs-media;
-    has Bool $!needs-content;
-    has Bool $!needs-itunes;
+has Bool $!needs-dc;
+has Bool $!needs-media;
+has Bool $!needs-content;
+has Bool $!needs-itunes;
 
 submethod TWEAK {
     self!set-namespace-flags;
@@ -50,7 +51,14 @@ multi method new(XML::Document $doc) {
     my $wm      = get-text-optional($channel, "webMaster");
     my $pd      = parse-date-optional(get-text-optional($channel, "pubDate"));
     my $lbd     = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
-    my $cat     = get-text-optional($channel, "category");
+    my @categories;
+    for $channel.elements(:TAG<category>) -> $c {
+        with $c.contents[0] -> $t {
+            my $text = $t.?text // Str;
+            @categories.push: $text.defined && $text.chars ?? decode-entities($text) !! Str;
+        }
+    }
+    @categories .= grep(*.defined);
     my $gen     = get-text-optional($channel, "generator");
     my $docs    = get-text-optional($channel, "docs");
     my $ttl-str = get-text-optional($channel, "ttl");
@@ -75,7 +83,7 @@ multi method new(XML::Document $doc) {
     my %bless = :$title, :$link, :description($desc),
         :language($lang), :copyright($cpy),
         :managingEditor($me), :webMaster($wm),
-        :category($cat), :generator($gen), :docs($docs),
+        :generator($gen), :docs($docs),
         :image(%image),
         :itunes-author($it-author), :itunes-summary($it-summary),
         :$atom-self-link;
@@ -87,11 +95,19 @@ multi method new(XML::Document $doc) {
             warn "ttl of $_ minutes exceeds recommended maximum of 10080 (1 week)" if $_ > 10080;
         }
     }
-    self.bless(|%bless, :@items)
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
+    self.bless(|%bless, :@categories, :@items)
 }
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     die "Invalid RSS XML: $!" unless $doc;
     self.new($doc)
 }
@@ -139,7 +155,7 @@ method XML {
         $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$RFC2822.to-string($.lastBuildDate)]));
     }
 
-    $channel.append: XML::Element.new(:name<category>, :nodes([encode-entities($.category)])) if $.category.defined;
+    $channel.append: XML::Element.new(:name<category>, :nodes([encode-entities($_)])) for @.categories;
     $channel.append: XML::Element.new(:name<generator>, :nodes([encode-entities($.generator)])) if $.generator.defined;
     $channel.append: XML::Element.new(:name<docs>, :nodes([encode-entities($.docs)])) if $.docs.defined;
     $channel.append: XML::Element.new(:name<ttl>, :nodes([encode-entities(~$.ttl)])) if $.ttl.defined;
@@ -159,8 +175,12 @@ method XML {
 }
 
 method Str {
-    return $!cached-str if $!cached-str.defined;
-    $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+    $!str-lock.protect: {
+        unless $!cached-str.defined {
+            $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+        }
+    }
+    $!cached-str
 }
 
 =begin pod

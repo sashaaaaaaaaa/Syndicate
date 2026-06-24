@@ -1,5 +1,5 @@
 use v6.d;
-use XML;
+use XML::Entity;
 use DateTime::Grammar;
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;

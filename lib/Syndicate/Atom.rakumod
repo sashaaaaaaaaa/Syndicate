@@ -3,6 +3,7 @@ use XML;
 use Syndicate::Feed;
 use Syndicate::Atom::Item;
 use Syndicate::Utils;
+use Syndicate::Stats;
 
 unit class Syndicate::Atom:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 
@@ -92,11 +93,19 @@ multi method new(XML::Document $doc) {
         :author-detail(%author-detail),
         :link-self(%link-self), :link-alternate(%link-alternate);
     %bless<updated> = $upd if $upd ~~ DateTime;
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     self.bless(|%bless, :@items, :@contributors, :categories(@categories))
 }
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     die "Invalid Atom XML: $!" unless $doc;
     self.new($doc)
 }
@@ -152,7 +161,8 @@ method XML {
         $xml.append: $c;
     }
 
-    my $upd = $!computed-updated // $!updated // DateTime.now;
+    $!computed-updated //= $!updated // DateTime.now;
+    my $upd = $!computed-updated;
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
 
     $xml.append: $_.XML for @.items;
@@ -161,8 +171,12 @@ method XML {
 }
 
 method Str {
-    return $!cached-str if $!cached-str.defined;
-    $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+    $!str-lock.protect: {
+        unless $!cached-str.defined {
+            $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+        }
+    }
+    $!cached-str
 }
 
 =begin pod

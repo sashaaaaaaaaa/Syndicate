@@ -96,8 +96,8 @@ method resolve-url(Str $url, Str $base --> Str) {
     my $scheme = $base ~~ /^(https?)/ ?? ~$0 !! 'https';
     return $scheme ~ ':' ~ $url if $url ~~ /^\/\//;
 
-    my $b = URI.new($base);
-    my $u = URI.new($url);
+    my $b = try { URI.new($base) } // return $url;
+    my $u = try { URI.new($url) }  // return $url;
     my $rp = $u.path.path;
     unless $rp.starts-with('/') {
         my $bp = $b.path.path;

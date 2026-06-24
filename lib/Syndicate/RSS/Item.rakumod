@@ -12,7 +12,7 @@ unit class Syndicate::RSS::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 has Str $.guid;
 has Bool $.guid-is-permalink = True;
 has Bool $.has-dc-creator;
-has Str $.category;
+has @.categories of Str;
 has Str $.comments;
 has %.enclosure of Str;
 has Str $.source;
@@ -41,7 +41,14 @@ multi method from-xml(XML::Element $item-elem) {
     my $desc    = get-text-optional($item-elem, "description");
     my $encoded = get-text-optional($item-elem, "content:encoded");
     my $author  = get-text-optional($item-elem, "author");
-    my $cat     = get-text-optional($item-elem, "category");
+    my @categories;
+    for $item-elem.elements(:TAG<category>) -> $c {
+        with $c.contents[0] -> $t {
+            my $text = $t.?text // Str;
+            @categories.push: $text.defined && $text.chars ?? decode-entities($text) !! Str;
+        }
+    }
+    @categories .= grep(*.defined);
     my $comment = get-text-optional($item-elem, "comments");
     my $pubdate = parse-date-optional(get-text-optional($item-elem, "pubDate"));
     my $source  = get-text-optional($item-elem, "source");
@@ -71,15 +78,14 @@ multi method from-xml(XML::Element $item-elem) {
     my $media-title       = %extra<media-title>         // Str;
     my $media-description = %extra<media-description>   // Str;
 
-    my $content = $encoded.defined && $encoded.chars ?? $encoded !! $desc;
+    my $content = $encoded.defined && $encoded.chars ?? $encoded !! Str;
     my $item-id = $guid // $link // Str;
     my %bless = :$title, :$link, :summary($desc),
         :$author,
         :id($item-id),
         :$content,
         :has-dc-creator(%extra<has-dc-creator> // False),
-        :$guid, :guid-is-permalink($guid-is-permalink),
-        :category($cat), :comments($comment),
+        :comments($comment),
         :enclosure(%enclosure), :source($source),
         :media-title($media-title), :media-description($media-description),
         :itunes-author(%extra<itunes-author> // Str),
@@ -87,7 +93,7 @@ multi method from-xml(XML::Element $item-elem) {
         :itunes-duration(%extra<itunes-duration> // Str);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
     Syndicate::Stats.record-item;
-    self.bless(|%bless, :@media-contents, :@media-thumbnails)
+    self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails)
 }
 
 method XML {
@@ -105,7 +111,7 @@ method XML {
         $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
     }
     $xml.append: XML::Element.new(:name<author>, :nodes([encode-entities($.author)])) if $.author.defined;
-    $xml.append: XML::Element.new(:name<category>, :nodes([encode-entities($.category)])) if $.category.defined;
+    $xml.append: XML::Element.new(:name<category>, :nodes([encode-entities($_)])) for @.categories;
     $xml.append: XML::Element.new(:name<comments>, :nodes([encode-entities($.comments)])) if $.comments.defined;
     if %.enclosure<url>.defined && %.enclosure<url>.chars {
         my $enc = XML::Element.new(:name<enclosure>);

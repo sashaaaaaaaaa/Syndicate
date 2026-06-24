@@ -13,6 +13,7 @@ has Str $.content-type;
 has Str $.rights;
 has %.source-feed;
 has @.contributors of Hash;
+has DateTime $!cached-updated;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
@@ -104,7 +105,8 @@ method XML {
         $xml.append: XML::Element.new(:name<content>, :attribs(%attribs), :nodes([encode-entities($.content)]));
     }
 
-    my $upd = $.updated // DateTime.now;
+    $!cached-updated //= $.updated // DateTime.now;
+    my $upd = $!cached-updated;
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
     if $.published.defined {
         $xml.append: XML::Element.new(:name<published>, :nodes([$.published.Str]));
