@@ -98,14 +98,7 @@ method to-json {
     to-json $.to-hash
 }
 
-method Str {
-    $!str-lock.protect: {
-        unless $!cached-str.defined {
-            $!cached-str = $.to-json
-        }
-    }
-    $!cached-str
-}
+method Str { $.to-json }
 
 =begin pod
 

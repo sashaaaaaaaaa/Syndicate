@@ -130,15 +130,6 @@ method XML {
     return $root;
 }
 
-method Str {
-    $!str-lock.protect: {
-        unless $!cached-str.defined {
-            $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
-        }
-    }
-    $!cached-str
-}
-
 =begin pod
 
 =head1 NAME

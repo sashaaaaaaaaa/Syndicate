@@ -157,7 +157,7 @@ method XML {
     $channel.append: XML::Element.new(:name<category>, :nodes([encode-entities($_)])) for @.categories;
     $channel.append: XML::Element.new(:name<generator>, :nodes([encode-entities($.generator)])) if $.generator.defined;
     $channel.append: XML::Element.new(:name<docs>, :nodes([encode-entities($.docs)])) if $.docs.defined;
-    $channel.append: XML::Element.new(:name<ttl>, :nodes([encode-entities(~$.ttl)])) if $.ttl.defined;
+    $channel.append: XML::Element.new(:name<ttl>, :nodes([~$.ttl])) if $.ttl.defined;
 
     self.build-xml-image($channel, %.image) if %.image<url>.defined || %.image<title>.defined;
 
@@ -171,15 +171,6 @@ method XML {
     $channel.append: $_.XML for @.items;
 
     return $xml;
-}
-
-method Str {
-    $!str-lock.protect: {
-        unless $!cached-str.defined {
-            $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
-        }
-    }
-    $!cached-str
 }
 
 =begin pod
