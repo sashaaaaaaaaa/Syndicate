@@ -104,4 +104,8 @@ Parse JSON Feed, returning C<Syndicate::JSONFeed>.
 
 Parse RSS 1.0 XML, returning C<Syndicate::RSS::V1_0>.
 
+=head2 C<parse-rss091(Str $xml)>
+
+Parse RSS 0.91 XML, returning C<Syndicate::RSS::V0_91>.
+
 =end pod

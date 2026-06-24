@@ -138,6 +138,8 @@ C<Syndicate::RSS::V1_0>, or C<Syndicate::JSONFeed>).
 
 Reads a file from disk and parses it as a feed (auto-detected format).
 Throws if the file cannot be read or is not valid feed content.
+Assumes UTF-8 encoding. For non-UTF-8 feed files, read the content
+manually with the appropriate encoding and pass to C<parse-feed>.
 
 =for code :lang<raku>
 my $feed = parse-file("feed.xml");
