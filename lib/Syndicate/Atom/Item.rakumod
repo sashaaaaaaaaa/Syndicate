@@ -6,6 +6,10 @@ use Syndicate::Stats;
 
 unit class Syndicate::Atom::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
+submethod TWEAK {
+    $!updated //= DateTime.now;
+}
+
 has %.author-detail of Str;
 has @.categories of Str;
 has DateTime $.published;
@@ -112,7 +116,7 @@ method XML {
         $xml.append: XML::Element.new(:name<content>, :attribs(%attribs), :nodes([encode-entities($.content)]));
     }
 
-    my $upd = $.updated // DateTime.now;
+    my $upd = $.updated;
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
     if $.published.defined {
         $xml.append: XML::Element.new(:name<published>, :nodes([$.published.Str]));

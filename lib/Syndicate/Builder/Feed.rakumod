@@ -36,7 +36,7 @@ method id(Str $v?)          { $!id = $v if $v.defined; $!id }
 method language(Str $v?)    { $!language = $v if $v.defined; $!language }
 method rights(Str $v?)      { $!rights = $v if $v.defined; $!rights }
 method generator(Str $v?)   { $!generator = $v if $v.defined; $!generator }
-method updated(DateTime $v?) { $!updated = $v if $v.defined; $!updated }
+method updated(DateTime $v?) { $!updated = $v if $v.defined; $!updated //= DateTime.now }
 method icon(Str $v?)        { $!icon = $v if $v.defined; $!icon }
 method logo(Str $v?)        { $!logo = $v if $v.defined; $!logo }
 method feed-url(Str $v?)    { $!feed-url = $v if $v.defined; $!feed-url }
@@ -89,7 +89,7 @@ method atom-feed {
     %author-detail<name>  = $!author-name  if $!author-name.defined;
     %author-detail<email> = $!author-email if $!author-email.defined;
     %author-detail<uri>   = $!author-uri   if $!author-uri.defined;
-    my $atom-id = $!id // $!link // "";
+    my $atom-id = $!id // $!link // die "Syndicate::Builder::Feed: Atom feed requires id or link";
     my $subtitle = $!description // Str;
     my %bless;
     %bless<title>         = $!title       if $!title.defined;
@@ -102,7 +102,7 @@ method atom-feed {
     %bless<icon>          = $!icon        if $!icon.defined;
     %bless<logo>          = $!logo        if $!logo.defined;
     %bless<author-detail> = %author-detail;
-    %bless<updated>       = $!updated // DateTime.now;
+    %bless<updated>       = $.updated;
     my @cats = @!categories;
     Syndicate::Atom.new(|%bless, :@items, :categories(@cats))
 }

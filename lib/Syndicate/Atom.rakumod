@@ -116,6 +116,7 @@ method !cache-updated {
             }
         }
     }
+    $!computed-updated //= DateTime.now;
 }
 
 method XML {
@@ -158,7 +159,7 @@ method XML {
         $xml.append: $c;
     }
 
-    my $upd = $!computed-updated // $!updated // DateTime.now;
+    my $upd = $!computed-updated;
     $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
 
     $xml.append: $_.XML for @.items;
