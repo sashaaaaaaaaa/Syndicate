@@ -88,6 +88,10 @@ multi method from-xml(XML::Element $entry-elem) {
         :source-feed(%source-feed);
     %bless<updated> = $updated if $updated ~~ DateTime;
     %bless<published> = $pub if $pub ~~ DateTime;
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     Syndicate::Stats.record-item;
     self.bless(|%bless, :@contributors, :categories(@categories))
 }

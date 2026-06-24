@@ -61,6 +61,10 @@ method new-from-hash(%h) {
         :$author;
     %bless<date_published> = $dp if $dp ~~ DateTime;
     %bless<date_modified>  = $dm if $dm ~~ DateTime;
+    CATCH {
+        Syndicate::Stats.record-error;
+        .rethrow;
+    }
     Syndicate::Stats.record-item;
     self.bless(|%bless, :@authors, :@tags)
 }

@@ -19,11 +19,12 @@ has Bool $.expired;
 multi method new(Str $json) {
     my %h;
     my $ok = try { %h = from-json($json); True };
+    my $err = $!;
     CATCH {
         Syndicate::Stats.record-error;
         .rethrow;
     }
-    die "Invalid JSON: $!" without $ok;
+    die "Invalid JSON: $err" without $ok;
     self.new-from-hash(%h)
 }
 
