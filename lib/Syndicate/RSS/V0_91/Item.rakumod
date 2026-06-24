@@ -56,9 +56,9 @@ multi method from-xml(XML::Element $item-elem) {
 
 method XML {
     my $xml = XML::Element.new(:name<item>);
-    $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
-    $xml.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
-    $xml.append: XML::Element.new(:name<description>, :nodes([encode-entities($.summary)])) if $.summary.defined;
+    add-element($xml, "title",       $.title);
+    add-element($xml, "link",        $.link);
+    add-element($xml, "description", $.summary);
     run-generators($xml, self);
     $xml
 }

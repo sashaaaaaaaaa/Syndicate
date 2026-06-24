@@ -9,8 +9,9 @@ use Syndicate::RSS::Item;
 use Syndicate::Atom;
 use Syndicate::Atom::Item;
 use Syndicate::JSONFeed;
+use Syndicate::Stats;
 
-plan 13;
+plan 14;
 
 # ===== feed-format errors (supplementing t/02-parse) =====
 dies-ok { feed-format('') }, 'empty input dies';
@@ -36,5 +37,8 @@ dies-ok { Syndicate::JSONFeed.new('not json') }, 'invalid JSON dies';
 
 # ===== RSS 1.0 constructor errors =====
 dies-ok { Syndicate::RSS::V1_0.new('<not-rdf/>') }, 'wrong RDF root element dies';
+
+# ===== Stats error count =====
+is Syndicate::Stats.errors, 7, 'all errors recorded by Stats';
 
 done-testing;

@@ -101,15 +101,15 @@ method XML {
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;
 
-    $channel.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
-    $channel.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
-    $channel.append: XML::Element.new(:name<description>, :nodes([encode-entities($.description)])) if $.description.defined;
-    $channel.append: XML::Element.new(:name<language>, :nodes([encode-entities($.language)])) if $.language.defined;
-    $channel.append: XML::Element.new(:name<rating>, :nodes([encode-entities($.rating)])) if $.rating.defined;
-    $channel.append: XML::Element.new(:name<copyright>, :nodes([encode-entities($.copyright)])) if $.copyright.defined;
-    $channel.append: XML::Element.new(:name<docs>, :nodes([encode-entities($.docs)])) if $.docs.defined;
-    $channel.append: XML::Element.new(:name<managingEditor>, :nodes([encode-entities($.managingEditor)])) if $.managingEditor.defined;
-    $channel.append: XML::Element.new(:name<webMaster>, :nodes([encode-entities($.webMaster)])) if $.webMaster.defined;
+    add-element($channel, "title",          $.title);
+    add-element($channel, "link",           $.link);
+    add-element($channel, "description",    $.description);
+    add-element($channel, "language",       $.language);
+    add-element($channel, "rating",         $.rating);
+    add-element($channel, "copyright",      $.copyright);
+    add-element($channel, "docs",           $.docs);
+    add-element($channel, "managingEditor", $.managingEditor);
+    add-element($channel, "webMaster",      $.webMaster);
 
     if $.pubDate.defined {
         $channel.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.pubDate)]));

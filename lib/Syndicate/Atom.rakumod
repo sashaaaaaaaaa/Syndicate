@@ -121,9 +121,9 @@ method !cache-updated {
 
 method XML {
     my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns('http://www.w3.org/2005/Atom')}));
-    $xml.append: XML::Element.new(:name<id>, :nodes([encode-entities($.id)])) if $.id.defined;
-    $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
-    $xml.append: XML::Element.new(:name<subtitle>, :nodes([encode-entities($.subtitle)])) if $.subtitle.defined;
+    add-element($xml, "id",        $.id);
+    add-element($xml, "title",     $.title);
+    add-element($xml, "subtitle",  $.subtitle);
 
     if $.link.defined {
         $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link)), :rel<alternate>}));
@@ -136,16 +136,16 @@ method XML {
 
     if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
         my $author = XML::Element.new(:name<author>);
-        $author.append: XML::Element.new(:name<name>, :nodes([encode-entities(%!author-detail<name>)])) if %!author-detail<name>.defined;
-        $author.append: XML::Element.new(:name<email>, :nodes([encode-entities(%!author-detail<email>)])) if %!author-detail<email>.defined;
-        $author.append: XML::Element.new(:name<uri>, :nodes([encode-entities(%!author-detail<uri>)])) if %!author-detail<uri>.defined;
+        add-element($author, "name",  %!author-detail<name>);
+        add-element($author, "email", %!author-detail<email>);
+        add-element($author, "uri",   %!author-detail<uri>);
         $xml.append: $author;
     }
 
-    $xml.append: XML::Element.new(:name<rights>, :nodes([encode-entities($.rights)])) if $.rights.defined;
-    $xml.append: XML::Element.new(:name<generator>, :nodes([encode-entities($.generator)])) if $.generator.defined;
-    $xml.append: XML::Element.new(:name<icon>, :nodes([encode-entities($.icon)])) if $.icon.defined;
-    $xml.append: XML::Element.new(:name<logo>, :nodes([encode-entities($.logo)])) if $.logo.defined;
+    add-element($xml, "rights",    $.rights);
+    add-element($xml, "generator", $.generator);
+    add-element($xml, "icon",      $.icon);
+    add-element($xml, "logo",      $.logo);
 
     for @.categories -> $cat {
         $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
@@ -153,9 +153,9 @@ method XML {
 
     for @.contributors -> %c {
         my $c = XML::Element.new(:name<contributor>);
-        $c.append: XML::Element.new(:name<name>, :nodes([encode-entities(%c<name>)])) if %c<name>.defined;
-        $c.append: XML::Element.new(:name<email>, :nodes([encode-entities(%c<email>)])) if %c<email>.defined;
-        $c.append: XML::Element.new(:name<uri>, :nodes([encode-entities(%c<uri>)])) if %c<uri>.defined;
+        add-element($c, "name",  %c<name>);
+        add-element($c, "email", %c<email>);
+        add-element($c, "uri",   %c<uri>);
         $xml.append: $c;
     }
 

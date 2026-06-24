@@ -101,10 +101,10 @@ method XML {
     $channel.attribs{'rdf:about'} = $.about if $.about.defined;
     $root.append: $channel;
 
-    $channel.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
-    $channel.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
-    $channel.append: XML::Element.new(:name<description>, :nodes([encode-entities($.description)])) if $.description.defined;
-    $channel.append: XML::Element.new(:name<generator>, :nodes([encode-entities($.generator)])) if $.generator.defined;
+    add-element($channel, "title",       $.title);
+    add-element($channel, "link",        $.link);
+    add-element($channel, "description", $.description);
+    add-element($channel, "generator",   $.generator);
     add-dc-element($channel, "language", $.language) if $.language.defined;
 
     if %.image<about>.defined {

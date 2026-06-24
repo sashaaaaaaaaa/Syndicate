@@ -54,11 +54,10 @@ multi method new(XML::Document $doc) {
     my @categories;
     for $channel.elements(:TAG<category>) -> $c {
         with $c.contents[0] -> $t {
-            my $text = $t.?text // Str;
-            @categories.push: $text.defined && $text.chars ?? decode-entities($text) !! Str;
+            my $text = $t.?text // "";
+            @categories.push: decode-entities($text) if $text.chars;
         }
     }
-    @categories .= grep(*.defined);
     my $gen     = get-text-optional($channel, "generator");
     my $docs    = get-text-optional($channel, "docs");
     my $ttl-str = get-text-optional($channel, "ttl");
@@ -134,13 +133,13 @@ method XML {
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;
 
-    $channel.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
-    $channel.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
-    $channel.append: XML::Element.new(:name<description>, :nodes([encode-entities($.description)])) if $.description.defined;
-    $channel.append: XML::Element.new(:name<language>, :nodes([encode-entities($.language)])) if $.language.defined;
-    $channel.append: XML::Element.new(:name<copyright>, :nodes([encode-entities($.copyright)])) if $.copyright.defined;
-    $channel.append: XML::Element.new(:name<managingEditor>, :nodes([encode-entities($.managingEditor)])) if $.managingEditor.defined;
-    $channel.append: XML::Element.new(:name<webMaster>, :nodes([encode-entities($.webMaster)])) if $.webMaster.defined;
+    add-element($channel, "title",          $.title);
+    add-element($channel, "link",           $.link);
+    add-element($channel, "description",    $.description);
+    add-element($channel, "language",       $.language);
+    add-element($channel, "copyright",      $.copyright);
+    add-element($channel, "managingEditor", $.managingEditor);
+    add-element($channel, "webMaster",      $.webMaster);
     add-itunes-element($channel, "author", $.itunes-author) if $.itunes-author.defined;
     add-itunes-element($channel, "summary", $.itunes-summary) if $.itunes-summary.defined;
 
@@ -151,10 +150,10 @@ method XML {
         $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$RFC2822.to-string($.lastBuildDate)]));
     }
 
-    $channel.append: XML::Element.new(:name<category>, :nodes([encode-entities($_)])) for @.categories;
-    $channel.append: XML::Element.new(:name<generator>, :nodes([encode-entities($.generator)])) if $.generator.defined;
-    $channel.append: XML::Element.new(:name<docs>, :nodes([encode-entities($.docs)])) if $.docs.defined;
-    $channel.append: XML::Element.new(:name<ttl>, :nodes([~$.ttl])) if $.ttl.defined;
+    add-element($channel, "category",  $_) for @.categories;
+    add-element($channel, "generator", $.generator);
+    add-element($channel, "docs",      $.docs);
+    add-element($channel, "ttl",       ~$.ttl) if $.ttl.defined;
 
     self.build-xml-image($channel, %.image) if %.image<url>.defined || %.image<title>.defined;
 

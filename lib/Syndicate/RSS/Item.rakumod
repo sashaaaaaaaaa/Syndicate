@@ -101,23 +101,23 @@ multi method from-xml(XML::Element $item-elem) {
 
 method XML {
     my $xml = XML::Element.new(:name<item>);
-    $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
-    $xml.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
+    add-element($xml, "title", $.title);
+    add-element($xml, "link",  $.link);
     if $.guid.defined {
         my $guid-elem = XML::Element.new(:name<guid>, :nodes([encode-entities($.guid)]));
         $guid-elem.attribs<isPermaLink> = $.guid-is-permalink ?? "true" !! "false";
         $xml.append: $guid-elem;
     }
-    $xml.append: XML::Element.new(:name<description>, :nodes([encode-entities($.summary)])) if $.summary.defined;
+    add-element($xml, "description", $.summary);
     if $.content.defined && $.content.chars {
         $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
     }
     if $.updated.defined {
         $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
     }
-    $xml.append: XML::Element.new(:name<author>, :nodes([encode-entities($.author)])) if $.author.defined;
-    $xml.append: XML::Element.new(:name<category>, :nodes([encode-entities($_)])) for @.categories;
-    $xml.append: XML::Element.new(:name<comments>, :nodes([encode-entities($.comments)])) if $.comments.defined;
+    add-element($xml, "author",   $.author);
+    add-element($xml, "category", $_) for @.categories;
+    add-element($xml, "comments", $.comments);
     if %.enclosure<url>.defined && %.enclosure<url>.chars {
         my $enc = XML::Element.new(:name<enclosure>);
         $enc.attribs<url> = encode-entities(%.enclosure<url>);
@@ -125,7 +125,7 @@ method XML {
         $enc.attribs<type>   = %.enclosure<type>   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
         $xml.append: $enc;
     }
-    $xml.append: XML::Element.new(:name<source>, :nodes([encode-entities($.source)])) if $.source.defined;
+    add-element($xml, "source", $.source);
 
     run-generators($xml, self);
 

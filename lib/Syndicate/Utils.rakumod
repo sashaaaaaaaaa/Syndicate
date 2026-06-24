@@ -1,4 +1,5 @@
 use v6.d;
+use XML;
 use XML::Entity;
 use DateTime::Grammar;
 
@@ -14,6 +15,11 @@ sub decode-entities(Str $text) is export {
 sub encode-entities(Str $text) is export {
     return $text unless $text.defined && $text.chars;
     $entity.encode($text)
+}
+
+sub add-element($parent, $name, $value) is export {
+    return unless $value.defined;
+    $parent.append: XML::Element.new(:name($name), :nodes([encode-entities($value)]));
 }
 
 sub get-text($parent, $tag) is export {
