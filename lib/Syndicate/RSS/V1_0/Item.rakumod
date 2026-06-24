@@ -34,6 +34,7 @@ multi method from-xml(XML::Element $item-elem) {
     my $title   = get-text-optional($item-elem, "title");
     my $link    = get-text-optional($item-elem, "link");
     my $desc    = get-text-optional($item-elem, "description");
+    my $encoded = get-text-optional($item-elem, "content:encoded");
 
     my %extra;
     run-parsers($item-elem, %extra);
@@ -49,11 +50,12 @@ multi method from-xml(XML::Element $item-elem) {
     my $media-title       = %extra<media-title>         // Str;
     my $media-description = %extra<media-description>   // Str;
 
+    my $content = $encoded.defined && $encoded.chars ?? $encoded !! $desc // Str;
     my $item-id = $about // $link // Str;
     my %bless = :$about, :$title, :$link, :summary($desc),
                 :$author,
                 :id($item-id),
-                :content($desc // Str),
+                :$content,
                 :has-dc-creator(%extra<has-dc-creator> // False);
     %bless<updated> = $updated if $updated ~~ DateTime;
     CATCH {
@@ -74,6 +76,10 @@ method XML {
     $xml.append: XML::Element.new(:name<title>, :nodes([encode-entities($.title)])) if $.title.defined;
     $xml.append: XML::Element.new(:name<link>, :nodes([encode-entities($.link)])) if $.link.defined;
     $xml.append: XML::Element.new(:name<description>, :nodes([encode-entities($.summary)])) if $.summary.defined;
+
+    if $.content.defined && $.content.chars {
+        $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
+    }
 
     run-generators($xml, self);
     if $.updated.defined {

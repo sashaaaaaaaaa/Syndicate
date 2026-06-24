@@ -15,6 +15,7 @@ has Str $.about;
 has %.image of Str;
 has Bool $!needs-dc;
 has Bool $!needs-media;
+has Bool $!needs-content;
 has Bool $!needs-itunes;
 # 'is built' is a standard Raku mechanism that allows setting a private
 # attribute via the constructor without exposing a public accessor.
@@ -24,13 +25,15 @@ submethod TWEAK {
     $!lang-from-dc //= False;
     $!needs-dc    = $!lang-from-dc || $!language.defined;
     $!needs-media = False;
+    $!needs-content = False;
     $!needs-itunes = False;
     for @!items {
         $!needs-dc      ||= .?has-dc-creator || .?updated.defined
                          || ( .?dc-subjects.defined && .?dc-subjects.elems > 0 );
         $!needs-media   ||= ?(.?media-contents) || ?(.?media-thumbnails) || .?media-title.defined || .?media-description.defined;
+        $!needs-content ||= ?(.?content.defined && .?content.chars);
         $!needs-itunes  ||= .?itunes-author.defined || .?itunes-summary.defined || .?itunes-duration.defined;
-        last if $!needs-dc && $!needs-media && $!needs-itunes;
+        last if $!needs-dc && $!needs-media && $!needs-content && $!needs-itunes;
     }
 }
 
@@ -95,6 +98,7 @@ method XML {
     add-dc-declaration($root)    if $!needs-dc;
     add-media-declaration($root) if $!needs-media;
     add-itunes-declaration($root) if $!needs-itunes;
+    $root.attribs{'xmlns:content'} = 'http://purl.org/rss/1.0/modules/content/' if $!needs-content;
 
     my $channel = XML::Element.new(:name<channel>);
     $channel.attribs{'rdf:about'} = $.about if $.about.defined;

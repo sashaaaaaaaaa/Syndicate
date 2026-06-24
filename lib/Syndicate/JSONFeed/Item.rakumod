@@ -77,9 +77,9 @@ method to-hash {
     %h<summary>        = $.summary       if $.summary.defined;
     %h<id>             = $.id            if $.id.defined;
     %h<author>         = $.author        if $.author.defined;
-    %h<content_html>   = $.content_html  if $.content_html.defined;
-    %h<content_text>   = $.content_text  if $.content_text.defined;
-    %h<content_html>   = $.content       if $.content.defined && !$.content_html.defined && !$.content_text.defined;
+    %h<content_html> = $.content_html  if $.content_html.defined;
+    %h<content_text>  = $.content_text  if $.content_text.defined;
+    %h<content_html> //= $.content      if $.content.defined;
     %h<image>          = $.image         if $.image.defined;
     %h<banner_image>   = $.banner_image  if $.banner_image.defined;
     %h<date_published> = $.date_published.Str if $.date_published.defined;
