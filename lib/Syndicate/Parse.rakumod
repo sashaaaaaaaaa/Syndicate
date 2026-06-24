@@ -75,6 +75,14 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
     $feed
 }
 
+multi sub parse-file(Str $path --> Syndicate::Feed:D) is export {
+    parse-feed(slurp($path))
+}
+
+multi sub parse-file(IO::Path $path --> Syndicate::Feed:D) is export {
+    parse-file($path.Str)
+}
+
 sub root-element(Str $input) {
     my $doc = try { XML::Document.new($input.trim) };
     return Nil unless $doc;

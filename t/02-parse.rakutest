@@ -4,7 +4,7 @@ use lib 'lib';
 use Syndicate;
 use Syndicate::Parse;
 
-plan 33;
+plan 38;
 
 # ===== feed-format detection =====
 
@@ -83,5 +83,12 @@ dies-ok { feed-format("<html></html>") }, "unknown root element dies";
 ok defined(&feed-format), "feed-format is exported";
 ok defined(&parse-feed), "parse-feed is exported";
 ok defined(&parse), "parse is exported from Syndicate";
+
+# ===== parse-file convenience =====
+isa-ok parse-file("t/data/atom-full.xml"), Syndicate::Atom, "parse-file atom";
+isa-ok parse-file("t/data/rss2-full.xml"), Syndicate::RSS, "parse-file rss2";
+isa-ok parse-file("t/data/rss1-full.xml"), Syndicate::RSS::V1_0, "parse-file rss1";
+isa-ok parse-file("t/data/jsonfeed-full.json".IO), Syndicate::JSONFeed, "parse-file jsonfeed IO::Path";
+dies-ok { parse-file("t/nonexistent.xml") }, "parse-file nonexistent file dies";
 
 done-testing;
