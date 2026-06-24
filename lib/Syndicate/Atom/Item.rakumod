@@ -42,8 +42,12 @@ multi method from-xml(XML::Element $entry-elem) {
     my $rights   = get-text-optional($entry-elem, "rights");
 
     my $link = Str;
-    with $entry-elem.elements(:TAG<link>)[0] {
-        $link = .attribs<href> // "";
+    for $entry-elem.elements(:TAG<link>) {
+        my $rel = .attribs<rel> // "alternate";
+        if $rel eq "alternate" {
+            $link = .attribs<href> // "";
+            last;
+        }
     }
 
     my %author-detail;
