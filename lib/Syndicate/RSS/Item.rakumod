@@ -71,7 +71,7 @@ multi method from-xml(XML::Element $item-elem) {
     my %extra;
     %extra<author> = $author if $author.defined && $author.chars;
     run-parsers($item-elem, %extra);
-    $author = %extra<author> // Str;
+    $author = $author.defined && $author.chars ?? $author !! %extra<author> // Str;
 
     my @media-contents    = @(%extra<media-contents>    // []);
     my @media-thumbnails  = @(%extra<media-thumbnails>  // []);

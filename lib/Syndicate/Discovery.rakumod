@@ -4,6 +4,9 @@ use URI;
 use Syndicate::Parse;
 use Syndicate::Utils;
 
+# Pragmatic regex for common-case feed discovery from typical HTML pages.
+# Not a full HTML parser — will match inside comments, <script>/<style> blocks,
+# and may break on unusual attribute quoting. Acceptable for the use case.
 my constant $link-tag = rx/ '<link' <-[>]>* ['/>' | '>'] /;
 my constant $base-tag = rx/ '<base' <-[>]>* ['/>' | '>'] /;
 

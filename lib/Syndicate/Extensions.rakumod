@@ -2,6 +2,9 @@ use v6.d;
 
 unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
 
+# Only populated at compile-time by use-statements in parser modules.
+# No runtime registration exists, so @extensions is never mutated
+# during iteration. Thread-safe by construction.
 my @extensions;
 
 sub register-ext(:&parse, :&generate) is export {

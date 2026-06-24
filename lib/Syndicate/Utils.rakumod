@@ -22,7 +22,7 @@ sub get-text($parent, $tag) is export {
     with $e.contents[0] -> $t {
         return decode-entities($t.?text // "");
     }
-    Str
+    die "Empty required element <$tag>"
 }
 
 sub get-text-optional($parent, $tag) is export {

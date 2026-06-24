@@ -16,6 +16,8 @@ has %.image of Str;
 has Bool $!needs-dc;
 has Bool $!needs-media;
 has Bool $!needs-itunes;
+# 'is built' is a standard Raku mechanism that allows setting a private
+# attribute via the constructor without exposing a public accessor.
 has Bool $!lang-from-dc is built;
 
 submethod TWEAK {

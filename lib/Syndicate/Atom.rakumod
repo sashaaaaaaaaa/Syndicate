@@ -73,9 +73,6 @@ multi method new(XML::Document $doc) {
             %link-alternate = (href => $href, type => .attribs<type> // Str);
             $primary-link = $href unless $primary-link;
         }
-        else {
-            $primary-link = $href unless $primary-link;
-        }
     }
     $primary-link ||= %link-self<href>;
 
