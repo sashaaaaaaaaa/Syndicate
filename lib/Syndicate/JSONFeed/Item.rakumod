@@ -61,6 +61,7 @@ method new-from-hash(%h) {
         :$author;
     %bless<date_published> = $dp if $dp ~~ DateTime;
     %bless<date_modified>  = $dm if $dm ~~ DateTime;
+    %bless<updated>        = $dm if $dm ~~ DateTime;
     CATCH {
         Syndicate::Stats.record-error;
         .rethrow;
@@ -84,6 +85,7 @@ method to-hash {
     %h<banner_image>   = $.banner_image  if $.banner_image.defined;
     %h<date_published> = $.date_published.Str if $.date_published.defined;
     %h<date_modified>  = $.date_modified.Str  if $.date_modified.defined;
+    %h<date_modified> //= $.updated.Str       if $.updated.defined;
     if @.authors {
         %h<authors> = @.authors.map({
             my %a;

@@ -108,7 +108,7 @@ method XML {
     my $xml = XML::Element.new(:name<entry>);
     add-element($xml, "title",   $.title);
     $xml.append: XML::Element.new(:name<link>, :attribs({:href($.link // ""), :rel<alternate>})) if $.link.defined;
-    add-element($xml, "id",      $.id // $.link // "") if $.id.defined || $.link.defined;
+    add-element($xml, "id",      $.id // $.link // "");
     add-element($xml, "summary", $.summary);
 
     if $.content.defined {

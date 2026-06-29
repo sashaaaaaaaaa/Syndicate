@@ -36,7 +36,7 @@ method id(Str $v?)          { $!id = $v if $v.defined; $!id }
 method language(Str $v?)    { $!language = $v if $v.defined; $!language }
 method rights(Str $v?)      { $!rights = $v if $v.defined; $!rights }
 method generator(Str $v?)   { $!generator = $v if $v.defined; $!generator }
-method updated(DateTime $v?) { $!updated = $v if $v.defined; $!updated // DateTime.now }
+method updated(DateTime $v?) { $!updated = $v if $v.defined; $!updated //= DateTime.now }
 method icon(Str $v?)        { $!icon = $v if $v.defined; $!icon }
 method logo(Str $v?)        { $!logo = $v if $v.defined; $!logo }
 method feed-url(Str $v?)    { $!feed-url = $v if $v.defined; $!feed-url }
