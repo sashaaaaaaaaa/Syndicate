@@ -72,6 +72,7 @@ multi method from-xml(XML::Element $item-elem) {
     run-parsers($item-elem, %extra);
     # Prefer explicit <author> over dc:creator to match RSS 2.0 element priority
     $author = $author.defined && $author.chars ?? $author !! %extra<author> // Str;
+    # dc:subject is intentionally not stored here — only V1_0 items track @.dc-subjects
 
     my @media-contents    = @(%extra<media-contents>    // []);
     my @media-thumbnails  = @(%extra<media-thumbnails>  // []);

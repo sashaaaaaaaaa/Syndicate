@@ -28,6 +28,7 @@ submethod TWEAK {
     $!needs-content = False;
     $!needs-itunes = False;
     self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes, $!needs-content);
+    # V1_0-specific: also check updated/dc-subjects beyond !set-item-flags (only handles dc-creator)
     for self.items -> $item {
         $!needs-dc ||= $item.?updated.defined
                     || ( $item.?dc-subjects.defined && $item.?dc-subjects.elems > 0 );

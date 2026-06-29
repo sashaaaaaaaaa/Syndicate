@@ -12,15 +12,9 @@ has @.items of Syndicate::Item is readonly;
 # All public attributes are read-only after construction, so $!cached-str
 # never goes stale. No invalidation mechanism is needed.
 has Str $!cached-str;
-has Lock $!str-lock = Lock.new;
 
 method Str {
-    $!str-lock.protect: {
-        unless $!cached-str.defined {
-            $!cached-str = '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
-        }
-    }
-    $!cached-str
+    $!cached-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
 }
 
 =begin pod

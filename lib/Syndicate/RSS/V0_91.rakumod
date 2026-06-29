@@ -34,7 +34,7 @@ submethod TWEAK {
     $!needs-dc    = False;
     $!needs-media = False;
     $!needs-itunes = $!itunes-author.defined || $!itunes-summary.defined;
-    my $dummy;
+    my $dummy = False;
     self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes, $dummy);
 }
 

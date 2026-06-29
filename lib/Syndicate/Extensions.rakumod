@@ -15,10 +15,12 @@ sub register-ext(:&parse, :&generate) is export {
 sub run-parsers($elem, %attrs) is export {
     return unless @extensions;
     for @extensions -> %ext {
-        my $ok = try { %ext<parse>($elem, %attrs); True };
-        unless $ok {
-            Syndicate::Stats.record-error;
-            note "Extension parse callback failed: $!";
+        %ext<parse>($elem, %attrs);
+        CATCH {
+            default {
+                Syndicate::Stats.record-error;
+                note "Extension parse callback failed: $_";
+            }
         }
     }
 }
@@ -26,10 +28,12 @@ sub run-parsers($elem, %attrs) is export {
 sub run-generators($xml, $item) is export {
     return unless @extensions;
     for @extensions -> %ext {
-        my $ok = try { %ext<generate>($xml, $item); True };
-        unless $ok {
-            Syndicate::Stats.record-error;
-            note "Extension generate callback failed: $!";
+        %ext<generate>($xml, $item);
+        CATCH {
+            default {
+                Syndicate::Stats.record-error;
+                note "Extension generate callback failed: $_";
+            }
         }
     }
 }

@@ -34,6 +34,7 @@ multi method new-from-hash(%h) {
     die "JSON Feed requires title" unless $title.defined && $title.chars;
     my $link        = %h<home_page_url> // %h<feed_url> // Str;
     my $desc        = %h<description> // Str;
+    my $gen         = %h<generator> // Str;
 
     my %author;
     with %h<author> {
@@ -50,6 +51,7 @@ multi method new-from-hash(%h) {
     }
 
     my %bless = :$version, :$title, :$link, :description($desc),
+        :generator($gen),
         :feed_url(%h<feed_url> // Str),
         :user_comment(%h<user_comment> // Str),
         :next_url(%h<next_url> // Str),
@@ -77,6 +79,7 @@ method to-hash {
     %h<icon>          = $.icon          if $.icon.defined;
     %h<favicon>       = $.favicon       if $.favicon.defined;
     %h<language>      = $.language      if $.language.defined;
+    %h<generator>     = $.generator     if $.generator.defined;
     %h<expired>       = $.expired       if $.expired.defined;
 
     if %.author<name>.defined || %.author<url>.defined || %.author<avatar>.defined {

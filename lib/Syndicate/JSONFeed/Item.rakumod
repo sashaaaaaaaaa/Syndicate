@@ -80,6 +80,7 @@ method to-hash {
     %h<author>         = $.author        if $.author.defined;
     %h<content_html> = $.content_html  if $.content_html.defined;
     %h<content_text>  = $.content_text  if $.content_text.defined;
+    # Fallback: use $.content as content_html only when neither content type was explicitly set
     %h<content_html> //= $.content if $.content.defined && !$.content_text.defined;
     %h<image>          = $.image         if $.image.defined;
     %h<banner_image>   = $.banner_image  if $.banner_image.defined;
