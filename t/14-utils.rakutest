@@ -1,0 +1,64 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use XML;
+use Syndicate::Utils;
+
+plan 19;
+
+# ===== encode-entities =====
+is encode-entities('&'), '&amp;', 'encode &';
+is encode-entities('<'), '&lt;', 'encode <';
+ok !encode-entities(Str).defined, 'encode Str returns Str';
+
+# ===== decode-entities =====
+is decode-entities('&amp;'), '&', 'decode &amp;';
+is decode-entities('&lt;'), '<', 'decode &lt;';
+ok !decode-entities(Str).defined, 'decode Str returns Str';
+
+# ===== add-element =====
+{
+    my $p = XML::Element.new(:name<parent>);
+    add-element($p, 'title', 'Hello & Goodbye');
+    my $el = $p.elements(:TAG<title>)[0];
+    is ~$el, '<title>Hello &amp; Goodbye</title>', 'add-element encodes value';
+    add-element($p, 'empty', Str);
+    ok !$p.elements(:TAG<empty>), 'add-element with Str appends nothing';
+}
+
+# ===== get-text =====
+{
+    my $doc = XML::Document.new('<root><title>Hello &amp; World</title><empty></empty></root>');
+    my $r = $doc.root;
+    is get-text($r, 'title'), 'Hello & World', 'get-text returns decoded text';
+    dies-ok { get-text($r, 'missing') }, 'get-text on missing element dies';
+    dies-ok { get-text($r, 'empty') }, 'get-text on empty element dies';
+}
+
+# ===== get-text-optional =====
+{
+    my $doc = XML::Document.new('<root><title>Hello</title></root>');
+    my $r = $doc.root;
+    is get-text-optional($r, 'title'), 'Hello', 'get-text-optional returns text';
+    ok !get-text-optional($r, 'missing').defined, 'get-text-optional on missing returns Str';
+}
+
+# ===== parse-date =====
+{
+    my $dt = parse-date('2026-01-15T10:00:00Z');
+    isa-ok $dt, DateTime, 'parse-date RFC3339 returns DateTime';
+    is $dt.year, 2026, 'year correct';
+    dies-ok { parse-date('') }, 'parse-date on empty dies';
+}
+
+# ===== parse-date-optional =====
+{
+    isa-ok parse-date-optional('2026-01-15T10:00:00Z'), DateTime,
+        'parse-date-optional valid returns DateTime';
+    ok !parse-date-optional('garbage').defined,
+        'parse-date-optional invalid returns Nil';
+    ok !parse-date-optional('').defined,
+        'parse-date-optional empty returns Nil';
+}
+
+done-testing;

@@ -1,0 +1,56 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use XML;
+use Syndicate::Extensions;
+use Syndicate::RSS::Item;
+
+plan 6;
+
+my $parse-call-count = 0;
+my $gen-call-count = 0;
+
+register-ext(
+    parse => sub ($elem, %attrs) {
+        $parse-call-count++;
+        %attrs<flag> = 'parsed';
+    },
+    generate => sub ($xml, $item) {
+        $gen-call-count++;
+        $xml.attribs<flag> = 'generated';
+    }
+);
+
+# ===== run-parsers =====
+{
+    my $elem = XML::Element.new(:name<item>);
+    my %attrs;
+    run-parsers($elem, %attrs);
+    ok $parse-call-count > 0, 'run-parsers calls registered parse callbacks';
+    is %attrs<flag>, 'parsed', 'run-parsers callback can modify %attrs';
+}
+
+# ===== run-generators =====
+my $test-item = Syndicate::RSS::Item.new(
+    :title('Test'), :link('http://x.com'), :summary('D')
+);
+{
+    my $xml = XML::Element.new(:name<item>);
+    run-generators($xml, $test-item);
+    ok $gen-call-count > 0, 'run-generators calls registered generate callbacks';
+    is $xml.attribs<flag>, 'generated', 'run-generators callback can modify $xml';
+}
+
+# ===== Errors in callbacks are caught =====
+{
+    register-ext(
+        parse    => sub ($elem, %attrs) { die 'test parse error' },
+        generate => sub ($xml, $item)   { die 'test generate error' }
+    );
+    lives-ok { run-parsers(XML::Element.new(:name<x>), {}) },
+        'run-parsers catches dying callbacks';
+    lives-ok { run-generators(XML::Element.new(:name<x>), $test-item) },
+        'run-generators catches dying callbacks';
+}
+
+done-testing;

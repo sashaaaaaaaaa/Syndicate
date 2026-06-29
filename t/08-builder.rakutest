@@ -4,8 +4,9 @@ use lib 'lib';
 use Syndicate;
 use Syndicate::Builder::Feed;
 use Syndicate::Builder::Entry;
+use JSON::Fast;
 
-plan 115;
+plan 123;
 
 # ===== Feed builder fields =====
 my $fb = Syndicate::Builder::Feed.new;
@@ -240,5 +241,22 @@ $fb-rss1-empty.description("Empty 1.0 test");
 my $rss1-empty-str = $fb-rss1-empty.rss1-str;
 like $rss1-empty-str, /'<rdf:RDF'/, "empty RSS 1.0 has root";
 like $rss1-empty-str, /"Empty 1.0"/, "empty RSS 1.0 has title";
+
+# ===== JSON Feed builder output =====
+my $json-str = $fb.json-str;
+ok $json-str.chars > 0, "json-str generates output";
+my $json-parsed = try { from-json($json-str) };
+isa-ok $json-parsed, Hash, "json-str output is valid JSON";
+is $json-parsed<title>, "Test Builder Feed", "JSON output has feed title";
+ok $json-parsed<items> ~~ Array && $json-parsed<items>.elems == 2,
+    "JSON output has 2 items";
+
+# JSON Feed roundtrip
+use Syndicate::JSONFeed;
+my $jf = Syndicate::JSONFeed.new($json-str);
+isa-ok $jf, Syndicate::JSONFeed, "JSON roundtrip parsed";
+is $jf.title, "Test Builder Feed", "JSON roundtrip title";
+is $jf.items.elems, 2, "JSON roundtrip item count";
+is $jf.items[0].title, "Entry One", "JSON roundtrip first item title";
 
 done-testing;

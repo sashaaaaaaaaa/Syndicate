@@ -1,0 +1,117 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use XML;
+use Syndicate::Extension::DublinCore;
+use Syndicate::Extension::MediaRSS;
+use Syndicate::Extension::ITunes;
+
+plan 19;
+
+# ===== DublinCore =====
+
+{
+    my $doc = XML::Document.new(q:to/XML/);
+    <item>
+      <dc:creator>Alice Author</dc:creator>
+      <dc:date>2025-06-15T12:00:00Z</dc:date>
+      <dc:subject>News</dc:subject>
+      <dc:subject>Technology</dc:subject>
+    </item>
+    XML
+    my $parent = $doc.root;
+
+    is get-dc-text($parent, 'creator'), 'Alice Author',
+        'DC: get-dc-text returns creator';
+    ok !get-dc-text($parent, 'nonexistent').defined,
+        'DC: get-dc-text on missing returns Str';
+    is get-dc-texts($parent, 'subject').elems, 2,
+        'DC: get-dc-texts returns all subjects';
+    is get-dc-texts($parent, 'subject')[0], 'News',
+        'DC: first dc:subject';
+}
+
+{
+    my $root = XML::Element.new(:name<rdf:RDF>);
+    add-dc-declaration($root);
+    is $root.attribs{'xmlns:dc'}, 'http://purl.org/dc/elements/1.1/',
+        'DC: add-dc-declaration sets xmlns';
+}
+
+{
+    my $chan = XML::Element.new(:name<channel>);
+    add-dc-element($chan, 'creator', 'Jane');
+    is ~$chan.elements(:TAG<dc:creator>)[0],
+        '<dc:creator>Jane</dc:creator>',
+        'DC: add-dc-element creates element with text';
+    add-dc-element($chan, 'creator', Str);
+    is $chan.elements(:TAG<dc:creator>).elems, 1,
+        'DC: add-dc-element with Str adds nothing';
+}
+
+# ===== MediaRSS =====
+
+{
+    my $doc = XML::Document.new(q:to/XML/);
+    <item>
+      <media:title>Video Title</media:title>
+      <media:description>Video desc</media:description>
+      <media:content url="http://x.com/v.mp4" type="video/mp4" medium="video" duration="120" fileSize="1000" width="640" height="480"/>
+      <media:thumbnail url="http://x.com/t.jpg" width="320" height="240" time="01:23"/>
+    </item>
+    XML
+    my $parent = $doc.root;
+
+    is get-media-text($parent, 'title'), 'Video Title',
+        'MRSS: get-media-text returns title';
+    ok !get-media-text($parent, 'nonexistent').defined,
+        'MRSS: get-media-text on missing returns Str';
+    is get-media-contents($parent).elems, 1,
+        'MRSS: get-media-contents count';
+    is get-media-contents($parent)[0]<url>, 'http://x.com/v.mp4',
+        'MRSS: media:content url';
+    is get-media-thumbnails($parent).elems, 1,
+        'MRSS: get-media-thumbnails count';
+    is get-media-thumbnails($parent)[0]<url>, 'http://x.com/t.jpg',
+        'MRSS: media:thumbnail url';
+}
+
+# ===== ITunes =====
+
+{
+    my $doc = XML::Document.new(q:to/XML/);
+    <item>
+      <itunes:author>John Podcaster</itunes:author>
+      <itunes:summary>Great podcast</itunes:summary>
+      <itunes:duration>45:30</itunes:duration>
+    </item>
+    XML
+    my $parent = $doc.root;
+
+    is get-itunes-text($parent, 'author'), 'John Podcaster',
+        'IT: get-itunes-text returns author';
+    is get-itunes-text($parent, 'summary'), 'Great podcast',
+        'IT: get-itunes-text returns summary';
+    is get-itunes-duration($parent), '45:30',
+        'IT: get-itunes-duration returns duration';
+    ok !get-itunes-text($parent, 'nonexistent').defined,
+        'IT: get-itunes-text on missing returns Str';
+}
+
+{
+    my $root = XML::Element.new(:name<rss>);
+    add-itunes-declaration($root);
+    is $root.attribs{'xmlns:itunes'},
+        'http://www.itunes.com/dtds/podcast-1.0.dtd',
+        'IT: add-itunes-declaration sets xmlns';
+}
+
+{
+    my $xml = XML::Element.new(:name<channel>);
+    add-itunes-element($xml, 'author', 'Jane');
+    is ~$xml.elements(:TAG<itunes:author>)[0],
+        '<itunes:author>Jane</itunes:author>',
+        'IT: add-itunes-element creates element';
+}
+
+done-testing;
