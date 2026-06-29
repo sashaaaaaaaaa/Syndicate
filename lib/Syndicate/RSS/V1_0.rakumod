@@ -27,11 +27,15 @@ submethod TWEAK {
     $!needs-media = False;
     $!needs-content = False;
     $!needs-itunes = False;
-    ($!needs-dc, $!needs-media, $!needs-itunes, $!needs-content) = self!set-item-flags($!needs-dc);
-    # V1_0-specific: also check updated/dc-subjects beyond !set-item-flags (only handles dc-creator)
+    # Single pass: detect all namespace flags including V1_0-specific DC needs
     for self.items -> $item {
-        $!needs-dc ||= $item.?updated.defined
-                    || ( $item.?dc-subjects.defined && $item.?dc-subjects.elems > 0 );
+        $!needs-dc      ||= $item.?has-dc-creator
+                         || $item.?updated.defined
+                         || ( $item.?dc-subjects.defined && $item.?dc-subjects.elems > 0 );
+        $!needs-media   ||= ?($item.?media-contents) || ?($item.?media-thumbnails) || $item.?media-title.defined || $item.?media-description.defined;
+        $!needs-itunes  ||= $item.?itunes-author.defined || $item.?itunes-summary.defined || $item.?itunes-duration.defined;
+        $!needs-content ||= ?($item.?content.defined && $item.?content.chars);
+        last if $!needs-dc && $!needs-media && $!needs-itunes && $!needs-content;
     }
 }
 
