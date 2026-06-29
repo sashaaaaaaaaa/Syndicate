@@ -47,14 +47,12 @@ my $test-item = Syndicate::RSS::Item.new(
         parse    => sub ($elem, %attrs) { die 'test parse error' },
         generate => sub ($xml, $item)   { die 'test generate error' }
     );
-    my $saved-err = $*ERR;
-    $*ERR = open '/dev/null', :w;
+    temp $*ERR = open($*SPEC.devnull, :w);
     lives-ok { run-parsers(XML::Element.new(:name<x>), {}) },
         'run-parsers catches dying callbacks';
     lives-ok { run-generators(XML::Element.new(:name<x>), $test-item) },
         'run-generators catches dying callbacks';
     $*ERR.close;
-    $*ERR = $saved-err;
 }
 
 done-testing;
