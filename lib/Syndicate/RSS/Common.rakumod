@@ -4,11 +4,12 @@ use Syndicate::Utils;
 
 unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
 
-method !set-item-flags($dc is rw, $media is rw, $itunes is rw) {
+method !set-item-flags($dc is rw, $media is rw, $itunes is rw, $content is rw) {
     for self.items -> $item {
         $dc     ||= $item.?has-dc-creator;
         $media  ||= ?($item.?media-contents) || ?($item.?media-thumbnails) || $item.?media-title.defined || $item.?media-description.defined;
         $itunes ||= $item.?itunes-author.defined || $item.?itunes-summary.defined || $item.?itunes-duration.defined;
+        $content ||= ?($item.?content.defined && $item.?content.chars) if $content.defined;
     }
 }
 

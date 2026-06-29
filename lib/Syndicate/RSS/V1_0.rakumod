@@ -27,11 +27,10 @@ submethod TWEAK {
     $!needs-media = False;
     $!needs-content = False;
     $!needs-itunes = False;
-    self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes);
+    self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes, $!needs-content);
     for self.items -> $item {
-        $!needs-dc      ||= $item.?updated.defined
-                         || ( $item.?dc-subjects.defined && $item.?dc-subjects.elems > 0 );
-        $!needs-content ||= ?($item.?content.defined && $item.?content.chars);
+        $!needs-dc ||= $item.?updated.defined
+                    || ( $item.?dc-subjects.defined && $item.?dc-subjects.elems > 0 );
     }
 }
 

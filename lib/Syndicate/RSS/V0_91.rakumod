@@ -34,7 +34,8 @@ submethod TWEAK {
     $!needs-dc    = False;
     $!needs-media = False;
     $!needs-itunes = $!itunes-author.defined || $!itunes-summary.defined;
-    self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes);
+    my $dummy;
+    self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes, $dummy);
 }
 
 multi method new(XML::Document $doc) {
