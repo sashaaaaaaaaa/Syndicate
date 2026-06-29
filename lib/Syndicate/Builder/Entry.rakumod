@@ -83,7 +83,7 @@ method build-rss-item {
         :guid($item-id),
         :media-title($!media-title // Str),
         :media-description($!media-description // Str);
-    %bless<updated> = $!updated if $!updated ~~ DateTime;
+    %bless<updated> = $!updated if $!updated.defined;
     Syndicate::RSS::Item.new(|%bless,
         :categories(@!categories),
         :media-contents(@!media-contents),
@@ -123,8 +123,8 @@ method build-json-item {
             %bless<content_html> = $c;
         }
     }
-    %bless<date_published> = $!published if $!published ~~ DateTime;
-    %bless<date_modified>  = $!updated   if $!updated ~~ DateTime;
+    %bless<date_published> = $!published if $!published.defined;
+    %bless<date_modified>  = $!updated   if $!updated.defined;
     my @tags = @!categories;
     my @authors;
     @authors.push: %author-detail if %author-detail;
@@ -141,7 +141,7 @@ method build-v1_0-item {
         :$about,
         :author($!author-name // Str),
         :has-dc-creator($!author-name.defined);
-    %bless<updated> = $!updated if $!updated ~~ DateTime;
+    %bless<updated> = $!updated if $!updated.defined;
     my @dc-subjects = @!categories;
     Syndicate::RSS::V1_0::Item.new(|%bless, :@dc-subjects)
 }
@@ -161,8 +161,8 @@ method build-atom-item {
         :content($!content // Str),
         :content-type($!content-type // Str),
         :rights($!rights // Str);
-    %bless<updated>   = $!updated   if $!updated ~~ DateTime;
-    %bless<published> = $!published if $!published ~~ DateTime;
+    %bless<updated>   = $!updated   if $!updated.defined;
+    %bless<published> = $!published if $!published.defined;
     my @cats = @!categories;
     Syndicate::Atom::Item.new(|%bless, :categories(@cats))
 }

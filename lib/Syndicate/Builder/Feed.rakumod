@@ -79,7 +79,7 @@ method rss-feed {
     %bless<itunes-author>     = $!itunes-author  if $!itunes-author.defined;
     %bless<itunes-summary>    = $!itunes-summary if $!itunes-summary.defined;
     %bless<atom-self-link>    = $!atom-self-link if $!atom-self-link.defined;
-    %bless<pubDate>           = $!updated        if $!updated ~~ DateTime;
+    %bless<pubDate>           = $!updated        if $!updated.defined;
     Syndicate::RSS.new(|%bless, :categories(@!categories), :@items)
 }
 
@@ -117,7 +117,7 @@ method rss091-feed {
     %bless<copyright>       = $!rights       if $!rights.defined;
     %bless<managingEditor>  = $!author-email if $!author-email.defined;
     %bless<generator>       = $!generator    if $!generator.defined;
-    %bless<pubDate>         = $!updated      if $!updated ~~ DateTime;
+    %bless<pubDate>         = $!updated      if $!updated.defined;
     Syndicate::RSS::V0_91.new(|%bless, :@items)
 }
 

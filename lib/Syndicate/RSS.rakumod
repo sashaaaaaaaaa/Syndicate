@@ -90,6 +90,9 @@ multi method new(XML::Document $doc) {
     %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
     if $ttl-str.defined && $ttl-str.chars {
         %bless<ttl> = try { $ttl-str.Int };
+        unless %bless<ttl>.defined {
+            warn "Invalid ttl value: $ttl-str";
+        }
         with %bless<ttl> {
             warn "ttl of $_ minutes exceeds recommended maximum of 10080 (1 week)" if $_ > 10080;
         }
