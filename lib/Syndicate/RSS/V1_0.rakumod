@@ -9,6 +9,10 @@ use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 
+my constant NS-RDF     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+my constant NS-RSS1    = 'http://purl.org/rss/1.0/';
+my constant NS-CONTENT = 'http://purl.org/rss/1.0/modules/content/';
+
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.about;
@@ -92,13 +96,13 @@ multi method new(Str $xml) {
 
 method XML {
     my $root = XML::Element.new(:name<rdf:RDF>, :attribs({
-        'xmlns:rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-        'xmlns'     => 'http://purl.org/rss/1.0/'
+        'xmlns:rdf' => NS-RDF,
+        'xmlns'     => NS-RSS1
     }));
     add-dc-declaration($root)    if $!needs-dc;
     add-media-declaration($root) if $!needs-media;
     add-itunes-declaration($root) if $!needs-itunes;
-    $root.attribs{'xmlns:content'} = 'http://purl.org/rss/1.0/modules/content/' if $!needs-content;
+    $root.attribs{'xmlns:content'} = NS-CONTENT if $!needs-content;
 
     my $channel = XML::Element.new(:name<channel>);
     $channel.attribs{'rdf:about'} = $.about if $.about.defined;

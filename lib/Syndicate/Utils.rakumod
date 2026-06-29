@@ -7,22 +7,22 @@ unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
 my $entity = XML::Entity.new;
 
-sub decode-entities(Str $text) is export {
+sub decode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
     $entity.decode($text)
 }
 
-sub encode-entities(Str $text) is export {
+sub encode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
     $entity.encode($text)
 }
 
-sub add-element($parent, $name, $value) is export {
+sub add-element($parent, $name, $value --> Nil) is export {
     return unless $value.defined;
     $parent.append: XML::Element.new(:name($name), :nodes([encode-entities($value)]));
 }
 
-sub get-text($parent, $tag) is export {
+sub get-text($parent, $tag --> Str) is export {
     my $e = $parent.elements(:TAG($tag))[0];
     die "Missing required element <$tag>" without $e;
     with $e.contents[0] -> $t {
@@ -33,7 +33,7 @@ sub get-text($parent, $tag) is export {
     die "Empty required element <$tag>"
 }
 
-sub get-text-optional($parent, $tag) is export {
+sub get-text-optional($parent, $tag --> Str) is export {
     with $parent.elements(:TAG($tag))[0] -> $e {
         with $e.contents[0] -> $t {
             my $text = ($t.?text // Str).trim;
@@ -47,7 +47,7 @@ sub parse-datetime(Str $str) is export {
     datetime-interpret($str)
 }
 
-sub parse-date(Str $str) is export {
+sub parse-date(Str $str --> DateTime) is export {
     die "Cannot parse date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
     parse-datetime($str.trim) // die "Cannot parse date: $str"
 }

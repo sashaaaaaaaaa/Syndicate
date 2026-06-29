@@ -11,6 +11,9 @@ use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 
+my constant NS-CONTENT = 'http://purl.org/rss/1.0/modules/content/';
+my constant NS-ATOM    = 'http://www.w3.org/2005/Atom';
+
 unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.copyright;
@@ -126,9 +129,9 @@ method XML {
     add-dc-declaration($xml)    if $!needs-dc;
     add-media-declaration($xml) if $!needs-media;
     add-itunes-declaration($xml) if $!needs-itunes;
-    $xml.attribs{'xmlns:content'} = 'http://purl.org/rss/1.0/modules/content/' if $!needs-content;
+    $xml.attribs{'xmlns:content'} = NS-CONTENT if $!needs-content;
     if $.atom-self-link.defined {
-        $xml.attribs{'xmlns:atom'} = 'http://www.w3.org/2005/Atom';
+        $xml.attribs{'xmlns:atom'} = NS-ATOM;
     }
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;

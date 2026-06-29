@@ -67,37 +67,33 @@ method parse-skip-days($channel --> Array) {
     @skipDays
 }
 
+method !build-xml-elements($parent, %data, *@keys) {
+    for @keys -> $key {
+        with %data{$key} {
+            $parent.append: XML::Element.new(:name($key), :nodes([encode-entities($_)])) if .chars;
+        }
+    }
+}
+
 method build-xml-image($parent, %image, Bool :$rdf-about = False) {
     return unless %image;
     my $img = XML::Element.new(:name<image>);
     $img.attribs{'rdf:about'} = %image<about> if $rdf-about && %image<about>.defined;
-    $img.append: XML::Element.new(:name<url>, :nodes([encode-entities(%image<url>)])) if %image<url>.defined && %image<url>.chars;
-    $img.append: XML::Element.new(:name<title>, :nodes([encode-entities(%image<title>)])) if %image<title>.defined && %image<title>.chars;
-    $img.append: XML::Element.new(:name<link>, :nodes([encode-entities(%image<link>)])) if %image<link>.defined && %image<link>.chars;
-    $img.append: XML::Element.new(:name<width>, :nodes([encode-entities(%image<width>)])) if %image<width>.defined;
-    $img.append: XML::Element.new(:name<height>, :nodes([encode-entities(%image<height>)])) if %image<height>.defined;
-    $img.append: XML::Element.new(:name<description>, :nodes([encode-entities(%image<description>)])) if %image<description>.defined;
+    self!build-xml-elements($img, %image, <url title link width height description>);
     $parent.append: $img;
 }
 
 method build-xml-textinput($channel, %textInput) {
     return unless %textInput;
     my $ti = XML::Element.new(:name<textinput>);
-    $ti.append: XML::Element.new(:name<title>, :nodes([encode-entities(%textInput<title>)]))
-        if %textInput<title>.defined && %textInput<title>.chars;
-    $ti.append: XML::Element.new(:name<description>, :nodes([encode-entities(%textInput<description>)]))
-        if %textInput<description>.defined && %textInput<description>.chars;
-    $ti.append: XML::Element.new(:name<name>, :nodes([encode-entities(%textInput<name>)]))
-        if %textInput<name>.defined && %textInput<name>.chars;
-    $ti.append: XML::Element.new(:name<link>, :nodes([encode-entities(%textInput<link>)]))
-        if %textInput<link>.defined && %textInput<link>.chars;
+    self!build-xml-elements($ti, %textInput, <title description name link>);
     $channel.append: $ti;
 }
 
 method build-xml-skip-hours($channel, @skipHours) {
     return unless @skipHours;
     my $sh = XML::Element.new(:name<skipHours>);
-    $sh.append: XML::Element.new(:name<hour>, :nodes([~$_])) for @skipHours;
+    $sh.append: XML::Element.new(:name<hour>, :nodes([encode-entities(~$_)])) for @skipHours;
     $channel.append: $sh;
 }
 

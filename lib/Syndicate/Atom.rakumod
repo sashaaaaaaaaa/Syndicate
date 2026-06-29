@@ -3,6 +3,8 @@ use XML;
 use Syndicate::Feed;
 use Syndicate::Atom::Item;
 use Syndicate::Utils;
+
+my constant NS-ATOM = 'http://www.w3.org/2005/Atom';
 use Syndicate::Stats;
 
 unit class Syndicate::Atom:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
@@ -28,7 +30,7 @@ submethod TWEAK {
 multi method new(XML::Document $doc) {
     my $feed = $doc.root;
     die "Not an Atom feed" unless $feed.name eq "feed";
-    die "Not an Atom namespace" unless ($feed.nsURI // "") eq "http://www.w3.org/2005/Atom";
+    die "Not an Atom namespace" unless ($feed.nsURI // "") eq NS-ATOM;
 
     my $id    = get-text($feed, "id");
     my $title = get-text($feed, "title");
@@ -120,7 +122,7 @@ method !cache-updated {
 }
 
 method XML {
-    my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns('http://www.w3.org/2005/Atom')}));
+    my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns(NS-ATOM)}));
     add-element($xml, "id",        $.id);
     add-element($xml, "title",     $.title);
     add-element($xml, "subtitle",  $.subtitle);
