@@ -97,7 +97,7 @@ method to-hash {
         }).Array;
     }
     if @.tags {
-        %h<tags> = @.tags.Array;
+        %h<tags> = @.tags;
     }
     %h
 }

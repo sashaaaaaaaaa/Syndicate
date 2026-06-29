@@ -118,7 +118,7 @@ method !set-namespace-flags {
     $!needs-media   = False;
     $!needs-content = False;
     $!needs-itunes  = $!itunes-author.defined || $!itunes-summary.defined;
-    self!set-item-flags($!needs-dc, $!needs-media, $!needs-itunes, $!needs-content);
+    ($!needs-dc, $!needs-media, $!needs-itunes, $!needs-content) = self!set-item-flags;
 }
 
 method XML {
