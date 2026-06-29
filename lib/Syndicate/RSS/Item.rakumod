@@ -70,6 +70,7 @@ multi method from-xml(XML::Element $item-elem) {
     my %extra;
     %extra<author> = $author if $author.defined && $author.chars;
     run-parsers($item-elem, %extra);
+    # Prefer explicit <author> over dc:creator to match RSS 2.0 element priority
     $author = $author.defined && $author.chars ?? $author !! %extra<author> // Str;
 
     my @media-contents    = @(%extra<media-contents>    // []);

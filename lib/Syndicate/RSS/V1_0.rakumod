@@ -48,8 +48,7 @@ multi method new(XML::Document $doc) {
     my $gen   = get-text-optional($channel, "generator");
     my $lang  = get-text-optional($channel, "language");
     my $lang-from-dc = False;
-    if $lang.defined {
-    } else {
+    unless $lang.defined {
         $lang = get-dc-text($channel, "language");
         $lang-from-dc = True if $lang.defined;
     }
