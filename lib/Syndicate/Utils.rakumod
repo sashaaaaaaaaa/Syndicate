@@ -26,7 +26,7 @@ sub get-text($parent, $tag) is export {
     my $e = $parent.elements(:TAG($tag))[0];
     die "Missing required element <$tag>" without $e;
     with $e.contents[0] -> $t {
-        my $text = $t.?text.trim // "";
+        my $text = ($t.?text // "").trim;
         die "Empty required element <$tag>" unless $text.chars;
         return decode-entities($text);
     }
@@ -36,7 +36,7 @@ sub get-text($parent, $tag) is export {
 sub get-text-optional($parent, $tag) is export {
     with $parent.elements(:TAG($tag))[0] -> $e {
         with $e.contents[0] -> $t {
-            my $text = $t.?text.trim // Str;
+            my $text = ($t.?text // Str).trim;
             return $text.defined && $text.chars ?? decode-entities($text) !! Str;
         }
     }
