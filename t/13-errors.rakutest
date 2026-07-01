@@ -13,6 +13,8 @@ use Syndicate::Stats;
 
 plan 14;
 
+my $errors-before = Syndicate::Stats.errors;
+
 # ===== feed-format errors (supplementing t/02-parse) =====
 dies-ok { feed-format('') }, 'empty input dies';
 dies-ok { feed-format('   ') }, 'whitespace-only input dies';
@@ -39,6 +41,6 @@ dies-ok { Syndicate::JSONFeed.new('not json') }, 'invalid JSON dies';
 dies-ok { Syndicate::RSS::V1_0.new('<not-rdf/>') }, 'wrong RDF root element dies';
 
 # ===== Stats error count =====
-is Syndicate::Stats.errors, 7, 'all errors recorded by Stats';
+is Syndicate::Stats.errors - $errors-before, 7, 'all errors recorded by Stats';
 
 done-testing;

@@ -4,7 +4,7 @@ use Syndicate::Utils;
 
 unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
 
-method !set-item-flags(Bool $initial-dc = False) {
+method !set-item-flags(Bool $initial-dc = False, Bool :$check-content = True) {
     my $dc     = $initial-dc;
     my $media  = False;
     my $itunes = False;
@@ -13,8 +13,8 @@ method !set-item-flags(Bool $initial-dc = False) {
         $dc     ||= $item.?has-dc-creator;
         $media  ||= ?($item.?media-contents) || ?($item.?media-thumbnails) || $item.?media-title.defined || $item.?media-description.defined;
         $itunes ||= $item.?itunes-author.defined || $item.?itunes-summary.defined || $item.?itunes-duration.defined;
-        $content ||= ?($item.?content.defined && $item.?content.chars);
-        last if $dc && $media && $itunes && $content;
+        $content ||= ?($item.?content.defined && $item.?content.chars) if $check-content;
+        last if $dc && $media && $itunes && ($check-content ?? $content !! True);
     }
     ($dc, $media, $itunes, $content)
 }
