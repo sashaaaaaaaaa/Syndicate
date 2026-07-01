@@ -34,7 +34,7 @@ method !validate-url(Str $url) {
         unless $url.starts-with('http://') || $url.starts-with('https://');
 }
 
-method fetch(Str $url) {
+method fetch(Str $url --> Syndicate::Feed:D) {
     self!validate-url($url);
     my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
@@ -42,7 +42,7 @@ method fetch(Str $url) {
     parse-feed($body)
 }
 
-method discover(Str $url) {
+method discover(Str $url --> Syndicate::Feed:D) {
     self!validate-url($url);
     my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;

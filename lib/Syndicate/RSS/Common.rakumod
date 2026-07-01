@@ -83,25 +83,25 @@ method build-xml-image($parent, %image, Bool :$rdf-about = False) {
     $parent.append: $img;
 }
 
-method build-xml-textinput($channel, %textInput) {
+method build-xml-textinput($parent, %textInput) {
     return unless %textInput;
     my $ti = XML::Element.new(:name<textinput>);
     self!build-xml-elements($ti, %textInput, <title description name link>);
-    $channel.append: $ti;
+    $parent.append: $ti;
 }
 
-method build-xml-skip-hours($channel, @skipHours) {
+method build-xml-skip-hours($parent, @skipHours) {
     return unless @skipHours;
     my $sh = XML::Element.new(:name<skipHours>);
     $sh.append: XML::Element.new(:name<hour>, :nodes([encode-entities(~$_)])) for @skipHours;
-    $channel.append: $sh;
+    $parent.append: $sh;
 }
 
-method build-xml-skip-days($channel, @skipDays) {
+method build-xml-skip-days($parent, @skipDays) {
     return unless @skipDays;
     my $sd = XML::Element.new(:name<skipDays>);
     $sd.append: XML::Element.new(:name<day>, :nodes([encode-entities($_)])) for @skipDays;
-    $channel.append: $sd;
+    $parent.append: $sd;
 }
 
 =begin pod

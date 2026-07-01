@@ -8,11 +8,12 @@ unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
 # during iteration. Thread-safe by construction.
 my @extensions;
 
-sub register-ext(:&parse, :&generate) is export {
-    @extensions.push: %(:&parse, :&generate)
+sub register-ext(:&parse, :&generate) is export returns Nil {
+    @extensions.push: %(:&parse, :&generate);
+    return Nil;
 }
 
-sub run-parsers($elem, %attrs) is export {
+sub run-parsers($elem, %attrs) is export returns Nil {
     return unless @extensions;
     for @extensions -> %ext {
         %ext<parse>($elem, %attrs);
@@ -23,9 +24,10 @@ sub run-parsers($elem, %attrs) is export {
             }
         }
     }
+    return Nil;
 }
 
-sub run-generators($xml, $item) is export {
+sub run-generators($xml, $item) is export returns Nil {
     return unless @extensions;
     for @extensions -> %ext {
         %ext<generate>($xml, $item);
@@ -36,6 +38,7 @@ sub run-generators($xml, $item) is export {
             }
         }
     }
+    return Nil;
 }
 
 =begin pod

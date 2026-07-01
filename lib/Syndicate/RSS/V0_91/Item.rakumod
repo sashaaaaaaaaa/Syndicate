@@ -46,7 +46,7 @@ multi method from-xml(XML::Element $item-elem) {
         .rethrow;
     }
     Syndicate::Stats.record-item;
-    self.bless(:$title, :$link, :summary($desc), :$author, :id($link // Str), :content(Str),
+    self.bless(:$title, :$link, :summary($desc), :$author, :id($link // Str),
         :has-dc-creator(%extra<has-dc-creator> // False),
         :@media-contents, :@media-thumbnails, :$media-title, :$media-description,
         :itunes-author(%extra<itunes-author> // Str),

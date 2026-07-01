@@ -14,7 +14,7 @@ has @.items of Syndicate::Item is readonly;
 has Str $!cached-str;
 
 method Str {
-    $!cached-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ ~self.XML
+    $!cached-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ self.XML.Str
 }
 
 =begin pod
