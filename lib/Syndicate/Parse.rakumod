@@ -77,7 +77,10 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
         when 'rdf:RDF' | 'RDF' {
             $feed = Syndicate::RSS::V1_0.new($doc);
         }
-        default { die "Unknown feed format: <{$root.name}>" }
+        default {
+            Syndicate::Stats.record-error;
+            die "Unknown feed format: <{$root.name}>"
+        }
     }
     Syndicate::Stats.record-feed;
     $feed

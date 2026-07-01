@@ -51,6 +51,7 @@ method discover(Str $url) {
     my $feed;
     try { $feed = parse-feed($body) };
     return $feed if $feed.defined;
+    note "Feed parse failed at {$url}, falling back to HTML discovery: $!" if $!;
 
     my @feeds = self.find-feeds($body, $url);
     die "No feeds found at $url" unless @feeds;

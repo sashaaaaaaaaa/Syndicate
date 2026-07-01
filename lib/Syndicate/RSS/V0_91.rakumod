@@ -33,8 +33,9 @@ has Bool $!needs-itunes;
 submethod TWEAK {
     $!needs-dc    = False;
     $!needs-media = False;
-    $!needs-itunes = $!itunes-author.defined || $!itunes-summary.defined;
+    my $feed-itunes = $!itunes-author.defined || $!itunes-summary.defined;
     ($!needs-dc, $!needs-media, $!needs-itunes, my $) = self!set-item-flags(:check-content(False));
+    $!needs-itunes ||= $feed-itunes;
 }
 
 multi method new(XML::Document $doc) {
