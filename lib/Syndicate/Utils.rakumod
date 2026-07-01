@@ -43,7 +43,7 @@ sub get-text-optional($parent, $tag --> Str) is export {
     Str
 }
 
-sub parse-datetime(Str $str) is export {
+sub parse-datetime(Str $str --> DateTime) is export {
     datetime-interpret($str)
 }
 

@@ -16,9 +16,11 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
     die "Empty input" unless $clean.chars;
 
-    my $root = root-element($clean);
-    if $root {
-        return feed-format($root<name>, $root<ver>);
+    unless $clean.starts-with('{') || $clean.starts-with('[') {
+        my $root = root-element($clean);
+        if $root {
+            return feed-format($root<name>, $root<ver>);
+        }
     }
 
     my $parsed = try { from-json($clean) };
@@ -44,11 +46,14 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
 }
 
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
-    my $root-info = root-element($input.trim);
-    if $root-info {
-        return parse-feed($root-info<doc>);
+    my $clean = $input.trim;
+    unless $clean.starts-with('{') || $clean.starts-with('[') {
+        my $root-info = root-element($clean);
+        if $root-info {
+            return parse-feed($root-info<doc>);
+        }
     }
-    my $parsed = try { from-json($input.trim) };
+    my $parsed = try { from-json($clean) };
     unless $parsed ~~ Hash && $parsed<version>.defined {
         Syndicate::Stats.record-error;
         die "Unable to detect feed format: input is not valid XML or JSON";
