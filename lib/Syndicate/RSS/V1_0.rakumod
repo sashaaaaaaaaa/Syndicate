@@ -77,6 +77,8 @@ multi method new(XML::Document $doc) {
 
     my @items;
     for $root.elements(:TAG<item>) -> $item-elem {
+        next unless $item-elem.elements(:TAG<title>)[0];
+        next unless $item-elem.elements(:TAG<link>)[0];
         @items.push: Syndicate::RSS::V1_0::Item.from-xml($item-elem);
     }
 

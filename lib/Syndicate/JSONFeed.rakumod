@@ -46,8 +46,9 @@ multi method new-from-hash(%h) {
     my @items;
     die "JSON Feed requires 'items' key" unless %h<items>:exists;
     die "JSON Feed 'items' must be an array" unless %h<items> ~~ Array;
-    for @(%h<items>) -> %item-data {
-        @items.push: Syndicate::JSONFeed::Item.new-from-hash(%item-data);
+    for @(%h<items>) -> $item-data {
+        die "JSON Feed 'items' must contain objects, got: {$item-data.^name}" unless $item-data ~~ Hash;
+        @items.push: Syndicate::JSONFeed::Item.new-from-hash(%$item-data);
     }
 
     my %bless = :$version, :$title, :$link, :description($desc),

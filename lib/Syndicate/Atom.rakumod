@@ -64,7 +64,7 @@ multi method new(XML::Document $doc) {
 
     my %link-self;
     my %link-alternate;
-    my $primary-link = "";
+    my $primary-link = Str;
     for $feed.elements(:TAG<link>) {
         my $rel = .attribs<rel> // "alternate";
         my $href = .attribs<href> // "";
