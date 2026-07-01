@@ -54,8 +54,14 @@ multi method new(XML::Document $doc) {
     my $link  = get-text($channel, "link");
     my $desc  = get-text($channel, "description");
     my $gen   = get-text-optional($channel, "generator");
-    my $lang  = get-text-optional($channel, "language");
+    my $lang-elem = $channel.elements(:TAG<language>)[0];
+    my $lang;
     my $lang-from-dc = False;
+    if $lang-elem {
+        with $lang-elem.contents[0] -> $t {
+            $lang = $t.?text;
+        }
+    }
     unless $lang.defined {
         $lang = get-dc-text($channel, "language");
         $lang-from-dc = True if $lang.defined;
@@ -112,7 +118,7 @@ method XML {
     add-element($channel, "link",        $.link);
     add-element($channel, "description", $.description);
     add-element($channel, "generator",   $.generator);
-    add-dc-element($channel, "language", $.language) if $.language.defined;
+    add-element($channel, "language", $.language) if $.language.defined;
 
     if %.image<about>.defined {
         my $img-ref = XML::Element.new(:name<image>);

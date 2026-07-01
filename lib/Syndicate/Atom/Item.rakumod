@@ -107,7 +107,7 @@ multi method from-xml(XML::Element $entry-elem) {
 method XML {
     my $xml = XML::Element.new(:name<entry>);
     add-element($xml, "title",   $.title);
-    $xml.append: XML::Element.new(:name<link>, :attribs({:href($.link // ""), :rel<alternate>})) if $.link.defined;
+    $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link // "")), :rel<alternate>})) if $.link.defined;
     add-element($xml, "id",      $.id // $.link // "");
     add-element($xml, "summary", $.summary);
 
@@ -145,7 +145,7 @@ method XML {
         my $s = XML::Element.new(:name<source>);
         add-element($s, "title", %!source-feed<title>);
         add-element($s, "id",    %!source-feed<id>);
-        $s.append: XML::Element.new(:name<link>, :attribs({:href(%!source-feed<link> // ""), :rel<alternate>})) if %!source-feed<link>.defined;
+        $s.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities(%!source-feed<link> // "")), :rel<alternate>})) if %!source-feed<link>.defined;
         if %!source-feed<updated>.defined {
             $s.append: XML::Element.new(:name<updated>, :nodes([%!source-feed<updated>.Str]));
         }
