@@ -25,6 +25,7 @@ has @.tags of Str;
 has Str $!cached-str;
 has Hash $!cached-hash;
 has Lock $!cache-lock = Lock.new;
+has Lock $!hash-lock = Lock.new;
 
 method new-from-hash(%h) {
     my $title   = %h<title> // Str;
@@ -71,7 +72,7 @@ method new-from-hash(%h) {
 }
 
 method to-hash {
-    $!cache-lock.protect: {
+    $!hash-lock.protect: {
         $!cached-hash //= do {
             my %h;
             %h<title>          = $.title         if $.title.defined;

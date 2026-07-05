@@ -50,9 +50,10 @@ method discover(Str $url --> Syndicate::Feed:D) {
     my $body = self!decode-response($resp);
 
     my $feed;
-    try { $feed = parse-feed($body) };
+    my $parse-err;
+    try { $feed = parse-feed($body); $parse-err = $! };
     return $feed if $feed.defined;
-    note "Feed parse failed at {$url}, falling back to HTML discovery: $!" if $!;
+    note "Feed parse failed at {$url}, falling back to HTML discovery: $parse-err" if $parse-err;
 
     my @feeds = self.find-feeds($body, $url);
     die "No feeds found at $url" unless @feeds;

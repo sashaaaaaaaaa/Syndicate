@@ -16,6 +16,7 @@ has Str $.favicon;
 has %.author of Str;
 has Bool $.expired;
 has Hash $!cached-hash;
+has Lock $!hash-lock = Lock.new;
 
 multi method new(Str $json) {
     my %h;
@@ -74,7 +75,7 @@ multi method new-from-hash(%h) {
 }
 
 method to-hash {
-    $!cache-lock.protect: {
+    $!hash-lock.protect: {
         $!cached-hash //= do {
             my %h;
             %h<version>       = $.version;

@@ -79,7 +79,10 @@ multi method new(XML::Document $doc) {
 
     my @items;
     for $root.elements(:TAG<item>) -> $item-elem {
-        unless $item-elem.elements(:TAG<title>)[0] && $item-elem.elements(:TAG<link>)[0] {
+        my $title-el = $item-elem.elements(:TAG<title>)[0];
+        my $link-el  = $item-elem.elements(:TAG<link>)[0];
+        unless $title-el && $title-el.contents[0] && $title-el.contents[0].?text.trim.chars
+            && $link-el && $link-el.contents[0] && $link-el.contents[0].?text.trim.chars {
             note "Skipping RSS 1.0 item without title or link";
             next;
         }

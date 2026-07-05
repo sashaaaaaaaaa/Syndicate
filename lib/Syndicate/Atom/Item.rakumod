@@ -7,7 +7,9 @@ use Syndicate::Stats;
 unit class Syndicate::Atom::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
 submethod TWEAK {
-    die "Atom entries require an 'updated' timestamp" unless $!updated.defined;
+    unless $!updated.defined {
+        die "Atom entry '{$!id // $!title // "(unknown)"}' requires an 'updated' timestamp";
+    }
 }
 
 has %.author-detail of Str;
