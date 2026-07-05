@@ -52,24 +52,15 @@ multi method from-xml(XML::Element $item-elem) {
     my $pubdate = parse-date-optional(get-text-optional($item-elem, "pubDate"));
     my $source  = get-text-optional($item-elem, "source");
 
-    my $guid-elem = $item-elem.elements(:TAG<guid>)[0];
-    my $guid = Str;
-    my $guid-is-permalink = True;
-    with $guid-elem {
-        $guid = .contents[0].?text // Str;
-        $guid-is-permalink = (.attribs<isPermaLink> // "true") eq "true";
-    }
-
-    my %enclosure;
-    with $item-elem.elements(:TAG<enclosure>)[0] {
-        %enclosure<url>    = .attribs<url>    // Str;
-        %enclosure<length> = .attribs<length> // Str;
-        %enclosure<type>   = .attribs<type>   // Str;
-    }
+    my ($guid, $guid-is-permalink) = self!parse-guid($item-elem);
+    my %enclosure = self!parse-enclosure($item-elem);
 
     my %extra;
     %extra<author> = $author if $author.defined && $author.chars;
     run-parsers($item-elem, %extra);
+    # %extra keys from extensions: author, has-dc-creator, media-contents,
+    #   media-thumbnails, media-title, media-description,
+    #   itunes-author, itunes-summary, itunes-duration
     # Prefer explicit <author> over dc:creator to match RSS 2.0 element priority
     $author = $author.defined && $author.chars ?? $author !! %extra<author> // Str;
     # dc:subject is intentionally not stored here — only V1_0 items track @.dc-subjects
@@ -87,7 +78,7 @@ multi method from-xml(XML::Element $item-elem) {
         :$content,
         :has-dc-creator(%extra<has-dc-creator> // False),
         :comments($comment),
-        :enclosure(%enclosure), :source($source),
+        :enclosure(%enclosure), :source($source), :$guid-is-permalink,
         :media-title($media-title), :media-description($media-description),
         :itunes-author(%extra<itunes-author> // Str),
         :itunes-summary(%extra<itunes-summary> // Str),
@@ -129,6 +120,24 @@ method XML {
     run-generators($xml, self);
 
     return $xml;
+}
+
+method !parse-guid(XML::Element $item-elem) {
+    my $guid-elem = $item-elem.elements(:TAG<guid>)[0];
+    return (Str, True) unless $guid-elem;
+    my $guid = $guid-elem.contents[0].?text // Str;
+    my $is-permalink = ($guid-elem.attribs<isPermaLink> // "true") eq "true";
+    ($guid, $is-permalink)
+}
+
+method !parse-enclosure(XML::Element $item-elem) {
+    my %enclosure;
+    with $item-elem.elements(:TAG<enclosure>)[0] {
+        %enclosure<url>    = .attribs<url>    // Str;
+        %enclosure<length> = .attribs<length> // Str;
+        %enclosure<type>   = .attribs<type>   // Str;
+    }
+    %enclosure
 }
 
 method Str { $!cache-lock.protect: { $!cached-str //= ~self.XML } }

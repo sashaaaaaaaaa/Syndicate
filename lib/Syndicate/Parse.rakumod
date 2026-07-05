@@ -16,13 +16,8 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
     die "Empty input" unless $clean.chars;
 
-    # JSON feeds always start with { but some may start with [.
-    # Skip XML parsing for both to avoid the guaranteed-fail DOM build.
-    unless $clean.starts-with('{') || $clean.starts-with('[') {
-        my $root = root-element($clean);
-        if $root {
-            return feed-format($root<name>, $root<ver>);
-        }
+    with try-xml-parse($clean) -> $root {
+        return feed-format($root<name>, $root<ver>);
     }
 
     my $parsed = try { from-json($clean) };
@@ -51,12 +46,8 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
 
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $clean = $input.trim;
-    # JSON feeds always start with { but some may start with [.
-    unless $clean.starts-with('{') || $clean.starts-with('[') {
-        my $root-info = root-element($clean);
-        if $root-info {
-            return parse-feed($root-info<doc>);
-        }
+    with try-xml-parse($clean) -> $root-info {
+        return parse-feed($root-info<doc>);
     }
     my $parsed = try { from-json($clean) };
     unless $parsed ~~ Hash
@@ -97,14 +88,10 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
     my $clean = $input.trim;
     die "Empty input" unless $clean.chars;
 
-    # JSON feeds always start with { but some may start with [.
-    unless $clean.starts-with('{') || $clean.starts-with('[') {
-        my $root-info = root-element($clean);
-        if $root-info {
-            my $format = feed-format($root-info<name>, $root-info<ver>);
-            my $feed   = parse-feed($root-info<doc>);
-            return ($format, $feed);
-        }
+    with try-xml-parse($clean) -> $root-info {
+        my $format = feed-format($root-info<name>, $root-info<ver>);
+        my $feed   = parse-feed($root-info<doc>);
+        return ($format, $feed);
     }
 
     my $parsed = try { from-json($clean) };
@@ -127,6 +114,11 @@ multi sub parse-file(Str $path --> Syndicate::Feed:D) is export {
 
 multi sub parse-file(IO::Path $path --> Syndicate::Feed:D) is export {
     parse-file($path.Str)
+}
+
+sub try-xml-parse(Str $clean) {
+    return Nil if $clean.starts-with('{') || $clean.starts-with('[');
+    root-element($clean)
 }
 
 sub root-element(Str $input) {

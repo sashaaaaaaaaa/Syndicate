@@ -8,7 +8,7 @@ has Str $.link;
 has Str $.description;
 has Str $.generator;
 has Str $.language;
-has @!items of Syndicate::Item;
+has @!items of Syndicate::Item is built;
 method items() { @!items.List }
 has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
