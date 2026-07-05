@@ -5,9 +5,12 @@ use Syndicate::JSONFeed::Item;
 use Syndicate::Utils;
 use Syndicate::Stats;
 
+our constant JSONFEED-VERSION       is export = 'https://jsonfeed.org/version/1.1';
+our constant JSONFEED-VERSION-PREFIX is export = 'https://jsonfeed.org/version/';
+
 unit class Syndicate::JSONFeed:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 
-has Str $.version = "https://jsonfeed.org/version/1.1";
+has Str $.version = JSONFEED-VERSION;
 has Str $.feed_url;
 has Str $.user_comment;
 has Str $.next_url;
@@ -29,7 +32,7 @@ multi method new(Str $json) {
 }
 
 multi method new-from-hash(%h) {
-    my $version = %h<version> // "https://jsonfeed.org/version/1.1";
+    my $version = %h<version> // JSONFEED-VERSION;
     die "Invalid JSON Feed version: $version"
         unless $version.starts-with('https://jsonfeed.org/version/');
     my $title       = %h<title> // Str;

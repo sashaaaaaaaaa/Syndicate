@@ -11,8 +11,9 @@ use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 
-my constant NS-CONTENT = 'http://purl.org/rss/1.0/modules/content/';
-my constant NS-ATOM    = 'http://www.w3.org/2005/Atom';
+my constant NS-CONTENT     = 'http://purl.org/rss/1.0/modules/content/';
+my constant NS-ATOM        = 'http://www.w3.org/2005/Atom';
+my constant ONE-WEEK-MINUTES = 10080;
 
 unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
@@ -97,7 +98,7 @@ multi method new(XML::Document $doc) {
             note "Invalid ttl value: $ttl-str";
         }
         with %bless<ttl> {
-            note "ttl of $_ minutes exceeds recommended maximum of 10080 (1 week)" if $_ > 10080;
+            note "ttl of $_ minutes exceeds recommended maximum of {ONE-WEEK-MINUTES} (1 week)" if $_ > ONE-WEEK-MINUTES;
         }
     }
     CATCH {

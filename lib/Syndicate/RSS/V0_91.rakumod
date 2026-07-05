@@ -133,6 +133,45 @@ method XML {
     return $xml;
 }
 
+method parse-textinput($channel --> Hash) {
+    my %textInput;
+    with $channel.elements(:TAG<textinput>)[0] {
+        %textInput<title>       = get-text-optional($_, "title");
+        %textInput<description> = get-text-optional($_, "description");
+        %textInput<name>        = get-text-optional($_, "name");
+        %textInput<link>        = get-text-optional($_, "link");
+    }
+    %textInput
+}
+
+method parse-skip-hours($channel --> Array) {
+    my @skipHours;
+    with $channel.elements(:TAG<skipHours>)[0] {
+        for .elements(:TAG<hour>) -> $h {
+            with $h.contents[0] {
+                if .text ~~ /^\d+$/ {
+                    @skipHours.push: .text.Int;
+                } else {
+                    note "Non-numeric hour value in skipHours: {.text}";
+                }
+            }
+        }
+    }
+    @skipHours
+}
+
+method parse-skip-days($channel --> Array) {
+    my @skipDays;
+    with $channel.elements(:TAG<skipDays>)[0] {
+        for .elements(:TAG<day>) -> $d {
+            with $d.contents[0] {
+                @skipDays.push: .text.tclc;
+            }
+        }
+    }
+    @skipDays
+}
+
 =begin pod
 
 =head1 NAME

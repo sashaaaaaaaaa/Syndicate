@@ -43,7 +43,7 @@ multi method from-xml(XML::Element $entry-elem) {
     with $entry-elem.elements(:TAG<content>)[0] -> $ce {
         $content-type = $ce.attribs<type> // "text";
         if $content-type eq "xhtml" {
-            $content = $ce.nodes.map(*.Str).join.trim;
+            $content = try { $ce.nodes.map(*.Str).join.trim } // Str;
         } else {
             with $ce.contents[0] -> $t {
                 my $text = $t.?text // Str;

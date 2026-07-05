@@ -27,7 +27,7 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
     die "Unable to detect feed format: input is not valid XML or JSON"
         unless $parsed ~~ Hash
             && $parsed<version>.defined
-            && $parsed<version>.starts-with('https://jsonfeed.org/version/');
+            && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX);
     JSONFeedFmt
 }
 
@@ -56,7 +56,7 @@ multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $parsed = try { from-json($clean) };
     unless $parsed ~~ Hash
         && $parsed<version>.defined
-        && $parsed<version>.starts-with('https://jsonfeed.org/version/') {
+        && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX) {
         Syndicate::Stats.record-error;
         die "Unable to detect feed format: input is not valid XML or JSON";
     }
@@ -89,7 +89,9 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
 }
 
 multi sub parse-file(Str $path --> Syndicate::Feed:D) is export {
-    parse-feed(slurp($path))
+    my $contents = try { slurp($path) };
+    die "Could not read file '$path': $!" unless $contents.defined;
+    parse-feed($contents)
 }
 
 multi sub parse-file(IO::Path $path --> Syndicate::Feed:D) is export {

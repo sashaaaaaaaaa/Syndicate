@@ -32,45 +32,6 @@ method parse-image($channel --> Hash) {
     %image
 }
 
-method parse-textinput($channel --> Hash) {
-    my %textInput;
-    with $channel.elements(:TAG<textinput>)[0] {
-        %textInput<title>       = get-text-optional($_, "title");
-        %textInput<description> = get-text-optional($_, "description");
-        %textInput<name>        = get-text-optional($_, "name");
-        %textInput<link>        = get-text-optional($_, "link");
-    }
-    %textInput
-}
-
-method parse-skip-hours($channel --> Array) {
-    my @skipHours;
-    with $channel.elements(:TAG<skipHours>)[0] {
-        for .elements(:TAG<hour>) -> $h {
-            with $h.contents[0] {
-                if .text ~~ /^\d+$/ {
-                    @skipHours.push: .text.Int;
-                } else {
-                    note "Non-numeric hour value in skipHours: {.text}";
-                }
-            }
-        }
-    }
-    @skipHours
-}
-
-method parse-skip-days($channel --> Array) {
-    my @skipDays;
-    with $channel.elements(:TAG<skipDays>)[0] {
-        for .elements(:TAG<day>) -> $d {
-            with $d.contents[0] {
-                @skipDays.push: .text.tclc;
-            }
-        }
-    }
-    @skipDays
-}
-
 method !build-xml-elements($parent, %data, *@keys) {
     for @keys -> $key {
         with %data{$key} {
@@ -116,19 +77,13 @@ Syndicate::RSS::Common - Shared role for RSS 2.0 and RSS 0.91
 
 =head1 DESCRIPTION
 
-Provides shared parsing and XML generation methods for image, textinput,
-skipHours, and skipDays elements. Used by both L<C<Syndicate::RSS>|rakudoc:Syndicate::RSS>
+Provides shared parsing and XML generation methods for image elements.
+Used by both L<C<Syndicate::RSS>|rakudoc:Syndicate::RSS>
 and L<C<Syndicate::RSS::V0_91>|rakudoc:Syndicate::RSS::V0_91>.
 
 =head1 METHODS
 
 =item C<parse-image($channel)> - Parse image element into Hash
-=item C<parse-textinput($channel)> - Parse textinput element into Hash
-=item C<parse-skip-hours($channel)> - Parse skipHours into Array of Int
-=item C<parse-skip-days($channel)> - Parse skipDays into Array of Str
 =item C<build-xml-image($parent, %image, Bool :$rdf-about)> - Generate image XML
-=item C<build-xml-textinput($channel, %textInput)> - Generate textinput XML
-=item C<build-xml-skip-hours($channel, @skipHours)> - Generate skipHours XML
-=item C<build-xml-skip-days($channel, @skipDays)> - Generate skipDays XML
 
 =end pod
