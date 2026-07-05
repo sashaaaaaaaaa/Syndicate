@@ -77,7 +77,6 @@ method to-hash {
     %h<external_url>   = $.external_url  if $.external_url.defined;
     %h<summary>        = $.summary       if $.summary.defined;
     %h<id>             = $.id            if $.id.defined;
-    %h<author>         = $.author        if $.author.defined;
     %h<content_html> = $.content_html  if $.content_html.defined;
     %h<content_text>  = $.content_text  if $.content_text.defined;
     # Fallback: use $.content as content_html only when neither content type was explicitly set

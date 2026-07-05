@@ -107,7 +107,7 @@ multi method from-xml(XML::Element $entry-elem) {
 method XML {
     my $xml = XML::Element.new(:name<entry>);
     add-element($xml, "title",   $.title);
-    $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link // "")), :rel<alternate>})) if $.link.defined;
+    $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link // "")), :rel<alternate>})) if $.link.defined && $.link.chars;
     add-element($xml, "id",      $.id // $.link // "");
     add-element($xml, "summary", $.summary);
 

@@ -48,7 +48,11 @@ method parse-skip-hours($channel --> Array) {
     with $channel.elements(:TAG<skipHours>)[0] {
         for .elements(:TAG<hour>) -> $h {
             with $h.contents[0] {
-                @skipHours.push: .text.Int if .text ~~ /^\d+$/;
+                if .text ~~ /^\d+$/ {
+                    @skipHours.push: .text.Int;
+                } else {
+                    note "Non-numeric hour value in skipHours: {.text}";
+                }
             }
         }
     }

@@ -97,8 +97,9 @@ multi method from-xml(XML::Element $item-elem) {
         Syndicate::Stats.record-error;
         .rethrow;
     }
+    my $item = self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails);
     Syndicate::Stats.record-item;
-    self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails)
+    $item
 }
 
 method XML {
