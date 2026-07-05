@@ -39,6 +39,8 @@ method fetch(Str $url --> Syndicate::Feed:D) {
     self!validate-url($url);
     my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
+    my $ct = $resp<headers><content-type>.[0] // '';
+    die "Not a feed — Content-Type: $ct" unless $ct.contains('xml') || $ct.contains('json') || $ct.contains('html') || $ct.contains('rss') || $ct.contains('atom') || $ct.contains('feed');
     my $body = self!decode-response($resp);
     parse-feed($body)
 }

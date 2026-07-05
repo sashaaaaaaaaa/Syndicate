@@ -52,7 +52,7 @@ multi method from-xml(XML::Element $item-elem) {
     my $media-title       = %extra<media-title>         // Str;
     my $media-description = %extra<media-description>   // Str;
 
-    my $content = $encoded.defined && $encoded.chars ?? $encoded !! $desc // Str;
+    my $content = $encoded.defined && $encoded.chars ?? $encoded !! Str;
     my $item-id = $about // $link // Str;
     my %bless = :$about, :$title, :$link, :summary($desc),
                 :$author,

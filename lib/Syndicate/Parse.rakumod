@@ -16,7 +16,9 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
     die "Empty input" unless $clean.chars;
 
-    unless $clean.starts-with('{') {
+    # JSON feeds always start with { but some may start with [.
+    # Skip XML parsing for both to avoid the guaranteed-fail DOM build.
+    unless $clean.starts-with('{') || $clean.starts-with('[') {
         my $root = root-element($clean);
         if $root {
             return feed-format($root<name>, $root<ver>);
@@ -47,7 +49,8 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
 
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $clean = $input.trim;
-    unless $clean.starts-with('{') {
+    # JSON feeds always start with { but some may start with [.
+    unless $clean.starts-with('{') || $clean.starts-with('[') {
         my $root-info = root-element($clean);
         if $root-info {
             return parse-feed($root-info<doc>);
@@ -92,7 +95,8 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
     my $clean = $input.trim;
     die "Empty input" unless $clean.chars;
 
-    unless $clean.starts-with('{') {
+    # JSON feeds always start with { but some may start with [.
+    unless $clean.starts-with('{') || $clean.starts-with('[') {
         my $root-info = root-element($clean);
         if $root-info {
             my $format = feed-format($root-info<name>, $root-info<ver>);
