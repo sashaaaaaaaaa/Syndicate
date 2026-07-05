@@ -104,7 +104,7 @@ method base-url(Str $html --> Str) {
 }
 
 method resolve-url(Str $url, Str $base --> Str) {
-    return $url if $url.starts-with('http://') || $url.starts-with('https://');
+    return $url if $url.lc.starts-with('http://') || $url.lc.starts-with('https://');
     my $scheme = $base ~~ /^(https?)/ ?? ~$0 !! 'https';
     return $scheme ~ ':' ~ $url if $url ~~ /^\/\//;
 

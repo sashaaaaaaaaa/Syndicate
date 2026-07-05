@@ -94,10 +94,10 @@ multi method new(XML::Document $doc) {
     if $ttl-str.defined && $ttl-str.chars {
         %bless<ttl> = try { $ttl-str.Int };
         unless %bless<ttl>.defined {
-            warn "Invalid ttl value: $ttl-str";
+            note "Invalid ttl value: $ttl-str";
         }
         with %bless<ttl> {
-            warn "ttl of $_ minutes exceeds recommended maximum of 10080 (1 week)" if $_ > 10080;
+            note "ttl of $_ minutes exceeds recommended maximum of 10080 (1 week)" if $_ > 10080;
         }
     }
     CATCH {
@@ -203,7 +203,7 @@ Supports iTunes podcast and Media RSS extensions via the extension registry.
 =item C<$.webMaster> - Webmaster email
 =item C<$.pubDate> - Publication date (L<C<DateTime>|rakudoc:DateTime>)
 =item C<$.lastBuildDate> - Last build date (L<C<DateTime>|rakudoc:DateTime>)
-=item C<$.category> - Feed category
+=item C<@.categories> - Feed categories
 =item C<$.docs> - Documentation URL
 =item C<$.ttl> - Time to live (minutes)
 =item C<%.image> - Feed image hash (url, title, link, width, height)

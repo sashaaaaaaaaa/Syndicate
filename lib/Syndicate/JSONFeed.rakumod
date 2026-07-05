@@ -37,10 +37,14 @@ multi method new-from-hash(%h) {
     my $gen         = %h<generator> // Str;
 
     my %author;
-    with %h<author> {
-        %author<name>   = .<name> // Str;
-        %author<url>    = .<url> // Str;
-        %author<avatar> = .<avatar> // Str;
+    if %h<author> ~~ Hash {
+        with %h<author> {
+            %author<name>   = .<name> // Str;
+            %author<url>    = .<url> // Str;
+            %author<avatar> = .<avatar> // Str;
+        }
+    } elsif %h<author>.defined {
+        die "JSON Feed 'author' must be a Hash, got {%h<author>.^name}";
     }
 
     my @items;

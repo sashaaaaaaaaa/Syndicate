@@ -79,7 +79,7 @@ method rss-feed {
     %bless<itunes-author>     = $!itunes-author  if $!itunes-author.defined;
     %bless<itunes-summary>    = $!itunes-summary if $!itunes-summary.defined;
     %bless<atom-self-link>    = $!atom-self-link if $!atom-self-link.defined;
-    %bless<pubDate>           = $!updated        if $!updated.defined;
+    %bless<pubDate>           = $.updated        if $.updated.defined;
     Syndicate::RSS.new(|%bless, :categories(@!categories), :@items)
 }
 
