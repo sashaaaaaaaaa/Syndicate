@@ -45,10 +45,6 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
     feed-format($root.name, $root.attribs<version> // "")
 }
 
-# NOTE: feed-format and parse-feed each call root-element independently,
-# so calling both sequentially re-parses the XML. This is accepted — the
-# typical path is parse-feed alone (one parse), and fixing the edge case
-# would require a compound return type that complicates the API.
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $clean = $input.trim;
     unless $clean.starts-with('{') {
@@ -92,6 +88,31 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
     $feed
 }
 
+multi sub parse-feed-with-format(Str $input --> List) is export {
+    my $clean = $input.trim;
+    die "Empty input" unless $clean.chars;
+
+    unless $clean.starts-with('{') {
+        my $root-info = root-element($clean);
+        if $root-info {
+            my $format = feed-format($root-info<name>, $root-info<ver>);
+            my $feed   = parse-feed($root-info<doc>);
+            return ($format, $feed);
+        }
+    }
+
+    my $parsed = try { from-json($clean) };
+    unless $parsed ~~ Hash
+        && $parsed<version>.defined
+        && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX) {
+        Syndicate::Stats.record-error;
+        die "Unable to detect feed format: input is not valid XML or JSON";
+    }
+    my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed);
+    Syndicate::Stats.record-feed;
+    return (JSONFeedFmt, $feed);
+}
+
 multi sub parse-file(Str $path --> Syndicate::Feed:D) is export {
     my $contents = try { slurp($path) };
     die "Could not read file '$path': $!" unless $contents.defined;
@@ -126,6 +147,8 @@ use Syndicate::Parse;
 my $format = feed-format($input);       # Detect format
 my $feed   = parse-feed($input);        # Parse any format (from string)
 my $feed   = parse-file("feed.xml");    # Parse from file path (Str or IO::Path)
+
+my ($format, $feed) = parse-feed-with-format($input); # Both, one XML parse
 =end code
 
 =head1 DESCRIPTION
@@ -153,6 +176,17 @@ JSON feeds starting with C<{>, XML feeds by root element name and version attrib
 Detects format and returns an object of the appropriate class
 (C<Syndicate::Atom>, C<Syndicate::RSS>, C<Syndicate::RSS::V0_91>,
 C<Syndicate::RSS::V1_0>, or C<Syndicate::JSONFeed>).
+
+=head2 C<parse-feed-with-format(Str $input --> List)>
+
+Detects the format and parses the feed in a single pass, returning a
+C<(FeedFormat, Syndicate::Feed)> List. Use this instead of calling
+C<feed-format($input)> followed by C<parse-feed($input)> — that
+sequence parses the XML twice, once per call. This sub calls the
+underlying XML parser only once.
+
+=for code :lang<raku>
+my ($format, $feed) = parse-feed-with-format($input);
 
 =head2 C<parse-file(Str $path)> / C<parse-file(IO::Path $path)>
 
