@@ -117,7 +117,7 @@ method build-json-item {
         :summary($!summary // Str),
         :content($c);
     if $c.defined {
-        if $!content-type.defined && $!content-type ne 'text/plain' {
+        if $!content-type.defined && ($!content-type.contains('html') || $!content-type.contains('xhtml')) {
             %bless<content_html> = $c;
         } else {
             %bless<content_text> = $c;

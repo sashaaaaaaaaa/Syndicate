@@ -26,10 +26,12 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
     }
 
     my $parsed = try { from-json($clean) };
-    die "Unable to detect feed format: input is not valid XML or JSON"
-        unless $parsed ~~ Hash
-            && $parsed<version>.defined
-            && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX);
+    unless $parsed ~~ Hash
+        && $parsed<version>.defined
+        && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX) {
+        Syndicate::Stats.record-error;
+        die "Unable to detect feed format: input is not valid XML or JSON";
+    }
     JSONFeedFmt
 }
 

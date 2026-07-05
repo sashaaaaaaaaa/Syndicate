@@ -8,13 +8,13 @@ has Str $.link;
 has Str $.description;
 has Str $.generator;
 has Str $.language;
-has @.items of Syndicate::Item is readonly;
-# All public attributes are read-only after construction, so $!cached-str
-# never goes stale. No invalidation mechanism is needed.
+has @!items of Syndicate::Item;
+method items() { @!items.List }
 has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 
 method Str {
+    return $!cached-str if $!cached-str.defined;
     $!cache-lock.protect: {
         $!cached-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ self.XML.Str
     }
