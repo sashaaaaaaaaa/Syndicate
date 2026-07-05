@@ -5,7 +5,7 @@ use Syndicate::Utils;
 
 unit module Syndicate::Extension::ITunes:ver<0.0.1>:auth<zef:sasha>;
 
-register-ext(
+register-ext(:namespace<itunes>,
     parse => sub ($elem, %attrs) {
         return unless $elem.elements.first({ .name.starts-with('itunes:') });
         %attrs<itunes-author>   = get-itunes-text($elem, "author");
@@ -24,7 +24,7 @@ my constant NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 sub get-itunes-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("itunes:$tag"))[0] -> $e {
         with $e.contents[0] -> $t {
-            return $t.?text // "";
+            return decode-entities($t.?text // "");
         }
     }
     Str

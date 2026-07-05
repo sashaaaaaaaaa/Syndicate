@@ -21,15 +21,16 @@ method !set-item-flags(Bool :$check-content = True) {
     ($dc, $media, $itunes, $content)
 }
 
-method parse-image($channel --> Hash) {
+method parse-image($parent, Bool :$rdf-about = False --> Hash) {
     my %image;
-    with $channel.elements(:TAG<image>)[0] {
+    with $parent.elements(:TAG<image>)[0] {
         %image<url>         = get-text-optional($_, "url");
         %image<title>       = get-text-optional($_, "title");
         %image<link>        = get-text-optional($_, "link");
-        %image<width>       = get-text-optional($_, "width");
-        %image<height>      = get-text-optional($_, "height");
+        %image<width>       = +(get-text-optional($_, "width")  // 0)  if get-text-optional($_, "width").defined;
+        %image<height>      = +(get-text-optional($_, "height") // 0)  if get-text-optional($_, "height").defined;
         %image<description> = get-text-optional($_, "description");
+        %image<about>       = $_.attribs{'rdf:about'} // $_.attribs<about> // Str if $rdf-about;
     }
     %image
 }
@@ -37,7 +38,7 @@ method parse-image($channel --> Hash) {
 method !build-xml-elements($parent, %data, *@keys) {
     for @keys -> $key {
         with %data{$key} {
-            $parent.append: XML::Element.new(:name($key), :nodes([encode-entities($_)])) if .chars;
+            $parent.append: XML::Element.new(:name($key), :nodes([encode-entities(~$_)])) if .chars;
         }
     }
 }

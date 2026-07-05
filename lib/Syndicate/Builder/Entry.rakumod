@@ -117,10 +117,10 @@ method build-json-item {
         :summary($!summary // Str),
         :content($c);
     if $c.defined {
-        if $!content-type.defined && $!content-type eq 'text/plain' {
-            %bless<content_text> = $c;
-        } else {
+        if $!content-type.defined && $!content-type ne 'text/plain' {
             %bless<content_html> = $c;
+        } else {
+            %bless<content_text> = $c;
         }
     }
     %bless<date_published> = $!published if $!published.defined;

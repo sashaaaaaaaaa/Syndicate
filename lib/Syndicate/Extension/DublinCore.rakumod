@@ -5,7 +5,7 @@ use Syndicate::Utils;
 
 unit module Syndicate::Extension::DublinCore:ver<0.0.1>:auth<zef:sasha>;
 
-register-ext(
+register-ext(:namespace<dc>,
     parse => sub ($elem, %attrs) {
         return unless $elem.elements.first({ .name.starts-with('dc:') });
         my $creator = get-dc-text($elem, "creator");
@@ -29,7 +29,7 @@ register-ext(
 sub get-dc-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("dc:$tag"))[0] -> $e {
         with $e.contents[0] -> $t {
-            return $t.?text // Str;
+            return decode-entities($t.?text // Str);
         }
     }
     Str
@@ -39,7 +39,7 @@ sub get-dc-texts($parent, Str $tag --> Array) is export {
     my @values;
     for $parent.elements(:TAG("dc:$tag")) -> $e {
         with $e.contents[0] -> $t {
-            @values.push: $t.text // "";
+            @values.push: decode-entities($t.text // "");
         }
     }
     @values

@@ -9,14 +9,16 @@ unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
 my @extensions;
 my $ext-lock = Lock.new;
 
-sub register-ext(:&parse, :&generate) is export {
-    $ext-lock.protect: { @extensions.push: %(:&parse, :&generate) }
+sub register-ext(:&parse, :&generate, Str :$namespace?) is export {
+    $ext-lock.protect: { @extensions.push: %(:&parse, :&generate, :$namespace) }
 }
 
 sub run-parsers($elem, %attrs) is export {
     my @exts = $ext-lock.protect: { @extensions.List };
     return unless @exts;
-    for @exts -> %ext {
+    my $active = set-active(@exts, $elem);
+    for @exts.kv -> $i, %ext {
+        next unless $active{$i};
         %ext<parse>($elem, %attrs);
         CATCH {
             when X::Control { .rethrow }
@@ -41,6 +43,20 @@ sub run-generators($xml, $item) is export {
             }
         }
     }
+}
+
+sub set-active(@exts, $elem) {
+    my @prefixes = @exts.map({ .<namespace> }).grep(*.defined);
+    return @exts.keys.Set unless @prefixes;
+    my %present = @prefixes.map({ $_ => False });
+    for $elem.elements -> $e {
+        my $name = $e.name;
+        with $name.index(':') -> $i {
+            my $prefix = $name.substr(0, $i);
+            %present{$prefix} = True if %present{$prefix}:exists;
+        }
+    }
+    @exts.kv.map(-> $i, %ext { $i if !%ext<namespace> || %present{%ext<namespace>} }).Set
 }
 
 =begin pod

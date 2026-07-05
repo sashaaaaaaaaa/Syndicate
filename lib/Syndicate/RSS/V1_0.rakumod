@@ -16,7 +16,7 @@ my constant NS-CONTENT = 'http://purl.org/rss/1.0/modules/content/';
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.about;
-has %.image of Str;
+has %.image;
 has Bool $!needs-dc;
 has Bool $!needs-media;
 has Bool $!needs-content;
@@ -57,13 +57,7 @@ multi method new(XML::Document $doc) {
 
     }
 
-    my %image;
-    with $root.elements(:TAG<image>)[0] -> $img {
-        %image<url>   = get-text-optional($img, "url");
-        %image<title> = get-text-optional($img, "title");
-        %image<link>  = get-text-optional($img, "link");
-        %image<about> = $img.attribs{'rdf:about'} // $img.attribs<about> // Str;
-    }
+    my %image = self.parse-image($root, :rdf-about);
 
     my @items;
     for $root.elements(:TAG<item>) -> $item-elem {

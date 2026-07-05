@@ -45,18 +45,25 @@ sub get-text-optional($parent, $tag --> Str) is export {
     Str
 }
 
-sub parse-datetime(Str $str) is export {
-    datetime-interpret($str)
+sub parse-categories($parent --> Array) is export {
+    my @categories;
+    for $parent.elements(:TAG<category>) -> $c {
+        with $c.contents[0] -> $t {
+            my $text = $t.?text // "";
+            @categories.push: decode-entities($text) if $text.chars;
+        }
+    }
+    @categories
 }
 
 sub parse-date(Str $str --> DateTime) is export {
     die "Cannot parse date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
-    parse-datetime($str.trim) // die "Cannot parse date: $str"
+    datetime-interpret($str.trim) // die "Cannot parse date: $str"
 }
 
 sub parse-date-optional(Str $str) is export {
     return Nil unless $str.defined && $str.trim.chars > 0;
-    parse-datetime($str.trim) // Nil
+    datetime-interpret($str.trim) // Nil
 }
 
 =begin pod
@@ -75,6 +82,7 @@ Not typically needed by end users.
 =item C<decode-entities(Str)>, C<encode-entities(Str)> - XML entity handling
 =item C<get-text($parent, $tag)> - Get required text content, dies if element missing
 =item C<get-text-optional($parent, $tag)> - Get optional text content (returns C<Str>)
+=item C<parse-categories($parent)> - Extract category tags text content
 =item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>
 =item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Nil>
 

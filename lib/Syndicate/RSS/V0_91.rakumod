@@ -20,7 +20,7 @@ has Str $.rating;
 has Str $.docs;
 has DateTime $.pubDate;
 has DateTime $.lastBuildDate;
-has %.image of Str;
+has %.image;
 has %.textInput of Str;
 has @.skipHours of Int;
 has @.skipDays of Str;

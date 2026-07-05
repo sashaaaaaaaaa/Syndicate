@@ -45,13 +45,7 @@ multi method from-xml(XML::Element $item-elem) {
     my $desc    = get-text-optional($item-elem, "description");
     my $encoded = get-text-optional($item-elem, "content:encoded");
     my $author  = get-text-optional($item-elem, "author");
-    my @categories;
-    for $item-elem.elements(:TAG<category>) -> $c {
-        with $c.contents[0] -> $t {
-            my $text = $t.?text // "";
-            @categories.push: decode-entities($text) if $text.chars;
-        }
-    }
+    my @categories = parse-categories($item-elem);
     my $comment = get-text-optional($item-elem, "comments");
     my $pubdate = parse-date-optional(get-text-optional($item-elem, "pubDate"));
     my $source  = get-text-optional($item-elem, "source");

@@ -25,7 +25,7 @@ has DateTime $.lastBuildDate;
 has @.categories of Str;
 has Str $.docs;
 has Int $.ttl;
-has %.image of Str;
+has %.image;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.atom-self-link;
@@ -55,13 +55,7 @@ multi method new(XML::Document $doc) {
     my $wm      = get-text-optional($channel, "webMaster");
     my $pd      = parse-date-optional(get-text-optional($channel, "pubDate"));
     my $lbd     = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
-    my @categories;
-    for $channel.elements(:TAG<category>) -> $c {
-        with $c.contents[0] -> $t {
-            my $text = $t.?text // "";
-            @categories.push: decode-entities($text) if $text.chars;
-        }
-    }
+    my @categories = parse-categories($channel);
     my $gen     = get-text-optional($channel, "generator");
     my $docs    = get-text-optional($channel, "docs");
     my $ttl-str = get-text-optional($channel, "ttl");
