@@ -161,7 +161,7 @@ method build-atom-item {
         :content($!content // Str),
         :content-type($!content-type // Str),
         :rights($!rights // Str);
-    %bless<updated>   = $!updated   if $!updated.defined;
+    %bless<updated>   = $!updated.defined ?? $!updated !! DateTime.now;
     %bless<published> = $!published if $!published.defined;
     my @cats = @!categories;
     Syndicate::Atom::Item.new(|%bless, :categories(@cats))

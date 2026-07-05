@@ -6,11 +6,15 @@ use Syndicate::Stats;
 
 plan 6;
 
+my $feeds-before = Syndicate::Stats.feeds-parsed;
+my $items-before = Syndicate::Stats.items-parsed;
+my $errors-before = Syndicate::Stats.errors;
+
 isa-ok Syndicate::Stats, Syndicate::Stats, "Stats class exists";
 
-is Syndicate::Stats.feeds-parsed, 0, "starts at zero";
-is Syndicate::Stats.items-parsed, 0, "items starts at zero";
-is Syndicate::Stats.errors, 0, "errors starts at zero";
+is Syndicate::Stats.feeds-parsed - $feeds-before, 0, "starts at zero";
+is Syndicate::Stats.items-parsed - $items-before, 0, "items starts at zero";
+is Syndicate::Stats.errors - $errors-before, 0, "errors starts at zero";
 
 # Test concurrency: increment from multiple threads
 my @promises;
@@ -22,7 +26,7 @@ for ^10 {
 }
 await @promises;
 
-is Syndicate::Stats.feeds-parsed, 10, "feeds-parsed = 10 after concurrent increments";
-is Syndicate::Stats.items-parsed, 50, "items-parsed = 50 after concurrent increments";
+is Syndicate::Stats.feeds-parsed - $feeds-before, 10, "feeds-parsed = 10 after concurrent increments";
+is Syndicate::Stats.items-parsed - $items-before, 50, "items-parsed = 50 after concurrent increments";
 
 done-testing;

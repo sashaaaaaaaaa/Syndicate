@@ -7,7 +7,7 @@ use Syndicate::Stats;
 unit class Syndicate::Atom::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
 submethod TWEAK {
-    $!updated //= DateTime.now;
+    die "Atom entries require an 'updated' timestamp" unless $!updated.defined;
 }
 
 has %.author-detail of Str;
@@ -17,11 +17,15 @@ has Str $.content-type;
 has Str $.rights;
 has %.source-feed;
 has @.contributors of Hash;
+has Str $!cached-str;
+has Lock $!cache-lock = Lock.new;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid Atom entry XML: $!" unless $doc;
-    self.from-xml($doc.root)
+    my $item = self.from-xml($doc.root);
+    CATCH { Syndicate::Stats.record-error; .rethrow }
+    $item
 }
 
 multi method new(XML::Element $xml-elem) {
@@ -164,7 +168,7 @@ method XML {
     return $xml;
 }
 
-method Str { ~self.XML }
+method Str { $!cache-lock.protect: { $!cached-str //= ~self.XML } }
 
 =begin pod
 

@@ -15,6 +15,7 @@ has Str $.icon;
 has Str $.favicon;
 has %.author of Str;
 has Bool $.expired;
+has Hash $!cached-hash;
 
 multi method new(Str $json) {
     my %h;
@@ -73,37 +74,41 @@ multi method new-from-hash(%h) {
 }
 
 method to-hash {
-    my %h;
-    %h<version>       = $.version;
-    %h<title>         = $.title         if $.title.defined;
-    %h<home_page_url> = $.link          if $.link.defined;
-    %h<feed_url>      = $.feed_url      if $.feed_url.defined;
-    %h<description>   = $.description   if $.description.defined;
-    %h<user_comment>  = $.user_comment  if $.user_comment.defined;
-    %h<next_url>      = $.next_url      if $.next_url.defined;
-    %h<icon>          = $.icon          if $.icon.defined;
-    %h<favicon>       = $.favicon       if $.favicon.defined;
-    %h<language>      = $.language      if $.language.defined;
-    %h<generator>     = $.generator     if $.generator.defined;
-    %h<expired>       = $.expired       if $.expired.defined;
+    $!cache-lock.protect: {
+        $!cached-hash //= do {
+            my %h;
+            %h<version>       = $.version;
+            %h<title>         = $.title         if $.title.defined;
+            %h<home_page_url> = $.link          if $.link.defined;
+            %h<feed_url>      = $.feed_url      if $.feed_url.defined;
+            %h<description>   = $.description   if $.description.defined;
+            %h<user_comment>  = $.user_comment  if $.user_comment.defined;
+            %h<next_url>      = $.next_url      if $.next_url.defined;
+            %h<icon>          = $.icon          if $.icon.defined;
+            %h<favicon>       = $.favicon       if $.favicon.defined;
+            %h<language>      = $.language      if $.language.defined;
+            %h<generator>     = $.generator     if $.generator.defined;
+            %h<expired>       = $.expired       if $.expired.defined;
 
-    if %.author<name>.defined || %.author<url>.defined || %.author<avatar>.defined {
-        my %a;
-        %a<name>   = %.author<name>   if %.author<name>.defined;
-        %a<url>    = %.author<url>    if %.author<url>.defined;
-        %a<avatar> = %.author<avatar> if %.author<avatar>.defined;
-        %h<author> = %a;
+            if %.author<name>.defined || %.author<url>.defined || %.author<avatar>.defined {
+                my %a;
+                %a<name>   = %.author<name>   if %.author<name>.defined;
+                %a<url>    = %.author<url>    if %.author<url>.defined;
+                %a<avatar> = %.author<avatar> if %.author<avatar>.defined;
+                %h<author> = %a;
+            }
+
+            if @.items {
+                %h<items> = @.items.map(*.to-hash).Array;
+            }
+
+            %h
+        }
     }
-
-    if @.items {
-        %h<items> = @.items.map(*.to-hash).Array;
-    }
-
-    %h
 }
 
 method to-json {
-    to-json $.to-hash
+    $!cache-lock.protect: { $!cached-str //= to-json $.to-hash }
 }
 
 method Str { $.to-json }

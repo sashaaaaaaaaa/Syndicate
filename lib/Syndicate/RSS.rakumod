@@ -119,9 +119,6 @@ multi method new(Str $xml) {
 }
 
 method !set-namespace-flags {
-    $!needs-dc      = False;
-    $!needs-media   = False;
-    $!needs-content = False;
     my $feed-itunes = $!itunes-author.defined || $!itunes-summary.defined;
     ($!needs-dc, $!needs-media, $!needs-itunes, $!needs-content) = self!set-item-flags;
     $!needs-itunes ||= $feed-itunes;

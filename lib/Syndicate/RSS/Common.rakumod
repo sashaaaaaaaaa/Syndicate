@@ -4,8 +4,8 @@ use Syndicate::Utils;
 
 unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
 
-method !set-item-flags(Bool $initial-dc = False, Bool :$check-content = True) {
-    my $dc     = $initial-dc;
+method !set-item-flags(Bool :$check-content = True) {
+    my $dc     = False;
     my $media  = False;
     my $itunes = False;
     my $content = False;

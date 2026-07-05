@@ -22,6 +22,9 @@ has DateTime $.date_published;
 has DateTime $.date_modified;
 has @.authors of Hash;
 has @.tags of Str;
+has Str $!cached-str;
+has Hash $!cached-hash;
+has Lock $!cache-lock = Lock.new;
 
 method new-from-hash(%h) {
     my $title   = %h<title> // Str;
@@ -68,37 +71,40 @@ method new-from-hash(%h) {
 }
 
 method to-hash {
-    my %h;
-    %h<title>          = $.title         if $.title.defined;
-    %h<url>            = $.link          if $.link.defined;
-    %h<external_url>   = $.external_url  if $.external_url.defined;
-    %h<summary>        = $.summary       if $.summary.defined;
-    %h<id>             = $.id            if $.id.defined;
-    %h<content_html> = $.content_html  if $.content_html.defined;
-    %h<content_text>  = $.content_text  if $.content_text.defined;
-    # Fallback: use $.content as content_html only when neither content type was explicitly set
-    %h<content_html> //= $.content if $.content.defined && !$.content_text.defined;
-    %h<image>          = $.image         if $.image.defined;
-    %h<banner_image>   = $.banner_image  if $.banner_image.defined;
-    %h<date_published> = $.date_published.Str if $.date_published.defined;
-    %h<date_modified>  = $.date_modified.Str  if $.date_modified.defined;
-    %h<date_modified> //= $.updated.Str       if $.updated.defined;
-    if @.authors {
-        %h<authors> = @.authors.map({
-            my %a;
-            %a<name>   = .<name>   if .<name>.defined;
-            %a<url>    = .<url>    if .<url>.defined;
-            %a<avatar> = .<avatar> if .<avatar>.defined;
-            %a
-        }).Array;
+    $!cache-lock.protect: {
+        $!cached-hash //= do {
+            my %h;
+            %h<title>          = $.title         if $.title.defined;
+            %h<url>            = $.link          if $.link.defined;
+            %h<external_url>   = $.external_url  if $.external_url.defined;
+            %h<summary>        = $.summary       if $.summary.defined;
+            %h<id>             = $.id            if $.id.defined;
+            %h<content_html> = $.content_html  if $.content_html.defined;
+            %h<content_text>  = $.content_text  if $.content_text.defined;
+            %h<content_html> //= $.content if $.content.defined && !$.content_text.defined;
+            %h<image>          = $.image         if $.image.defined;
+            %h<banner_image>   = $.banner_image  if $.banner_image.defined;
+            %h<date_published> = $.date_published.Str if $.date_published.defined;
+            %h<date_modified>  = $.date_modified.Str  if $.date_modified.defined;
+            %h<date_modified> //= $.updated.Str       if $.updated.defined;
+            if @.authors {
+                %h<authors> = @.authors.map({
+                    my %a;
+                    %a<name>   = .<name>   if .<name>.defined;
+                    %a<url>    = .<url>    if .<url>.defined;
+                    %a<avatar> = .<avatar> if .<avatar>.defined;
+                    %a
+                }).Array;
+            }
+            if @.tags {
+                %h<tags> = @.tags;
+            }
+            %h
+        }
     }
-    if @.tags {
-        %h<tags> = @.tags;
-    }
-    %h
 }
 
-method Str { to-json $.to-hash }
+method Str { $!cache-lock.protect: { $!cached-str //= to-json $.to-hash } }
 
 =begin pod
 

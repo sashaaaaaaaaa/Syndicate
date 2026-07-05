@@ -56,7 +56,7 @@ multi method new(XML::Document $doc) {
     my $gen   = get-text-optional($channel, "generator");
     my $lang-elem = $channel.elements(:TAG<language>)[0];
     my $lang;
-    my $lang-from-dc = False;
+    my $lang-fallback = False;
     if $lang-elem {
         with $lang-elem.contents[0] -> $t {
             $lang = $t.?text;
@@ -65,7 +65,7 @@ multi method new(XML::Document $doc) {
     unless $lang.defined {
         # No <language> element or empty element — try Dublin Core fallback
         $lang = get-dc-text($channel, "language");
-        $lang-from-dc = True if $lang.defined;
+        $lang-fallback = True if $lang.defined;
 
     }
 
@@ -93,7 +93,7 @@ multi method new(XML::Document $doc) {
     self.bless(:$about, :$title, :$link, :description($desc),
                :generator($gen), :language($lang),
                :image(%image),
-               :lang-from-dc($lang-from-dc),
+                :lang-from-dc($lang-fallback),
                :@items)
 }
 

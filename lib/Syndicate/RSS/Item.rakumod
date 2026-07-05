@@ -23,12 +23,16 @@ has Str $.media-description;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.itunes-duration;
+has Str $!cached-str;
+has Lock $!cache-lock = Lock.new;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid RSS item XML: $!" unless $doc;
     die "Not an RSS item element" unless $doc.root.name eq "item";
-    self.from-xml($doc.root)
+    my $item = self.from-xml($doc.root);
+    CATCH { Syndicate::Stats.record-error; .rethrow }
+    $item
 }
 
 multi method new(XML::Element $xml-elem) {
@@ -131,7 +135,7 @@ method XML {
     return $xml;
 }
 
-method Str { ~self.XML }
+method Str { $!cache-lock.protect: { $!cached-str //= ~self.XML } }
 
 =begin pod
 
