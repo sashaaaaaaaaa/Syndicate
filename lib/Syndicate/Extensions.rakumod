@@ -7,16 +7,19 @@ unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
 # Runtime calls to register-ext are supported but must not race
 # with concurrent run-parsers/run-generators calls.
 my @extensions;
+my $ext-lock = Lock.new;
 
 sub register-ext(:&parse, :&generate) is export {
-    @extensions.push: %(:&parse, :&generate)
+    $ext-lock.protect: { @extensions.push: %(:&parse, :&generate) }
 }
 
 sub run-parsers($elem, %attrs) is export {
-    return unless @extensions;
-    for @extensions -> %ext {
+    my @exts = $ext-lock.protect: { @extensions.List };
+    return unless @exts;
+    for @exts -> %ext {
         %ext<parse>($elem, %attrs);
         CATCH {
+            when X::Control { .rethrow }
             default {
                 Syndicate::Stats.record-error;
                 note "Extension parse callback failed: $_";
@@ -26,10 +29,12 @@ sub run-parsers($elem, %attrs) is export {
 }
 
 sub run-generators($xml, $item) is export {
-    return unless @extensions;
-    for @extensions -> %ext {
+    my @exts = $ext-lock.protect: { @extensions.List };
+    return unless @exts;
+    for @exts -> %ext {
         %ext<generate>($xml, $item);
         CATCH {
+            when X::Control { .rethrow }
             default {
                 Syndicate::Stats.record-error;
                 note "Extension generate callback failed: $_";

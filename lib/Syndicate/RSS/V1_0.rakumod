@@ -27,20 +27,8 @@ has Bool $!lang-from-dc is built;
 
 submethod TWEAK {
     $!lang-from-dc //= False;
-    $!needs-dc    = $!lang-from-dc || $!language.defined;
-    $!needs-media = False;
-    $!needs-content = False;
-    $!needs-itunes = False;
-    # Single pass: detect all namespace flags including V1_0-specific DC needs
-    for self.items -> $item {
-        $!needs-dc      ||= $item.?has-dc-creator
-                         || $item.?updated.defined
-                         || ( $item.?dc-subjects.defined && $item.?dc-subjects.elems > 0 );
-        $!needs-media   ||= ?($item.?media-contents) || ?($item.?media-thumbnails) || $item.?media-title.defined || $item.?media-description.defined;
-        $!needs-itunes  ||= $item.?itunes-author.defined || $item.?itunes-summary.defined || $item.?itunes-duration.defined;
-        $!needs-content ||= ?($item.?content.defined && $item.?content.chars);
-        last if $!needs-dc && $!needs-media && $!needs-itunes && $!needs-content;
-    }
+    ($!needs-dc, $!needs-media, $!needs-itunes, $!needs-content) = self!set-item-flags;
+    $!needs-dc ||= $!lang-from-dc || $!language.defined;
 }
 
 multi method new(XML::Document $doc) {

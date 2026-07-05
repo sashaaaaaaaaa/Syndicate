@@ -45,6 +45,10 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
     feed-format($root.name, $root.attribs<version> // "")
 }
 
+# NOTE: feed-format and parse-feed each call root-element independently,
+# so calling both sequentially re-parses the XML. This is accepted — the
+# typical path is parse-feed alone (one parse), and fixing the edge case
+# would require a compound return type that complicates the API.
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $clean = $input.trim;
     unless $clean.starts-with('{') {

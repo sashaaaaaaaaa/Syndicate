@@ -10,7 +10,9 @@ method !set-item-flags(Bool :$check-content = True) {
     my $itunes = False;
     my $content = False;
     for self.items -> $item {
-        $dc     ||= $item.?has-dc-creator;
+        $dc     ||= $item.?has-dc-creator
+                 || $item.?updated.defined
+                 || ?($item.?dc-subjects.defined && $item.?dc-subjects.elems);
         $media  ||= ?($item.?media-contents) || ?($item.?media-thumbnails) || $item.?media-title.defined || $item.?media-description.defined;
         $itunes ||= $item.?itunes-author.defined || $item.?itunes-summary.defined || $item.?itunes-duration.defined;
         $content ||= ?($item.?content.defined && $item.?content.chars) if $check-content;
@@ -73,13 +75,14 @@ method build-xml-skip-days($parent, @skipDays) {
 
 =head1 NAME
 
-Syndicate::RSS::Common - Shared role for RSS 2.0 and RSS 0.91
+Syndicate::RSS::Common - Shared role for RSS 2.0, RSS 0.91, and RSS 1.0
 
 =head1 DESCRIPTION
 
-Provides shared parsing and XML generation methods for image elements.
-Used by both L<C<Syndicate::RSS>|rakudoc:Syndicate::RSS>
-and L<C<Syndicate::RSS::V0_91>|rakudoc:Syndicate::RSS::V0_91>.
+Provides shared parsing and XML generation methods for image elements
+and namespace-flag detection. Used by L<C<Syndicate::RSS>|rakudoc:Syndicate::RSS>,
+L<C<Syndicate::RSS::V0_91>|rakudoc:Syndicate::RSS::V0_91>,
+and L<C<Syndicate::RSS::V1_0>|rakudoc:Syndicate::RSS::V1_0>.
 
 =head1 METHODS
 

@@ -43,10 +43,6 @@ multi method from-xml(XML::Element $item-elem) {
     my $media-title       = %extra<media-title>         // Str;
     my $media-description = %extra<media-description>   // Str;
 
-    CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
-    }
     my $item = self.bless(:$title, :$link, :summary($desc), :$author, :id($link // Str),
         :has-dc-creator(%extra<has-dc-creator> // False),
         :@media-contents, :@media-thumbnails, :$media-title, :$media-description,
