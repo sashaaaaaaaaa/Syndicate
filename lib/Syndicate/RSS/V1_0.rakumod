@@ -17,18 +17,16 @@ unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed 
 
 has Str $.about;
 has %.image;
-has Bool $!needs-dc;
-has Bool $!needs-media;
-has Bool $!needs-content;
-has Bool $!needs-itunes;
+has Bool $!needs-dc is built;
+has Bool $!needs-media is built;
+has Bool $!needs-content is built;
+has Bool $!needs-itunes is built;
 # 'is built' is a standard Raku mechanism that allows setting a private
 # attribute via the constructor without exposing a public accessor.
 has Bool $!lang-from-dc is built;
 
 submethod TWEAK {
     $!lang-from-dc //= False;
-    ($!needs-dc, $!needs-media, $!needs-itunes, $!needs-content) = self!set-item-flags;
-    $!needs-dc ||= $!lang-from-dc || $!language.defined;
 }
 
 multi method new(XML::Document $doc) {
@@ -60,6 +58,7 @@ multi method new(XML::Document $doc) {
     my %image = self.parse-image($root, :rdf-about);
 
     my @items;
+    my ($needs-dc, $needs-media, $needs-itunes, $needs-content);
     for $root.elements(:TAG<item>) -> $item-elem {
         my $title-el = $item-elem.elements(:TAG<title>)[0];
         my $link-el  = $item-elem.elements(:TAG<link>)[0];
@@ -68,7 +67,13 @@ multi method new(XML::Document $doc) {
             warn "Skipping RSS 1.0 item without title or link";
             next;
         }
-        @items.push: Syndicate::RSS::V1_0::Item.from-xml($item-elem);
+        my $item = Syndicate::RSS::V1_0::Item.from-xml($item-elem);
+        my ($dc, $media, $itunes, $content) = $item.namespace-flags;
+        $needs-dc ||= $dc;
+        $needs-media ||= $media;
+        $needs-itunes ||= $itunes;
+        $needs-content ||= $content;
+        @items.push: $item;
     }
 
     CATCH {
@@ -79,6 +84,7 @@ multi method new(XML::Document $doc) {
                :generator($gen), :language($lang),
                :image(%image),
                 :lang-from-dc($lang-fallback),
+               :$needs-dc, :$needs-media, :$needs-itunes, :$needs-content,
                :@items)
 }
 

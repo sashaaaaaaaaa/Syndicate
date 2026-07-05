@@ -4,23 +4,6 @@ use Syndicate::Utils;
 
 unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
 
-method !set-item-flags(Bool :$check-content = True) {
-    my $dc     = False;
-    my $media  = False;
-    my $itunes = False;
-    my $content = False;
-    for self.items -> $item {
-        $dc     ||= $item.?has-dc-creator
-                 || $item.?updated.defined
-                 || ?($item.?dc-subjects.defined && $item.?dc-subjects.elems);
-        $media  ||= ?($item.?media-contents) || ?($item.?media-thumbnails) || $item.?media-title.defined || $item.?media-description.defined;
-        $itunes ||= $item.?itunes-author.defined || $item.?itunes-summary.defined || $item.?itunes-duration.defined;
-        $content ||= ?($item.?content.defined && $item.?content.chars) if $check-content;
-        last if $dc && $media && $itunes && ($check-content ?? $content !! True);
-    }
-    ($dc, $media, $itunes, $content)
-}
-
 method parse-image($parent, Bool :$rdf-about = False --> Hash) {
     my %image;
     with $parent.elements(:TAG<image>)[0] {

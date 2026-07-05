@@ -140,6 +140,15 @@ method !parse-enclosure(XML::Element $item-elem) {
     %enclosure
 }
 
+method namespace-flags() {
+    (
+        $!has-dc-creator || $!updated.defined,
+        ?(@!media-contents) || ?(@!media-thumbnails) || $!media-title.defined || $!media-description.defined,
+        $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
+        ?($!content.defined && $!content.chars),
+    )
+}
+
 method Str { $!cache-lock.protect: { $!cached-str //= ~self.XML } }
 
 =begin pod

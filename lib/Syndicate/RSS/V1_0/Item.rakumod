@@ -92,6 +92,15 @@ method XML {
 
 method Str { $!cache-lock.protect: { $!cached-str //= ~self.XML } }
 
+method namespace-flags() {
+    (
+        $!has-dc-creator || $!updated.defined || ?(@!dc-subjects),
+        ?(@!media-contents) || ?(@!media-thumbnails) || $!media-title.defined || $!media-description.defined,
+        $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
+        ?($!content.defined && $!content.chars),
+    )
+}
+
 =begin pod
 
 =head1 NAME

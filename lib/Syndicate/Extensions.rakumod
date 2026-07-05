@@ -6,15 +6,19 @@ unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
 # Populated at compile-time by use-statements in parser modules.
 # Runtime calls to register-ext are supported but must not race
 # with concurrent run-parsers/run-generators calls.
-my @extensions;
+my @ext-snapshot;
 my $ext-lock = Lock.new;
 
 sub register-ext(:&parse, :&generate, Str :$namespace?) is export {
-    $ext-lock.protect: { @extensions.push: %(:&parse, :&generate, :$namespace) }
+    $ext-lock.protect: {
+        my @new = @ext-snapshot.List;
+        @new.push: %(:&parse, :&generate, :$namespace);
+        @ext-snapshot = @new;
+    }
 }
 
 sub run-parsers($elem, %attrs) is export {
-    my @exts = $ext-lock.protect: { @extensions.List };
+    my @exts = @ext-snapshot;
     return unless @exts;
     my $active = set-active(@exts, $elem);
     for @exts.kv -> $i, %ext {
@@ -31,7 +35,7 @@ sub run-parsers($elem, %attrs) is export {
 }
 
 sub run-generators($xml, $item) is export {
-    my @exts = $ext-lock.protect: { @extensions.List };
+    my @exts = @ext-snapshot;
     return unless @exts;
     for @exts -> %ext {
         %ext<generate>($xml, $item);

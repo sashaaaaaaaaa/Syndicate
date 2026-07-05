@@ -29,14 +29,10 @@ has %.image;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.atom-self-link;
-has Bool $!needs-dc;
-has Bool $!needs-media;
-has Bool $!needs-content;
-has Bool $!needs-itunes;
-
-submethod TWEAK {
-    self!set-namespace-flags;
-}
+has Bool $!needs-dc is built;
+has Bool $!needs-media is built;
+has Bool $!needs-content is built;
+has Bool $!needs-itunes is built;
 
 multi method new(XML::Document $doc) {
     my $rss = $doc.root;
@@ -75,9 +71,17 @@ multi method new(XML::Document $doc) {
     }
 
     my @items;
+    my ($needs-dc, $needs-media, $needs-itunes, $needs-content);
     for $channel.elements(:TAG<item>) -> $item-elem {
-        @items.push: Syndicate::RSS::Item.from-xml($item-elem);
+        my $item = Syndicate::RSS::Item.from-xml($item-elem);
+        my ($dc, $media, $itunes, $content) = $item.namespace-flags;
+        $needs-dc ||= $dc;
+        $needs-media ||= $media;
+        $needs-itunes ||= $itunes;
+        $needs-content ||= $content;
+        @items.push: $item;
     }
+    $needs-itunes ||= $it-author.defined || $it-summary.defined;
 
     my %bless = :$title, :$link, :description($desc),
         :language($lang), :copyright($cpy),
@@ -103,7 +107,8 @@ multi method new(XML::Document $doc) {
     }
     # CATCH covers the entire method scope (Raku phaser semantics),
     # not just the single self.bless call below.
-    self.bless(|%bless, :@categories, :@items)
+    self.bless(|%bless, :@categories, :@items,
+               :$needs-dc, :$needs-media, :$needs-itunes, :$needs-content)
 }
 
 multi method new(Str $xml) {
@@ -113,12 +118,6 @@ multi method new(Str $xml) {
         die "Invalid RSS XML: $!";
     }
     self.new($doc)
-}
-
-method !set-namespace-flags {
-    my $feed-itunes = $!itunes-author.defined || $!itunes-summary.defined;
-    ($!needs-dc, $!needs-media, $!needs-itunes, $!needs-content) = self!set-item-flags;
-    $!needs-itunes ||= $feed-itunes;
 }
 
 method XML {

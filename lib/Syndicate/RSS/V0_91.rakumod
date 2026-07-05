@@ -26,15 +26,9 @@ has @.skipHours of Int;
 has @.skipDays of Str;
 has Str $.itunes-author;
 has Str $.itunes-summary;
-has Bool $!needs-dc;
-has Bool $!needs-media;
-has Bool $!needs-itunes;
-
-submethod TWEAK {
-    my $feed-itunes = $!itunes-author.defined || $!itunes-summary.defined;
-    ($!needs-dc, $!needs-media, $!needs-itunes) = self!set-item-flags(:check-content(False));
-    $!needs-itunes ||= $feed-itunes;
-}
+has Bool $!needs-dc is built;
+has Bool $!needs-media is built;
+has Bool $!needs-itunes is built;
 
 multi method new(XML::Document $doc) {
     my $rss = $doc.root;
@@ -66,9 +60,16 @@ multi method new(XML::Document $doc) {
     my $it-summary = get-itunes-text($channel, "summary");
 
     my @items;
+    my ($needs-dc, $needs-media, $needs-itunes);
     for $channel.elements(:TAG<item>) -> $item-elem {
-        @items.push: Syndicate::RSS::V0_91::Item.from-xml($item-elem);
+        my $item = Syndicate::RSS::V0_91::Item.from-xml($item-elem);
+        my ($dc, $media, $itunes) = $item.namespace-flags;
+        $needs-dc ||= $dc;
+        $needs-media ||= $media;
+        $needs-itunes ||= $itunes;
+        @items.push: $item;
     }
+    $needs-itunes ||= $it-author.defined || $it-summary.defined;
 
     my %bless = :$title, :$link, :description($desc),
         :language($lang), :generator($gen), :copyright($cpy),
@@ -83,7 +84,8 @@ multi method new(XML::Document $doc) {
         Syndicate::Stats.record-error;
         .rethrow;
     }
-    self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays))
+    self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays),
+               :$needs-dc, :$needs-media, :$needs-itunes)
 }
 
 multi method new(Str $xml) {
