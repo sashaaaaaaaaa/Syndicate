@@ -20,6 +20,8 @@ has %.author of Str;
 has Bool $.expired;
 has Hash $!cached-hash;
 has Lock $!hash-lock = Lock.new;
+has Str $!cached-json;
+has Lock $!json-lock = Lock.new;
 
 multi method new(Str $json) {
     my %h;
@@ -112,7 +114,7 @@ method to-hash {
 }
 
 method to-json {
-    $!cache-lock.protect: { $!cached-str //= to-json $.to-hash }
+    $!json-lock.protect: { $!cached-json //= to-json $.to-hash }
 }
 
 method Str { $.to-json }

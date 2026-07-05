@@ -51,7 +51,8 @@ method discover(Str $url --> Syndicate::Feed:D) {
 
     my $feed;
     my $parse-err;
-    try { $feed = parse-feed($body); $parse-err = $! };
+    try { $feed = parse-feed($body) };
+    $parse-err = $!;
     return $feed if $feed.defined;
     note "Feed parse failed at {$url}, falling back to HTML discovery: $parse-err" if $parse-err;
 

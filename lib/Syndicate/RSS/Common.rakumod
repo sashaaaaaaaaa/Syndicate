@@ -27,8 +27,10 @@ method parse-image($parent, Bool :$rdf-about = False --> Hash) {
         %image<url>         = get-text-optional($_, "url");
         %image<title>       = get-text-optional($_, "title");
         %image<link>        = get-text-optional($_, "link");
-        %image<width>       = +(get-text-optional($_, "width")  // 0)  if get-text-optional($_, "width").defined;
-        %image<height>      = +(get-text-optional($_, "height") // 0)  if get-text-optional($_, "height").defined;
+        my $w = get-text-optional($_, "width");
+        my $h = get-text-optional($_, "height");
+        %image<width>       = +($w // 0) if $w.defined;
+        %image<height>      = +($h // 0) if $h.defined;
         %image<description> = get-text-optional($_, "description");
         %image<about>       = $_.attribs{'rdf:about'} // $_.attribs<about> // Str if $rdf-about;
     }

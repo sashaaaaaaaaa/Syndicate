@@ -65,6 +65,8 @@ multi method new(XML::Document $doc) {
     my %image = self.parse-image($channel);
 
     my $atom-self-link = Str;
+    # Matches only the literal prefix 'atom'. XML namespace URIs are not
+    # tracked by the XML module, so alternate prefixes are missed (rare).
     for $channel.elements(:TAG<atom:link>) -> $l {
         if ($l.attribs<rel> // "") eq "self" {
             $atom-self-link = $l.attribs<href> // Str;

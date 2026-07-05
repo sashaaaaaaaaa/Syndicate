@@ -36,7 +36,9 @@ multi method new(Str $xml) {
 }
 
 multi method new(XML::Element $xml-elem) {
-    self.from-xml($xml-elem)
+    my $item = self.from-xml($xml-elem);
+    CATCH { Syndicate::Stats.record-error; .rethrow }
+    $item
 }
 
 multi method from-xml(XML::Element $item-elem) {
