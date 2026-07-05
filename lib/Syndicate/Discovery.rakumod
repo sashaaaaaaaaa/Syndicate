@@ -32,7 +32,7 @@ method !decode-response($resp --> Str) {
 method !validate-url(Str $url) {
     my $scheme = try { URI.new($url).scheme.lc };
     die "Blocked URL scheme — only http and https are permitted"
-        unless $scheme.defined && $scheme eq any('http', 'https');
+        unless $scheme.defined && ($scheme eq 'http' || $scheme eq 'https');
 }
 
 method fetch(Str $url --> Syndicate::Feed:D) {

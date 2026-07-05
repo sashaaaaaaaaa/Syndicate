@@ -18,6 +18,8 @@ has Str $.media-description;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.itunes-duration;
+has Str $!cached-str;
+has Lock $!cache-lock = Lock.new;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
@@ -88,7 +90,7 @@ method XML {
     $xml
 }
 
-method Str { ~self.XML }
+method Str { $!cache-lock.protect: { $!cached-str //= ~self.XML } }
 
 =begin pod
 
