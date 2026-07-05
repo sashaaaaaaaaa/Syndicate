@@ -58,16 +58,13 @@ multi method from-xml(XML::Element $item-elem) {
                 :$content,
                 :has-dc-creator(%extra<has-dc-creator> // False);
     %bless<updated> = $updated if $updated ~~ DateTime;
-    CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
-    }
-    Syndicate::Stats.record-item;
-    self.bless(|%bless, :dc-subjects(@dc-subjects),
+    my $item = self.bless(|%bless, :dc-subjects(@dc-subjects),
         :@media-contents, :@media-thumbnails, :$media-title, :$media-description,
         :itunes-author(%extra<itunes-author> // Str),
         :itunes-summary(%extra<itunes-summary> // Str),
-        :itunes-duration(%extra<itunes-duration> // Str))
+        :itunes-duration(%extra<itunes-duration> // Str));
+    Syndicate::Stats.record-item;
+    $item
 }
 
 method XML {

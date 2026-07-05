@@ -36,9 +36,13 @@ multi method from-xml(XML::Element $entry-elem) {
     my $content-type = Str;
     with $entry-elem.elements(:TAG<content>)[0] -> $ce {
         $content-type = $ce.attribs<type> // "text";
-        with $ce.contents[0] -> $t {
-            my $text = $t.?text // Str;
-            $content = $text.defined && $text.chars ?? decode-entities($text) !! Str;
+        if $content-type eq "xhtml" {
+            $content = $ce.nodes.map(*.Str).join.trim;
+        } else {
+            with $ce.contents[0] -> $t {
+                my $text = $t.?text // Str;
+                $content = $text.defined && $text.chars ?? decode-entities($text) !! Str;
+            }
         }
     }
     my $updated  = parse-date(get-text($entry-elem, "updated"));
@@ -96,12 +100,9 @@ multi method from-xml(XML::Element $entry-elem) {
         :source-feed(%source-feed);
     %bless<updated> = $updated if $updated ~~ DateTime;
     %bless<published> = $pub if $pub ~~ DateTime;
-    CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
-    }
+    my $item = self.bless(|%bless, :@contributors, :categories(@categories));
     Syndicate::Stats.record-item;
-    self.bless(|%bless, :@contributors, :categories(@categories))
+    $item
 }
 
 method XML {
@@ -113,7 +114,14 @@ method XML {
 
     if $.content.defined {
         my %attribs = :type($.content-type // "text");
-        $xml.append: XML::Element.new(:name<content>, :attribs(%attribs), :nodes([encode-entities($.content)]));
+        my @nodes;
+        if %attribs<type> eq "xhtml" {
+            my $xhtml = try { XML::Document.new($.content) };
+            @nodes = $xhtml ?? [$xhtml.root] !! [encode-entities($.content)];
+        } else {
+            @nodes = [encode-entities($.content)];
+        }
+        $xml.append: XML::Element.new(:name<content>, :attribs(%attribs), :nodes(@nodes));
     }
 
     my $upd = $.updated;

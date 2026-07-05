@@ -104,6 +104,8 @@ multi method new(XML::Document $doc) {
         Syndicate::Stats.record-error;
         .rethrow;
     }
+    # CATCH covers the entire method scope (Raku phaser semantics),
+    # not just the single self.bless call below.
     self.bless(|%bless, :@categories, :@items)
 }
 

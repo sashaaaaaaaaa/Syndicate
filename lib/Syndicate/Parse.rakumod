@@ -97,11 +97,15 @@ multi sub parse-file(IO::Path $path --> Syndicate::Feed:D) is export {
 }
 
 sub root-element(Str $input) {
-    my $doc = try { XML::Document.new($input) };
+    my $doc;
+    my $err;
+    $doc = try { XML::Document.new($input) };
+    $err = $!;
     return Nil unless $doc;
     my $root = $doc.root;
     my $name = $root.name;
     my $ver = $root.attribs<version> // "";
+    return Nil unless $name.chars;
     %(:$name, :$ver, :$doc)
 }
 

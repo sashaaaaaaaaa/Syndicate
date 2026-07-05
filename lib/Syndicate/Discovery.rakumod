@@ -30,8 +30,9 @@ method !decode-response($resp --> Str) {
 }
 
 method !validate-url(Str $url) {
+    my $scheme = try { URI.new($url).scheme.lc };
     die "Blocked URL scheme — only http and https are permitted"
-        unless $url.starts-with('http://') || $url.starts-with('https://');
+        unless $scheme.defined && $scheme eq any('http', 'https');
 }
 
 method fetch(Str $url --> Syndicate::Feed:D) {
@@ -105,7 +106,7 @@ method base-url(Str $html --> Str) {
 
 method resolve-url(Str $url, Str $base --> Str) {
     return $url if $url.lc.starts-with('http://') || $url.lc.starts-with('https://');
-    my $scheme = $base ~~ /^(https?)/ ?? ~$0 !! 'https';
+    my $scheme = try { URI.new($base).scheme.lc } // 'https';
     return $scheme ~ ':' ~ $url if $url ~~ /^\/\//;
 
     my $b = try { URI.new($base) } // return $url;

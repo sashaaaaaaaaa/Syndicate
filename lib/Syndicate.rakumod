@@ -24,7 +24,7 @@ use Syndicate::Discovery;
 
 unit class Syndicate:ver<0.0.1>:auth<zef:sasha>;
 
-sub parse(Str $input --> Any) is export {
+sub parse(Str $input --> Syndicate::Feed:D) is export {
     parse-feed($input)
 }
 

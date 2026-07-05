@@ -93,10 +93,6 @@ multi method from-xml(XML::Element $item-elem) {
         :itunes-summary(%extra<itunes-summary> // Str),
         :itunes-duration(%extra<itunes-duration> // Str);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
-    CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
-    }
     my $item = self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails);
     Syndicate::Stats.record-item;
     $item

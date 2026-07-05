@@ -34,6 +34,8 @@ sub get-text($parent, $tag --> Str) is export {
 }
 
 sub get-text-optional($parent, $tag --> Str) is export {
+    # Note: Returns Str (type object) for both "element missing" and
+    # "element empty". Use .defined to distinguish from a found value.
     with $parent.elements(:TAG($tag))[0] -> $e {
         with $e.contents[0] -> $t {
             my $text = ($t.?text // Str).trim;

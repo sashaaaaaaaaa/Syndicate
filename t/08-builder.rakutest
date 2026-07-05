@@ -150,7 +150,7 @@ isa-ok $atom-parsed.updated, DateTime, "Atom roundtrip updated is DateTime";
 # ===== Content roundtrip in Atom =====
 my $atom-content-str = $fb3.atom-str;
 like $atom-content-str, /'<content type="xhtml">'/, "Atom output has content with type";
-like $atom-content-str, /"Hello &lt;em&gt;world&lt;\/em&gt;"/, "Atom output has content body";
+like $atom-content-str, /'<p>Hello <em>world</em></p>'/, "Atom output has XHTML content body";
 
 my $atom-content-parsed = Syndicate::Atom.new($atom-content-str);
 is $atom-content-parsed.items[0].content, "<p>Hello <em>world</em></p>", "content roundtrip body";

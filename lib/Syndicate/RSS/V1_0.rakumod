@@ -63,8 +63,10 @@ multi method new(XML::Document $doc) {
         }
     }
     unless $lang.defined {
+        # No <language> element or empty element — try Dublin Core fallback
         $lang = get-dc-text($channel, "language");
         $lang-from-dc = True if $lang.defined;
+
     }
 
     my %image;
@@ -77,8 +79,10 @@ multi method new(XML::Document $doc) {
 
     my @items;
     for $root.elements(:TAG<item>) -> $item-elem {
-        next unless $item-elem.elements(:TAG<title>)[0];
-        next unless $item-elem.elements(:TAG<link>)[0];
+        unless $item-elem.elements(:TAG<title>)[0] && $item-elem.elements(:TAG<link>)[0] {
+            note "Skipping RSS 1.0 item without title or link";
+            next;
+        }
         @items.push: Syndicate::RSS::V1_0::Item.from-xml($item-elem);
     }
 
