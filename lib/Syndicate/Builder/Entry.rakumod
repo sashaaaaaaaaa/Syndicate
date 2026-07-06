@@ -138,13 +138,13 @@ method build-json-item {
 }
 
 method build-v1_0-item {
-    my $about = $!id // $!link // Str;
     my $item-id = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :summary($!summary // Str),
         :id($item-id),
+        :about($item-id),
         :content($!content // Str),
-        :$about,
+
         :author($!author-name // Str),
         :has-dc-creator($!author-name.defined);
     %bless<updated> = $!updated if $!updated.defined;

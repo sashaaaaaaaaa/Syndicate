@@ -27,10 +27,6 @@ has @!categories of Str is built;
 method categories() { @!categories.List }
 has Bool $!lang-from-dc is built;
 
-submethod TWEAK {
-    $!lang-from-dc //= False;
-}
-
 multi method new(XML::Document $doc) {
     my $root = $doc.root;
     die "Not RSS 1.0" unless $root.name eq "rdf:RDF" || $root.name eq "RDF";

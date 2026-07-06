@@ -12,6 +12,8 @@ unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
 enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 
+# Note: feed-format() followed by parse-feed() parses XML twice.
+# Use parse-feed-with-format() when both format and feed are needed.
 multi sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
     die "feed-format: empty input" unless $clean.chars;

@@ -81,7 +81,7 @@ multi method new-from-hash(%h) {
 
 method !clone-hash(%h) {
     my %c = %h;
-    %c<items> = %c<items>.Array if %c<items>:exists;
+    %c<items> = %c<items>.map(*.clone).Array if %c<items>:exists;
     %c<author> = %c<author>.clone if %c<author>:exists;
     %c
 }
