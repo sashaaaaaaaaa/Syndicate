@@ -3,6 +3,7 @@ use Test;
 use lib 'lib';
 use Syndicate;
 use Syndicate::Stats;
+Syndicate::Stats.reset;
 
 plan 6;
 

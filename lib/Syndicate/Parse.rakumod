@@ -109,7 +109,8 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
 
 multi sub parse-file(Str $path --> Syndicate::Feed:D) is export {
     my $contents = try { slurp($path) };
-    die "Could not read file '$path': $!" unless $contents.defined;
+    my $err = $!;
+    die "Could not read file '$path': $err" unless $contents.defined;
     parse-feed($contents)
 }
 

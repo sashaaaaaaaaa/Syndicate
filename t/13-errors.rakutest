@@ -10,6 +10,7 @@ use Syndicate::Atom;
 use Syndicate::Atom::Item;
 use Syndicate::JSONFeed;
 use Syndicate::Stats;
+Syndicate::Stats.reset;
 
 plan 14;
 

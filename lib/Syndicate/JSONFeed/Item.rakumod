@@ -72,7 +72,6 @@ method new-from-hash(%h) {
 }
 
 method to-hash {
-    return %($!cached-hash) if $!cached-hash.defined;
     $!hash-lock.protect: {
         $!cached-hash //= do {
             my %h;
