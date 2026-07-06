@@ -22,6 +22,7 @@ has @.contributors of Hash;
 has %.link-self of Str;
 has %.link-alternate of Str;
 has DateTime $!computed-updated;
+has XML::Element $!cached-xml;
 
 submethod TWEAK {
     self!cache-updated;
@@ -117,10 +118,11 @@ method !cache-updated {
             }
         }
     }
-    $!computed-updated //= DateTime.now;
+    die "Atom feed requires 'updated' timestamp" without $!computed-updated;
 }
 
 method XML {
+    return $!cached-xml if $!cached-xml.defined;
     my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns(NS-ATOM)}));
     add-element($xml, "id",        $.id);
     add-element($xml, "title",     $.title);
@@ -165,6 +167,7 @@ method XML {
 
     $xml.append: $_.XML for @.items;
 
+    $!cached-xml = $xml;
     return $xml;
 }
 
