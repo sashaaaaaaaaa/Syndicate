@@ -81,7 +81,7 @@ multi method new-from-hash(%h) {
 
 my sub clone-hash(%h) {
     my %c = %h;
-    %c<items> = %c<items>.map(*.clone).Array if %c<items>:exists;
+    %c<items> = %c<items>.Array if %c<items>:exists;
     %c<author> = %c<author>.clone if %c<author>:exists;
     %c
 }
@@ -122,8 +122,7 @@ method to-hash {
 }
 
 method to-json {
-    my %h = $.to-hash;
-    $!json-lock.protect: { $!cached-json //= to-json %h }
+    $!json-lock.protect: { $!cached-json //= to-json $.to-hash }
 }
 
 method Str { $.to-json }

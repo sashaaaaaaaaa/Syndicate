@@ -14,6 +14,7 @@ has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 
 method Str {
+    return $!cached-str if $!cached-str.defined;
     $!cache-lock.protect: {
         $!cached-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ self.XML.Str
     }
