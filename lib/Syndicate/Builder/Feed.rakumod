@@ -118,6 +118,8 @@ method rss091-feed {
     %bless<managingEditor>  = $!author-email if $!author-email.defined;
     %bless<generator>       = $!generator    if $!generator.defined;
     %bless<pubDate>         = $!updated      if $!updated.defined;
+    %bless<itunes-author>  = $!itunes-author  if $!itunes-author.defined;
+    %bless<itunes-summary> = $!itunes-summary if $!itunes-summary.defined;
     Syndicate::RSS::V0_91.new(|%bless, :@items)
 }
 
@@ -150,7 +152,7 @@ method rss1-feed {
     %bless<about>       = $about        if $about.defined && $about.chars;
     %bless<generator>   = $!generator   if $!generator.defined;
     %bless<language>    = $!language    if $!language.defined;
-    Syndicate::RSS::V1_0.new(|%bless, :@items)
+    Syndicate::RSS::V1_0.new(|%bless, :categories(@!categories), :@items)
 }
 
 method rss-str     { ~$.rss-feed     }

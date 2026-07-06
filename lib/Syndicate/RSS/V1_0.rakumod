@@ -23,6 +23,7 @@ has Bool $!needs-content is built;
 has Bool $!needs-itunes is built;
 # 'is built' is a standard Raku mechanism that allows setting a private
 # attribute via the constructor without exposing a public accessor.
+has @.categories of Str;
 has Bool $!lang-from-dc is built;
 
 submethod TWEAK {
@@ -57,8 +58,16 @@ multi method new(XML::Document $doc) {
 
     my %image = self.parse-image($root, :rdf-about);
 
+    my @categories;
+    for $channel.elements(:TAG<dc:subject>) -> $s {
+        with $s.contents[0] -> $t {
+            @categories.push: $t.?text if $t.?text.defined;
+        }
+    }
+
     my @items;
     my ($needs-dc, $needs-media, $needs-itunes, $needs-content);
+    $needs-dc ||= ?@categories;
     for $root.elements(:TAG<item>) -> $item-elem {
         my $title-el = $item-elem.elements(:TAG<title>)[0];
         my $link-el  = $item-elem.elements(:TAG<link>)[0];
@@ -85,7 +94,7 @@ multi method new(XML::Document $doc) {
                :image(%image),
                 :lang-from-dc($lang-fallback),
                :$needs-dc, :$needs-media, :$needs-itunes, :$needs-content,
-               :@items)
+               :categories(@categories), :@items)
 }
 
 multi method new(Str $xml) {
@@ -116,6 +125,7 @@ method XML {
     add-element($channel, "description", $.description);
     add-element($channel, "generator",   $.generator);
     add-element($channel, "language", $.language) if $.language.defined;
+    add-dc-element($channel, "subject", $_) for @.categories;
 
     if %.image<about>.defined {
         my $img-ref = XML::Element.new(:name<image>);
