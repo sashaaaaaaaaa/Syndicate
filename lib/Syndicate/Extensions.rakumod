@@ -29,7 +29,7 @@ sub register-ext(:&parse, :&generate, Str :$namespace?) is export {
 }
 
 sub run-parsers($elem, %attrs) is export {
-    my @exts = @ext-snapshot;
+    my @exts := @ext-snapshot;
     return unless @exts;
     my $active = set-active(@exts, $elem);
     for @exts.kv -> $i, %ext {
@@ -46,7 +46,7 @@ sub run-parsers($elem, %attrs) is export {
 }
 
 sub run-generators($xml, $item) is export {
-    my @exts = @ext-snapshot;
+    my @exts := @ext-snapshot;
     return unless @exts;
     for @exts -> %ext {
         %ext<generate>($xml, $item);

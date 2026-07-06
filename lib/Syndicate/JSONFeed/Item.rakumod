@@ -102,15 +102,12 @@ method to-hash {
                 }).Array;
             }
             if @.tags {
-                %h<tags> = @.tags;
+                %h<tags> = @.tags.clone;
             }
             %h
         }
     }
-    my %h = %($!cached-hash);
-    %h<authors> = %h<authors>.map(*.clone).Array if %h<authors>:exists;
-    %h<tags>    = %h<tags>.clone    if %h<tags>:exists;
-    %h
+    %($!cached-hash)
 }
 
 method Str { $!cache-lock.protect: { $!cached-str //= to-json $.to-hash } }
