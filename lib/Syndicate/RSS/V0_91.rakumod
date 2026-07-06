@@ -111,7 +111,7 @@ method XML {
     add-element($channel, "description",    $.description);
     add-element($channel, "language",       $.language);
     add-element($channel, "rating",         $.rating);
-    add-element($channel, "copyright",      $.copyright);
+    add-element($channel, "copyright",      $.copyright) if $.copyright.defined;
     add-element($channel, "docs",           $.docs);
     add-element($channel, "managingEditor", $.managingEditor);
     add-element($channel, "webMaster",      $.webMaster);

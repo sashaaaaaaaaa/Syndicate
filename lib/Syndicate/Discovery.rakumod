@@ -40,7 +40,7 @@ method fetch(Str $url --> Syndicate::Feed:D) {
     my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $ct = $resp<headers><content-type>.[0] // '';
-    die "Not a feed — Content-Type: $ct" unless $ct.lc.contains('xml') || $ct.lc.contains('json') || $ct.lc.contains('html') || $ct.lc.contains('rss') || $ct.lc.contains('atom') || $ct.lc.contains('feed');
+    die "Not a feed — Content-Type: $ct" unless $ct.lc.contains('xml') || $ct.lc.contains('json') || $ct.lc.contains('rss') || $ct.lc.contains('atom') || $ct.lc.contains('feed');
     my $body = self!decode-response($resp);
     parse-feed($body)
 }
@@ -51,10 +51,8 @@ method discover(Str $url --> Syndicate::Feed:D) {
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $body = self!decode-response($resp);
 
-    my $feed;
-    my $parse-err;
-    try { $feed = parse-feed($body) };
-    $parse-err = $!;
+    my $feed = try { parse-feed($body) };
+    my $parse-err = $!;
     return $feed if $feed.defined;
     note "Feed parse failed at {$url}, falling back to HTML discovery: $parse-err" if $parse-err;
 

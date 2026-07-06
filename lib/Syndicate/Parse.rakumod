@@ -119,7 +119,7 @@ multi sub parse-file(IO::Path $path --> Syndicate::Feed:D) is export {
 }
 
 sub try-xml-parse(Str $clean) {
-    return Nil if $clean.starts-with('{') || $clean.starts-with('[');
+    return Nil if $clean.subst(/^\xFEFF/, '').starts-with('{') || $clean.subst(/^\xFEFF/, '').starts-with('[');
     root-element($clean)
 }
 

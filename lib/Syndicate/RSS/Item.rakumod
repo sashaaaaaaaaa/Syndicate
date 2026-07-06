@@ -111,8 +111,8 @@ method XML {
     if %.enclosure<url>.defined && %.enclosure<url>.chars {
         my $enc = XML::Element.new(:name<enclosure>);
         $enc.attribs<url> = encode-entities(%.enclosure<url>);
-        $enc.attribs<length> = %.enclosure<length> if %.enclosure<length>.defined && %.enclosure<length>.chars;
-        $enc.attribs<type>   = %.enclosure<type>   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
+        $enc.attribs<length> = encode-entities(%.enclosure<length>) if %.enclosure<length>.defined && %.enclosure<length>.chars;
+        $enc.attribs<type>   = encode-entities(%.enclosure<type>)   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
         $xml.append: $enc;
     }
     add-element($xml, "source", $.source);
