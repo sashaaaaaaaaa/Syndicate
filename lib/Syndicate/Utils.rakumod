@@ -45,6 +45,17 @@ sub get-text-optional($parent, $tag --> Str) is export {
     Str
 }
 
+sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
+    my $e = $parent.elements(:TAG($local-name), :namespace($ns-uri))[0];
+    with $e {
+        with $e.contents[0] -> $t {
+            my $text = ($t.?text // Str).trim;
+            return $text.defined && $text.chars ?? decode-entities($text) !! Str;
+        }
+    }
+    Str
+}
+
 sub parse-categories($parent --> Array) is export {
     my @categories;
     for $parent.elements(:TAG<category>) -> $c {

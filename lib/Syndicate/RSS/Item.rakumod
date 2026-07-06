@@ -45,7 +45,8 @@ multi method from-xml(XML::Element $item-elem) {
     my $title   = get-text-optional($item-elem, "title");
     my $link    = get-text-optional($item-elem, "link");
     my $desc    = get-text-optional($item-elem, "description");
-    my $encoded = get-text-optional($item-elem, "content:encoded");
+    my $encoded = get-text-optional($item-elem, "content:encoded")
+    // get-text-by-ns($item-elem, "encoded", 'http://purl.org/rss/1.0/modules/content/');
     my $author  = get-text-optional($item-elem, "author");
     my @categories = parse-categories($item-elem);
     my $comment = get-text-optional($item-elem, "comments");

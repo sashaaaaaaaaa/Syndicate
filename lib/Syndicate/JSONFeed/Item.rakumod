@@ -107,7 +107,9 @@ method to-hash {
             %h
         }
     }
-    %($!cached-hash)
+    my %h = %($!cached-hash);
+    %h<authors> = %h<authors>.map(*.clone).Array if %h<authors>:exists;
+    %h
 }
 
 method Str { $!cache-lock.protect: { $!cached-str //= to-json $.to-hash } }
