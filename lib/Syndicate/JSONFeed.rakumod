@@ -118,11 +118,12 @@ method to-hash {
             %h
         }
     }
-    clone-hash(%($!cached-hash))
+    clone-hash($!cached-hash)
 }
 
 method to-json {
-    $!json-lock.protect: { $!cached-json //= to-json $.to-hash }
+    my %h = $.to-hash;
+    $!json-lock.protect: { $!cached-json //= to-json %h }
 }
 
 method Str { $.to-json }
