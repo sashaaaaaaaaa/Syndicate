@@ -93,7 +93,7 @@ method XML {
     my $xml = XML::Element.new(:name<item>);
     add-element($xml, "title", $.title);
     add-element($xml, "link",  $.link);
-    if $.guid.defined {
+    if $.guid.defined && $.guid.chars {
         my $guid-elem = XML::Element.new(:name<guid>, :nodes([encode-entities($.guid)]));
         $guid-elem.attribs<isPermaLink> = $.guid-is-permalink ?? "true" !! "false";
         $xml.append: $guid-elem;

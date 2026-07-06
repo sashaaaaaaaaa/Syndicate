@@ -13,6 +13,7 @@ submethod TWEAK {
     }
 }
 
+has Str $.xml-lang;
 has %.author-detail of Str;
 has @.categories of Str;
 has DateTime $.published;
@@ -57,6 +58,7 @@ multi method from-xml(XML::Element $entry-elem) {
     my $updated  = parse-date(get-text($entry-elem, "updated"));
     my $pub      = parse-date-optional(get-text-optional($entry-elem, "published"));
     my $rights   = get-text-optional($entry-elem, "rights");
+    my $lang     = $entry-elem.attribs{'xml:lang'} // Str;
 
     my $link = Str;
     for $entry-elem.elements(:TAG<link>) {
@@ -104,7 +106,7 @@ multi method from-xml(XML::Element $entry-elem) {
         :$author,
         :$content,
         :$content-type,
-        :$rights,
+        :$rights, :xml-lang($lang),
         :author-detail(%author-detail),
         :source-feed(%source-feed);
     %bless<updated> = $updated if $updated ~~ DateTime;
@@ -116,6 +118,7 @@ multi method from-xml(XML::Element $entry-elem) {
 
 method XML {
     my $xml = XML::Element.new(:name<entry>);
+    $xml.attribs{'xml:lang'} = $.xml-lang if $.xml-lang.defined;
     add-element($xml, "title",   $.title);
     $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link // "")), :rel<alternate>})) if $.link.defined && $.link.chars;
     add-element($xml, "id",      $.id // $.link // "");

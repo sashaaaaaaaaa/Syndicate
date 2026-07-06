@@ -124,10 +124,10 @@ method !cache-updated {
 }
 
 method XML {
-    return $!cached-xml if $!cached-xml.defined;
     $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns(NS-ATOM)}));
+        $xml.attribs{'xml:lang'} = $.language if $.language.defined;
         add-element($xml, "id",        $.id);
         add-element($xml, "title",     $.title);
         add-element($xml, "subtitle",  $.subtitle);
