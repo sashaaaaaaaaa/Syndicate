@@ -21,9 +21,9 @@ has Str $.logo;
 has @.contributors of Hash;
 has %.link-self of Str;
 has %.link-alternate of Str;
-    has DateTime $!computed-updated;
-    has XML::Element $!cached-xml;
-    has Lock $!xml-lock = Lock.new;
+has DateTime $!computed-updated;
+has XML::Element $!cached-xml;
+has Lock $!xml-lock = Lock.new;
 
 submethod TWEAK {
     self!cache-updated;

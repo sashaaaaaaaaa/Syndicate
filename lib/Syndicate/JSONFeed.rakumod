@@ -79,7 +79,7 @@ multi method new-from-hash(%h) {
     self.bless(|%bless, :@items)
 }
 
-my sub clone-hash(%h) {
+method !clone-hash(%h) {
     my %c = %h;
     %c<items> = %c<items>.Array if %c<items>:exists;
     %c<author> = %c<author>.clone if %c<author>:exists;
@@ -118,7 +118,7 @@ method to-hash {
             %h
         }
     }
-    clone-hash($!cached-hash)
+    self!clone-hash($!cached-hash)
 }
 
 method to-json {
