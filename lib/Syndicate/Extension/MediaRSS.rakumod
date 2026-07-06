@@ -18,11 +18,11 @@ register-ext(:namespace<media>,
     generate => sub ($xml, $item) {
         add-media-content-element($xml, $_) for @($item.?media-contents // []);
         add-media-thumbnail-element($xml, $_) for @($item.?media-thumbnails // []);
-        with $item.?media-title {
-            $xml.append: XML::Element.new(:name<media:title>, :nodes([encode-entities($_)]));
+        with $item.?media-title -> $v {
+            $xml.append: XML::Element.new(:name<media:title>, :nodes([encode-entities($v)])) if $v.chars;
         }
-        with $item.?media-description {
-            $xml.append: XML::Element.new(:name<media:description>, :nodes([encode-entities($_)]));
+        with $item.?media-description -> $v {
+            $xml.append: XML::Element.new(:name<media:description>, :nodes([encode-entities($v)])) if $v.chars;
         }
     }
 );
@@ -30,7 +30,7 @@ register-ext(:namespace<media>,
 sub get-media-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("media:$tag"))[0] -> $e {
         with $e.contents[0] -> $t {
-            return decode-entities($t.?text // "");
+            return decode-entities($t.?text // Str);
         }
     }
     Str
