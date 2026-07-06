@@ -15,9 +15,9 @@ method record-item { $items-parsed⚛++ }
 method record-error { $errors⚛++ }
 
 method reset {
-    $feeds-parsed = 0;
-    $items-parsed = 0;
-    $errors = 0;
+    ⚛$feeds-parsed ⚛= 0;
+    ⚛$items-parsed ⚛= 0;
+    ⚛$errors ⚛= 0;
 }
 
 =begin pod

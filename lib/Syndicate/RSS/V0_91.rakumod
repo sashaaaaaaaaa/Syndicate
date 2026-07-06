@@ -115,6 +115,7 @@ method XML {
     add-element($channel, "docs",           $.docs);
     add-element($channel, "managingEditor", $.managingEditor);
     add-element($channel, "webMaster",      $.webMaster);
+    add-element($channel, "generator",     $.generator);
 
     if $.pubDate.defined {
         $channel.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.pubDate)]));

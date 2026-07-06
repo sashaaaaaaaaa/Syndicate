@@ -142,7 +142,7 @@ method !parse-enclosure(XML::Element $item-elem) {
 
 method namespace-flags() {
     (
-        $!has-dc-creator || $!updated.defined,
+        $!has-dc-creator,
         ?(@!media-contents) || ?(@!media-thumbnails) || $!media-title.defined || $!media-description.defined,
         $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
         ?($!content.defined && $!content.chars),

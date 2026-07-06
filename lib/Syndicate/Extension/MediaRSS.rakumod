@@ -72,22 +72,22 @@ sub add-media-declaration(XML::Element $root --> Nil) is export {
 
 sub add-media-content-element(XML::Element $parent, %content --> Nil) is export {
     my $e = XML::Element.new(:name<media:content>);
-    $e.attribs<url>      = %content<url>      if %content<url>.defined;
-    $e.attribs<type>     = %content<type>     if %content<type>.defined;
-    $e.attribs<medium>   = %content<medium>   if %content<medium>.defined;
-    $e.attribs<duration> = ~%content<duration> if %content<duration>.defined;
-    $e.attribs<fileSize> = ~%content<fileSize> if %content<fileSize>.defined;
-    $e.attribs<width>    = ~%content<width>    if %content<width>.defined;
-    $e.attribs<height>   = ~%content<height>   if %content<height>.defined;
+    $e.attribs<url>      = encode-entities(%content<url>)      if %content<url>.defined;
+    $e.attribs<type>     = encode-entities(%content<type>)     if %content<type>.defined;
+    $e.attribs<medium>   = encode-entities(%content<medium>)   if %content<medium>.defined;
+    $e.attribs<duration> = encode-entities(~%content<duration>) if %content<duration>.defined;
+    $e.attribs<fileSize> = encode-entities(~%content<fileSize>) if %content<fileSize>.defined;
+    $e.attribs<width>    = encode-entities(~%content<width>)    if %content<width>.defined;
+    $e.attribs<height>   = encode-entities(~%content<height>)   if %content<height>.defined;
     $parent.append: $e;
 }
 
 sub add-media-thumbnail-element(XML::Element $parent, %thumb --> Nil) is export {
     my $e = XML::Element.new(:name<media:thumbnail>);
-    $e.attribs<url>    = %thumb<url>    if %thumb<url>.defined;
-    $e.attribs<width>  = ~%thumb<width>  if %thumb<width>.defined;
-    $e.attribs<height> = ~%thumb<height> if %thumb<height>.defined;
-    $e.attribs<time>   = %thumb<time>   if %thumb<time>.defined;
+    $e.attribs<url>    = encode-entities(%thumb<url>)    if %thumb<url>.defined;
+    $e.attribs<width>  = encode-entities(~%thumb<width>)  if %thumb<width>.defined;
+    $e.attribs<height> = encode-entities(~%thumb<height>) if %thumb<height>.defined;
+    $e.attribs<time>   = encode-entities(%thumb<time>)   if %thumb<time>.defined;
     $parent.append: $e;
 }
 
