@@ -5,20 +5,16 @@ use DateTime::Grammar;
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
-my $entity;
-my $entity-lock = Lock.new;
-sub entity-instance {
-    $entity-lock.protect: { $entity //= XML::Entity.new }
-}
+my $entity = XML::Entity.new;
 
 sub decode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
-    entity-instance.decode($text)
+    $entity.decode($text)
 }
 
 sub encode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
-    entity-instance.encode($text)
+    $entity.encode($text)
 }
 
 sub add-element($parent, $name, $value --> Nil) is export {

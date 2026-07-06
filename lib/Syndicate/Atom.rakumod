@@ -21,8 +21,9 @@ has Str $.logo;
 has @.contributors of Hash;
 has %.link-self of Str;
 has %.link-alternate of Str;
-has DateTime $!computed-updated;
-has XML::Element $!cached-xml;
+    has DateTime $!computed-updated;
+    has XML::Element $!cached-xml;
+    has Lock $!xml-lock = Lock.new;
 
 submethod TWEAK {
     self!cache-updated;
@@ -123,52 +124,55 @@ method !cache-updated {
 
 method XML {
     return $!cached-xml if $!cached-xml.defined;
-    my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns(NS-ATOM)}));
-    add-element($xml, "id",        $.id);
-    add-element($xml, "title",     $.title);
-    add-element($xml, "subtitle",  $.subtitle);
+    $!xml-lock.protect: {
+        return $!cached-xml if $!cached-xml.defined;
+        my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns(NS-ATOM)}));
+        add-element($xml, "id",        $.id);
+        add-element($xml, "title",     $.title);
+        add-element($xml, "subtitle",  $.subtitle);
 
-    if $.link.defined {
-        $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link)), :rel<alternate>}));
+        if $.link.defined {
+            $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link)), :rel<alternate>}));
+        }
+        if %!link-self<href>.defined {
+            my %attr = :href(encode-entities(%!link-self<href>)), :rel<self>;
+            %attr<type> = %!link-self<type> if %!link-self<type>.defined;
+            $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
+        }
+
+        if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
+            my $author = XML::Element.new(:name<author>);
+            add-element($author, "name",  %!author-detail<name>);
+            add-element($author, "email", %!author-detail<email>);
+            add-element($author, "uri",   %!author-detail<uri>);
+            $xml.append: $author;
+        }
+
+        add-element($xml, "rights",    $.rights);
+        add-element($xml, "generator", $.generator);
+        add-element($xml, "icon",      $.icon);
+        add-element($xml, "logo",      $.logo);
+
+        for @.categories -> $cat {
+            $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
+        }
+
+        for @.contributors -> %c {
+            my $c = XML::Element.new(:name<contributor>);
+            add-element($c, "name",  %c<name>);
+            add-element($c, "email", %c<email>);
+            add-element($c, "uri",   %c<uri>);
+            $xml.append: $c;
+        }
+
+        my $upd = $!computed-updated;
+        $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
+
+        $xml.append: $_.XML for @.items;
+
+        $!cached-xml = $xml;
+        $xml
     }
-    if %!link-self<href>.defined {
-        my %attr = :href(encode-entities(%!link-self<href>)), :rel<self>;
-        %attr<type> = %!link-self<type> if %!link-self<type>.defined;
-        $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
-    }
-
-    if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
-        my $author = XML::Element.new(:name<author>);
-        add-element($author, "name",  %!author-detail<name>);
-        add-element($author, "email", %!author-detail<email>);
-        add-element($author, "uri",   %!author-detail<uri>);
-        $xml.append: $author;
-    }
-
-    add-element($xml, "rights",    $.rights);
-    add-element($xml, "generator", $.generator);
-    add-element($xml, "icon",      $.icon);
-    add-element($xml, "logo",      $.logo);
-
-    for @.categories -> $cat {
-        $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
-    }
-
-    for @.contributors -> %c {
-        my $c = XML::Element.new(:name<contributor>);
-        add-element($c, "name",  %c<name>);
-        add-element($c, "email", %c<email>);
-        add-element($c, "uri",   %c<uri>);
-        $xml.append: $c;
-    }
-
-    my $upd = $!computed-updated;
-    $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
-
-    $xml.append: $_.XML for @.items;
-
-    $!cached-xml = $xml;
-    return $xml;
 }
 
 =begin pod
