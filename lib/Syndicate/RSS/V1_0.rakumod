@@ -145,7 +145,7 @@ method XML {
     $items-wrapper.append: $seq;
     for @.items -> $item {
         my $li = XML::Element.new(:name<rdf:li>);
-        my $resource = $item.?about // $item.link // Str;
+        my $resource = $item.about // $item.link // Str;
         $li.attribs{'rdf:resource'} = $resource if $resource.defined && $resource.chars;
         $seq.append: $li;
     }

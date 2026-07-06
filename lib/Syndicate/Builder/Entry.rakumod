@@ -98,10 +98,10 @@ method build-v0_91-item {
         :summary($!summary // Str),
         :id($item-id),
         :content($!content // Str);
-    if $!author-name.defined {
-        %bless<author> = $!author-name;
-        %bless<has-dc-creator> = True;
-    }
+    %bless<author> = $!author-name if $!author-name.defined;
+    # has-dc-creator is intentionally not set — V0_91 does not use dc:
+    # namespace. The xmlns:dc declaration should only appear in formats
+    # that support Dublin Core (RSS 2.0, RSS 1.0).
     # id and content are passed for role-interface consistency
     # but V0_91::Item ignores them (format has no guid/content element)
     Syndicate::RSS::V0_91::Item.new(|%bless)

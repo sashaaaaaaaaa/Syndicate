@@ -8,7 +8,8 @@ unit class Syndicate::Atom::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item
 
 submethod TWEAK {
     unless $!updated.defined {
-        die "Atom entry '{$!id // $!title // "(unknown)"}' requires an 'updated' timestamp";
+        my $label = $!id.defined ?? $!id !! $!title.defined ?? $!title !! "<unnamed>";
+        die "Atom entry '$label' requires an 'updated' timestamp";
     }
 }
 
