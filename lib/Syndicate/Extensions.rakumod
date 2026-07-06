@@ -63,6 +63,10 @@ sub set-active(@exts, $elem) {
     my @prefixes = @exts.map({ .<namespace> }).grep(*.defined);
     return @exts.keys.Set unless @prefixes;
     my %present = @prefixes.map({ $_ => False });
+    my $check = $elem.name;
+    with $check.index(':') -> $i {
+        %present{$check.substr(0, $i)} = True;
+    }
     for $elem.elements -> $e {
         my $name = $e.name;
         with $name.index(':') -> $i {

@@ -102,6 +102,10 @@ method XML {
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;
 
+    add-dc-declaration($xml)    if $!needs-dc;
+    add-media-declaration($xml) if $!needs-media;
+    add-itunes-declaration($xml) if $!needs-itunes;
+
     add-element($channel, "title",          $.title);
     add-element($channel, "link",           $.link);
     add-element($channel, "description",    $.description);
@@ -127,9 +131,6 @@ method XML {
     add-itunes-element($channel, "author", $.itunes-author) if $.itunes-author.defined;
     add-itunes-element($channel, "summary", $.itunes-summary) if $.itunes-summary.defined;
 
-    add-dc-declaration($xml)    if $!needs-dc;
-    add-media-declaration($xml) if $!needs-media;
-    add-itunes-declaration($xml) if $!needs-itunes;
     $channel.append: $_.XML for @.items;
 
     return $xml;

@@ -115,7 +115,7 @@ method resolve-url(Str $url, Str $base --> Str) {
 
     my $b = try { URI.new($base) } // return $url;
     my $u = try { URI.new($url) }  // return $url;
-    my $rp = $u.path.path;
+    my $rp = ~$u.path;
     unless $rp.starts-with('/') {
         my $bp = $b.path.path;
         $bp ~~ s/ <-[/]>* $ // unless $bp.ends-with('/');
