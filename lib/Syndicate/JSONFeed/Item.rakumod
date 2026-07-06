@@ -82,6 +82,7 @@ method to-hash {
             %h<id>             = $.id            if $.id.defined;
             %h<content_html> = $.content_html  if $.content_html.defined;
             %h<content_text>  = $.content_text  if $.content_text.defined;
+            # Fallback: if content_html wasn't set explicitly, use $.content
             %h<content_html> //= $.content if $.content.defined;
             %h<image>          = $.image         if $.image.defined;
             %h<banner_image>   = $.banner_image  if $.banner_image.defined;
@@ -103,7 +104,10 @@ method to-hash {
             %h
         }
     }
-    %($!cached-hash)
+    my %h = %($!cached-hash);
+    %h<authors> = %h<authors>.clone if %h<authors>:exists;
+    %h<tags>    = %h<tags>.clone    if %h<tags>:exists;
+    %h
 }
 
 method Str { $!cache-lock.protect: { $!cached-str //= to-json $.to-hash } }

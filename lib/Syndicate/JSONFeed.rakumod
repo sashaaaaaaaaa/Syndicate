@@ -80,6 +80,11 @@ multi method new-from-hash(%h) {
 }
 
 method to-hash {
+    my sub clone-hash(%h) {
+        my %c = %h;
+        %c<items> = %c<items>.map(*.clone).Array if %c<items>:exists;
+        %c
+    }
     $!hash-lock.protect: {
         $!cached-hash //= do {
             my %h;
@@ -111,11 +116,13 @@ method to-hash {
             %h
         }
     }
-    %($!cached-hash)
+    clone-hash(%($!cached-hash))
 }
 
 method to-json {
-    $!json-lock.protect: { $!cached-json //= to-json $.to-hash }
+    return $!cached-json if $!cached-json.defined;
+    my %h = $.to-hash;
+    $!json-lock.protect: { $!cached-json //= to-json %h }
 }
 
 method Str { $.to-json }
