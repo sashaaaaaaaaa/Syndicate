@@ -40,6 +40,7 @@ multi method new(XML::Document $doc) {
     my $gen      = get-text-optional($feed, "generator");
     my $icon     = get-text-optional($feed, "icon");
     my $logo     = get-text-optional($feed, "logo");
+    my $lang     = $feed.attribs{'xml:lang'} // Str;
     my $upd      = parse-date(get-text($feed, "updated"));
 
     my %author-detail;
@@ -89,7 +90,7 @@ multi method new(XML::Document $doc) {
     my %bless = :$id, :$title, :link($primary-link),
         :description($desc),
         :subtitle($desc), :$rights,
-        :$author,
+        :$author, :language($lang),
         :generator($gen), :$icon, :$logo,
         :author-detail(%author-detail),
         :link-self(%link-self), :link-alternate(%link-alternate);

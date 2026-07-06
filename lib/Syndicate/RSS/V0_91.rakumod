@@ -172,7 +172,7 @@ method parse-skip-days($channel --> Array) {
     with $channel.elements(:TAG<skipDays>)[0] {
         for .elements(:TAG<day>) -> $d {
             with $d.contents[0] {
-                @skipDays.push: .text.tclc;
+                @skipDays.push: decode-entities(.text).tclc;
             }
         }
     }

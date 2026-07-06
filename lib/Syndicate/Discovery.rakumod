@@ -32,7 +32,7 @@ method !decode-response($resp --> Str) {
 method !validate-url(Str $url) {
     my $scheme = try { URI.new($url).scheme.lc };
     die "Blocked URL scheme — only http and https are permitted"
-        unless $scheme.defined && ($scheme eq 'http' || $scheme eq 'https');
+        unless $scheme.defined && $scheme ∈ <http https>;
 }
 
 method fetch(Str $url --> Syndicate::Feed:D) {
@@ -40,7 +40,7 @@ method fetch(Str $url --> Syndicate::Feed:D) {
     my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $ct = $resp<headers><content-type>.[0] // '';
-    die "Not a feed — Content-Type: $ct" unless $ct.lc.contains('xml') || $ct.lc.contains('json') || $ct.lc.contains('rss') || $ct.lc.contains('atom') || $ct.lc.contains('feed');
+    die "Not a feed — Content-Type: $ct" unless $ct.lc.contains('xml') || $ct.lc.contains('json') || $ct.lc.contains('rss') || $ct.lc.contains('atom');
     my $body = self!decode-response($resp);
     parse-feed($body)
 }
