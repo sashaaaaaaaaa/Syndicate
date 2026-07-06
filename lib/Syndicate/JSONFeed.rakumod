@@ -120,9 +120,7 @@ method to-hash {
 }
 
 method to-json {
-    return $!cached-json if $!cached-json.defined;
-    my %h = $.to-hash;
-    $!json-lock.protect: { $!cached-json //= to-json %h }
+    $!json-lock.protect: { $!cached-json //= to-json $.to-hash }
 }
 
 method Str { $.to-json }

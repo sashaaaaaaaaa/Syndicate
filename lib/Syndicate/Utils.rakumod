@@ -6,7 +6,10 @@ use DateTime::Grammar;
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
 my $entity;
-sub entity-instance { $entity //= XML::Entity.new }
+my $entity-lock = Lock.new;
+sub entity-instance {
+    $entity-lock.protect: { $entity //= XML::Entity.new }
+}
 
 sub decode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
