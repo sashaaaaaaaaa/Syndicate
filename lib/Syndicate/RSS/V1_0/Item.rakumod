@@ -24,11 +24,15 @@ has Lock $!cache-lock = Lock.new;
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid RSS 1.0 item XML: $!" unless $doc;
-    self.from-xml($doc.root)
+    my $item = self.from-xml($doc.root);
+    CATCH { Syndicate::Stats.record-error; .rethrow }
+    $item
 }
 
 multi method new(XML::Element $xml-elem) {
-    self.from-xml($xml-elem)
+    my $item = self.from-xml($xml-elem);
+    CATCH { Syndicate::Stats.record-error; .rethrow }
+    $item
 }
 
 multi method from-xml(XML::Element $item-elem) {

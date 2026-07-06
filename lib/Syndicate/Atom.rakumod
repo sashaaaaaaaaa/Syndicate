@@ -30,7 +30,6 @@ submethod TWEAK {
 multi method new(XML::Document $doc) {
     my $feed = $doc.root;
     die "Not an Atom feed" unless $feed.name eq "feed";
-    die "Not an Atom namespace" unless ($feed.nsURI // "") eq NS-ATOM;
 
     my $id    = get-text($feed, "id");
     my $title = get-text($feed, "title");

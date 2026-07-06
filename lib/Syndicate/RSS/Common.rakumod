@@ -38,7 +38,7 @@ method build-xml-image($parent, %image, Bool :$rdf-about = False) {
 
 method build-xml-textinput($parent, %textInput) {
     return unless %textInput;
-    my $ti = XML::Element.new(:name<textinput>);
+    my $ti = XML::Element.new(:name<textInput>);
     self!build-xml-elements($ti, %textInput, <title description name link>);
     $parent.append: $ti;
 }

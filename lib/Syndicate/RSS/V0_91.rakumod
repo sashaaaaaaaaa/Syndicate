@@ -137,7 +137,9 @@ method XML {
 
 method parse-textinput($channel --> Hash) {
     my %textInput;
-    with $channel.elements(:TAG<textinput>)[0] {
+    # Per RSS 0.91 DTD the element is <textInput> (camelCase), but some
+    # feeds use <textinput> (all lowercase). Accept both for leniency.
+    with ($channel.elements(:TAG<textInput>)[0] // $channel.elements(:TAG<textinput>)[0]) {
         %textInput<title>       = get-text-optional($_, "title");
         %textInput<description> = get-text-optional($_, "description");
         %textInput<name>        = get-text-optional($_, "name");

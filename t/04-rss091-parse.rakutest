@@ -104,7 +104,7 @@ my $xml-str = ~$feed;
 like $xml-str, /'<rss version="0.91">'/, "XML has rss root";
 like $xml-str, /'<channel>'/, "XML has channel";
 like $xml-str, /'<skipHours>'/, "XML has skipHours";
-like $xml-str, /'<textinput>'/, "XML has textinput";
+like $xml-str, /'<textInput>'/, "XML has textInput";
 like $xml-str, /'<image>'/, "XML has image";
 like $xml-str, /'<item>'/, "XML has items";
 
