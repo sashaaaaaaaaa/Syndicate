@@ -6,18 +6,18 @@ my atomicint $feeds-parsed = 0;
 my atomicint $items-parsed = 0;
 my atomicint $errors = 0;
 
-method feeds-parsed { ⚛$feeds-parsed }
-method items-parsed { ⚛$items-parsed }
-method errors { ⚛$errors }
+submethod feeds-parsed { ⚛$feeds-parsed }
+submethod items-parsed { ⚛$items-parsed }
+submethod errors { ⚛$errors }
 
-method record-feed { $feeds-parsed⚛++ }
-method record-item { $items-parsed⚛++ }
-method record-error { $errors⚛++ }
+submethod record-feed { $feeds-parsed⚛++ }
+submethod record-item { $items-parsed⚛++ }
+submethod record-error { $errors⚛++ }
 
-method reset {
-    ⚛$feeds-parsed ⚛= 0;
-    ⚛$items-parsed ⚛= 0;
-    ⚛$errors ⚛= 0;
+submethod reset {
+    $feeds-parsed ⚛= 0;
+    $items-parsed ⚛= 0;
+    $errors ⚛= 0;
 }
 
 =begin pod

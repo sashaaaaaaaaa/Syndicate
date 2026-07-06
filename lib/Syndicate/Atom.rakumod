@@ -88,8 +88,9 @@ multi method new(XML::Document $doc) {
     my $author = %author-detail<name> // %author-detail<email> // Str;
 
     my %bless = :$id, :$title, :link($primary-link),
-        :description($desc),
-        :subtitle($desc), :$rights,
+        :description($desc),  # Feed role expects $.description
+        :subtitle($desc),     # Atom expects subtitle; same value intentionally
+        :$rights,
         :$author, :language($lang),
         :generator($gen), :$icon, :$logo,
         :author-detail(%author-detail),
