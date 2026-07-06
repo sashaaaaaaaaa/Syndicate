@@ -1,4 +1,5 @@
 use v6.d;
+use XML;
 use Syndicate::Stats;
 
 unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
@@ -67,7 +68,7 @@ sub set-active(@exts, $elem) {
     with $check.index(':') -> $i {
         %present{$check.substr(0, $i)} = True;
     }
-    for $elem.elements -> $e {
+    for $elem.nodes.grep(XML::Element) -> $e {
         my $name = $e.name;
         with $name.index(':') -> $i {
             my $prefix = $name.substr(0, $i);

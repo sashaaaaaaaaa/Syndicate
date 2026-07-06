@@ -33,7 +33,7 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
 multi sub feed-format(Str $name, Str $ver) {
     given $name {
         when 'feed'   { return Atom }
-        when 'rss'    { return $ver.starts-with('0.9') ?? RSS091 !! RSS2 }
+        when 'rss'    { return $ver eq '0.91' ?? RSS091 !! RSS2 }
         when 'rdf:RDF' | 'RDF' { return RSS1 }
         default { die "Unknown feed format: <$_>" }
     }

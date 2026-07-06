@@ -83,6 +83,7 @@ method to-hash {
     my sub clone-hash(%h) {
         my %c = %h;
         %c<items> = %c<items>.map(*.clone).Array if %c<items>:exists;
+        %c<author> = %c<author>.clone if %c<author>:exists;
         %c
     }
     $!hash-lock.protect: {

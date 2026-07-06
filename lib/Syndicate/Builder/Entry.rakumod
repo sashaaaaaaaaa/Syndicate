@@ -131,7 +131,7 @@ method build-json-item {
     my @authors;
     @authors.push: %author-detail if %author-detail;
     my %item-hash = %bless;
-    %item-hash<url>     = %item-hash<link>:exists ?? %item-hash<link> !! Str;
+    %item-hash<url>     = %item-hash<link>.defined ?? %item-hash<link> !! Str;
     %item-hash<authors> = @authors if @authors;
     %item-hash<tags>    = @tags    if @tags;
     Syndicate::JSONFeed::Item.new-from-hash(%item-hash)
