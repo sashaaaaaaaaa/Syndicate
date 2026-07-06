@@ -42,13 +42,19 @@ multi method from-xml(XML::Element $item-elem) {
     run-parsers($item-elem, %extra);
     my $author = %extra<author> // Str;
 
+    my $updated = %extra<updated>:exists
+        ?? parse-date-optional(%extra<updated>)
+        !! Nil;
+
     my @media-contents    = @(%extra<media-contents>    // []);
     my @media-thumbnails  = @(%extra<media-thumbnails>  // []);
     my $media-title       = %extra<media-title>         // Str;
     my $media-description = %extra<media-description>   // Str;
 
-    my $item = self.bless(:$title, :$link, :summary($desc), :$author, :id($link // Str),
-        :has-dc-creator(%extra<has-dc-creator> // False),
+    my %bless = :$title, :$link, :summary($desc), :$author, :id($link // Str),
+        :has-dc-creator(%extra<has-dc-creator> // False);
+    %bless<updated> = $updated if $updated ~~ DateTime;
+    my $item = self.bless(|%bless,
         :@media-contents, :@media-thumbnails, :$media-title, :$media-description,
         :itunes-author(%extra<itunes-author> // Str),
         :itunes-summary(%extra<itunes-summary> // Str),

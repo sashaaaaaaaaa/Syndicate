@@ -117,8 +117,7 @@ method build-json-item {
     my $c = $!content // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :id($item-id),
-        :summary($!summary // Str),
-        :content($c);
+        :summary($!summary // Str);
     if $c.defined {
         if $!content-type.defined && ($!content-type.contains('html') || $!content-type.contains('xhtml')) {
             %bless<content_html> = $c;
@@ -168,9 +167,12 @@ method build-atom-item {
         :content($!content // Str),
         :content-type($!content-type // Str),
         :rights($!rights // Str);
-    # Falls back to DateTime.now if not explicitly set; produces
-    # non-deterministic XML across separate builder invocations
-    %bless<updated>   = $!updated.defined ?? $!updated !! DateTime.now;
+    if $!updated.defined {
+        %bless<updated> = $!updated;
+    } else {
+        Syndicate::Stats.record-error;
+        %bless<updated> = DateTime.now;
+    }
     %bless<published> = $!published if $!published.defined;
     my @cats = @!categories;
     Syndicate::Atom::Item.new(|%bless, :categories(@cats))
