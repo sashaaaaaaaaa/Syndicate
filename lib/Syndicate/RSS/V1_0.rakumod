@@ -11,7 +11,7 @@ use Syndicate::Stats;
 
 my constant NS-RDF     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 my constant NS-RSS1    = 'http://purl.org/rss/1.0/';
-my constant NS-CONTENT = 'http://purl.org/rss/1.0/modules/content/';
+
 
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 

@@ -2,6 +2,8 @@ use v6.d;
 use XML;
 use Syndicate::Utils;
 
+my constant NS-CONTENT is export = 'http://purl.org/rss/1.0/modules/content/';
+
 unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
 
 method parse-image($parent, Bool :$rdf-about = False --> Hash) {

@@ -11,7 +11,6 @@ use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 
-my constant NS-CONTENT     = 'http://purl.org/rss/1.0/modules/content/';
 my constant NS-ATOM        = 'http://www.w3.org/2005/Atom';
 my constant ONE-WEEK-MINUTES = 10080;
 
