@@ -5,16 +5,17 @@ use DateTime::Grammar;
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
-my $entity = XML::Entity.new;
+my $entity;
+sub entity-instance { $entity //= XML::Entity.new }
 
 sub decode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
-    $entity.decode($text)
+    entity-instance.decode($text)
 }
 
 sub encode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
-    $entity.encode($text)
+    entity-instance.encode($text)
 }
 
 sub add-element($parent, $name, $value --> Nil) is export {
@@ -57,8 +58,8 @@ sub parse-categories($parent --> Array) is export {
 }
 
 sub parse-date(Str $str --> DateTime) is export {
-    die "Cannot parse date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
-    datetime-interpret($str.trim) // die "Cannot parse date: $str"
+    die "parse-date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
+    datetime-interpret($str.trim) // die "parse-date: cannot parse '$str'"
 }
 
 sub parse-date-optional(Str $str) is export {

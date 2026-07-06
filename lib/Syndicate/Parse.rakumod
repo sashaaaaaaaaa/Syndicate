@@ -14,7 +14,7 @@ enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 
 multi sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
-    die "Empty input" unless $clean.chars;
+    die "feed-format: empty input" unless $clean.chars;
 
     with try-xml-parse($clean) -> $root {
         return feed-format($root<name>, $root<ver>);
@@ -25,7 +25,7 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
         && $parsed<version>.defined
         && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX) {
         Syndicate::Stats.record-error;
-        die "Unable to detect feed format: input is not valid XML or JSON";
+        die "feed-format: unable to detect feed format — input is not valid XML or JSON";
     }
     JSONFeedFmt
 }
@@ -46,6 +46,7 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
 
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $clean = $input.trim;
+    die "parse-feed: empty input" unless $clean.chars;
     with try-xml-parse($clean) -> $root-info {
         return parse-feed($root-info<doc>);
     }
@@ -54,7 +55,7 @@ multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
         && $parsed<version>.defined
         && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX) {
         Syndicate::Stats.record-error;
-        die "Unable to detect feed format: input is not valid XML or JSON";
+        die "parse-feed: unable to detect feed format — input is not valid XML or JSON";
     }
     my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed);
     Syndicate::Stats.record-feed;
@@ -86,7 +87,7 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
 
 multi sub parse-feed-with-format(Str $input --> List) is export {
     my $clean = $input.trim;
-    die "Empty input" unless $clean.chars;
+    die "parse-feed-with-format: empty input" unless $clean.chars;
 
     with try-xml-parse($clean) -> $root-info {
         my $format = feed-format($root-info<name>, $root-info<ver>);
@@ -99,7 +100,7 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
         && $parsed<version>.defined
         && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX) {
         Syndicate::Stats.record-error;
-        die "Unable to detect feed format: input is not valid XML or JSON";
+        die "parse-feed-with-format: unable to detect feed format — input is not valid XML or JSON";
     }
     my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed);
     Syndicate::Stats.record-feed;
