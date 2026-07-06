@@ -72,6 +72,7 @@ method new-from-hash(%h) {
 }
 
 method to-hash {
+    return %($!cached-hash) if $!cached-hash.defined;
     $!hash-lock.protect: {
         $!cached-hash //= do {
             my %h;
@@ -103,6 +104,7 @@ method to-hash {
             %h
         }
     }
+    %($!cached-hash)
 }
 
 method Str { $!cache-lock.protect: { $!cached-str //= to-json $.to-hash } }

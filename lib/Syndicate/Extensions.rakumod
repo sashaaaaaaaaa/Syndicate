@@ -9,6 +9,16 @@ unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
 my @ext-snapshot;
 my $ext-lock = Lock.new;
 
+sub extension-count(--> Int) is export { @ext-snapshot.elems }
+
+sub remove-last-ext(--> Nil) is export {
+    $ext-lock.protect: {
+        my @new = @ext-snapshot.List;
+        @new.pop if @new;
+        @ext-snapshot = @new;
+    }
+}
+
 sub register-ext(:&parse, :&generate, Str :$namespace?) is export {
     $ext-lock.protect: {
         my @new = @ext-snapshot.List;

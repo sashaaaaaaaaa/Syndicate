@@ -80,6 +80,7 @@ multi method new-from-hash(%h) {
 }
 
 method to-hash {
+    return %($!cached-hash) if $!cached-hash.defined;
     $!hash-lock.protect: {
         $!cached-hash //= do {
             my %h;
@@ -111,9 +112,11 @@ method to-hash {
             %h
         }
     }
+    %($!cached-hash)
 }
 
 method to-json {
+    return $!cached-json if $!cached-json.defined;
     $!json-lock.protect: { $!cached-json //= to-json $.to-hash }
 }
 

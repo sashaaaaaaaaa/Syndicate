@@ -7,6 +7,8 @@ use Syndicate::RSS::Item;
 
 plan 6;
 
+my $start-count = extension-count;
+
 my $parse-call-count = 0;
 my $gen-call-count = 0;
 
@@ -54,5 +56,9 @@ my $test-item = Syndicate::RSS::Item.new(
         'run-generators catches dying callbacks';
     $*ERR.close;
 }
+
+# Restore extension registry to pre-test state
+my $excess = extension-count() - $start-count;
+remove-last-ext for ^$excess;
 
 done-testing;
