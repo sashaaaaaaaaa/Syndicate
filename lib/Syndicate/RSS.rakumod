@@ -21,7 +21,8 @@ has Str $.managingEditor;
 has Str $.webMaster;
 has DateTime $.pubDate;
 has DateTime $.lastBuildDate;
-has @.categories of Str;
+has @!categories of Str is built;
+method categories() { @!categories.List }
 has Str $.docs;
 has Int $.ttl;
 has %.image;
@@ -148,7 +149,7 @@ method XML {
         $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$RFC2822.to-string($.lastBuildDate)]));
     }
 
-    add-element($channel, "category",  $_) for @.categories;
+    add-element($channel, "category",  $_) for @!categories;
     add-element($channel, "generator", $.generator);
     add-element($channel, "docs",      $.docs);
     add-element($channel, "ttl",       ~$.ttl) if $.ttl.defined;

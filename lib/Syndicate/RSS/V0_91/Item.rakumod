@@ -66,7 +66,10 @@ method XML {
     $xml
 }
 
-method Str { $!cache-lock.protect: { $!cached-str //= ~self.XML } }
+method Str {
+    return $!cached-str if $!cached-str.defined;
+    $!cache-lock.protect: { $!cached-str //= ~self.XML }
+}
 
 method namespace-flags() {
     (

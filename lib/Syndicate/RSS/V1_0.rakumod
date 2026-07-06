@@ -23,7 +23,8 @@ has Bool $!needs-content is built;
 has Bool $!needs-itunes is built;
 # 'is built' is a standard Raku mechanism that allows setting a private
 # attribute via the constructor without exposing a public accessor.
-has @.categories of Str;
+has @!categories of Str is built;
+method categories() { @!categories.List }
 has Bool $!lang-from-dc is built;
 
 submethod TWEAK {
@@ -131,7 +132,7 @@ method XML {
             add-element($channel, "language", $.language);
         }
     }
-    add-dc-element($channel, "subject", $_) for @.categories;
+    add-dc-element($channel, "subject", $_) for @!categories;
 
     if %.image<about>.defined {
         my $img-ref = XML::Element.new(:name<image>);
