@@ -30,7 +30,7 @@ sub get-text($parent, $tag --> Str) is export {
         die "Empty required element <$tag>" unless $text.chars;
         return decode-entities($text);
     }
-    die "Empty required element <$tag>"
+    die "Element <$tag> has no child nodes"
 }
 
 sub get-text-optional($parent, $tag --> Str) is export {
