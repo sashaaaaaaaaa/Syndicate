@@ -124,7 +124,13 @@ method XML {
     add-element($channel, "link",        $.link);
     add-element($channel, "description", $.description);
     add-element($channel, "generator",   $.generator);
-    add-element($channel, "language", $.language) if $.language.defined;
+    if $.language.defined {
+        if $!lang-from-dc {
+            add-dc-element($channel, "language", $.language);
+        } else {
+            add-element($channel, "language", $.language);
+        }
+    }
     add-dc-element($channel, "subject", $_) for @.categories;
 
     if %.image<about>.defined {
