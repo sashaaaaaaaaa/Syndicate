@@ -79,6 +79,8 @@ method build-rss-item {
         :summary($!summary // Str),
         :author($!author-name // Str),
         :id($item-id),
+        # content maps to content:encoded in RSS, <content> in Atom,
+        # and content_html/content_text in JSON Feed
         :content($!content // Str),
         :guid($item-id),
         :media-title($!media-title // Str),
@@ -165,6 +167,8 @@ method build-atom-item {
         :content($!content // Str),
         :content-type($!content-type // Str),
         :rights($!rights // Str);
+    # Falls back to DateTime.now if not explicitly set; produces
+    # non-deterministic XML across separate builder invocations
     %bless<updated>   = $!updated.defined ?? $!updated !! DateTime.now;
     %bless<published> = $!published if $!published.defined;
     my @cats = @!categories;
