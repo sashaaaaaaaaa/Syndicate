@@ -96,6 +96,10 @@ Central registry for feed format extensions. Extensions register
 parse/generate callbacks that run automatically during RSS item
 parsing and XML generation.
 
+B<Note:> All RSS parsers (RSS 0.91, RSS 1.0, RSS 2.0) unconditionally
+load the DublinCore, MediaRSS, and ITunes extensions at compile time.
+There is currently no opt-out mechanism to disable individual extensions.
+
 =head1 EXPORTED SUBS
 
 =head2 C<register-ext(:&parse, :&generate)>

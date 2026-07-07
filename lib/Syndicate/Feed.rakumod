@@ -10,6 +10,9 @@ has Str $.generator;
 has Str $.language;
 has @!items of Syndicate::Item is built;
 method items() { @!items.List }
+# Caches assume the feed object is immutable after construction.
+# Any mutation to attributes after the first call to .Str or .to-hash
+# will not be reflected in the cached output.
 has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 
