@@ -112,6 +112,7 @@ method to-hash {
         }
     }
     my %h = %($!cached-hash);
+    %h<items> = %h<items>.clone if %h<items>:exists;
     %h
 }
 
