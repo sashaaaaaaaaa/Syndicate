@@ -56,9 +56,9 @@ method discover(Str $url --> Syndicate::Feed:D) {
     return $feed if $feed.defined;
     note "Feed parse failed at {$url}, falling back to HTML discovery: $parse-err" if $parse-err;
 
-    my @feeds = self.find-feeds($body, $url);
-    die "No feeds found at $url" unless @feeds;
-    self.fetch(@feeds[0])
+    my $feed-url = self!find-first-feed($body, $url);
+    die "No feeds found at $url" unless $feed-url;
+    self.fetch($feed-url)
 }
 
 method find-feeds(Str $html, Str $base-url --> Array) {
@@ -76,6 +76,22 @@ method find-feeds(Str $html, Str $base-url --> Array) {
         @feeds.push: self.resolve-url(%attr<href>, $base);
     }
     @feeds
+}
+
+method !find-first-feed(Str $html, Str $base-url) {
+    my $base = self.base-url($html) // $base-url;
+
+    for $html.comb($link-tag) -> $tag {
+        my %attr = self!parse-attrs($tag);
+        next unless %attr<rel> && %attr<rel>.lc eq 'alternate';
+        my $tv = (%attr<type> // "").lc;
+        next unless $tv eq 'application/rss+xml'
+                  || $tv eq 'application/atom+xml'
+                  || $tv eq 'application/feed+json';
+        next unless %attr<href>.defined;
+        return self.resolve-url(%attr<href>, $base);
+    }
+    return;
 }
 
 method !parse-attrs(Str $tag --> Map) {
