@@ -19,6 +19,7 @@ has Str $.favicon;
 has %.author of Str;
 has Bool $.expired;
 has Hash $!cached-hash;
+has Hash $!cached-clone;
 has Lock $!hash-lock = Lock.new;
 has Str $!cached-json;
 has Lock $!json-lock = Lock.new;
@@ -117,8 +118,10 @@ method to-hash {
 
             %h
         }
+        $!cached-clone //= self!clone-hash($!cached-hash)
     }
-    self!clone-hash($!cached-hash)
+    my %h = %($!cached-clone);
+    %h
 }
 
 method to-json {
