@@ -73,7 +73,6 @@ method XML {
 }
 
 method Str {
-    return $!cached-str if $!cached-str.defined;
     $!cache-lock.protect: { $!cached-str //= ~self.XML }
 }
 

@@ -171,7 +171,6 @@ method build-atom-item {
     if $!updated.defined {
         %bless<updated> = $!updated;
     } else {
-        Syndicate::Stats.record-error;
         %bless<updated> = DateTime.now;
     }
     %bless<published> = $!published if $!published.defined;
