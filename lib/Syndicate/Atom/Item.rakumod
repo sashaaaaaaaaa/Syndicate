@@ -133,9 +133,7 @@ method XML {
         my @nodes;
         if %attribs<type> eq "xhtml" {
             my $xhtml = try { XML::Document.new($.content) };
-            # encode-entities on already-decoded $.content risks
-            # double-encoding when the original was already entity-encoded.
-            @nodes = $xhtml ?? [$xhtml.root] !! [encode-entities($.content)];
+            @nodes = $xhtml ?? [$xhtml.root] !! [$.content];
         } else {
             @nodes = [encode-entities($.content)];
         }

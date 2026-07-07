@@ -128,14 +128,12 @@ method build-json-item {
     }
     %bless<date_published> = $!published.Str if $!published.defined;
     %bless<date_modified>  = $!updated.Str   if $!updated.defined;
-    my @tags = @!categories;
     my @authors;
     @authors.push: %author-detail if %author-detail;
-    my %item-hash = %bless;
-    %item-hash<url>     = %item-hash<link>.defined ?? %item-hash<link> !! Str;
-    %item-hash<authors> = @authors if @authors;
-    %item-hash<tags>    = @tags    if @tags;
-    Syndicate::JSONFeed::Item.new-from-hash(%item-hash)
+    %bless<url>     = $!link.defined ?? $!link !! Str;
+    %bless<authors> = @authors if @authors;
+    %bless<tags>    = @!categories.List if @!categories;
+    Syndicate::JSONFeed::Item.new-from-hash(%bless)
 }
 
 method build-v1_0-item {

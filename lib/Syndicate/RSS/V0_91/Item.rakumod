@@ -68,6 +68,9 @@ method XML {
     add-element($xml, "title",       $.title);
     add-element($xml, "link",        $.link);
     add-element($xml, "description", $.summary);
+    if $.content.defined && $.content.chars {
+        $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
+    }
     run-generators($xml, self);
     $xml
 }
