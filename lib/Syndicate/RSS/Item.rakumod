@@ -75,7 +75,7 @@ multi method from-xml(XML::Element $item-elem) {
     my $item-id = $guid // $link // Str;
     my %bless = :$title, :$link, :summary($desc),
         :$author,
-        :id($item-id),
+        :id($item-id), :$guid,
         :$content,
         :has-dc-creator(%extra<has-dc-creator> // False),
         :comments($comment),
@@ -143,7 +143,7 @@ method !parse-enclosure(XML::Element $item-elem) {
 
 method namespace-flags() {
     (
-        $!has-dc-creator,
+        $!has-dc-creator || False,
         ?(@!media-contents) || ?(@!media-thumbnails) || $!media-title.defined || $!media-description.defined,
         $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
         ?($!content.defined && $!content.chars),
@@ -151,7 +151,6 @@ method namespace-flags() {
 }
 
 method Str {
-    return $!cached-str if $!cached-str.defined;
     $!cache-lock.protect: { $!cached-str //= ~self.XML }
 }
 

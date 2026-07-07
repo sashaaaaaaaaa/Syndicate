@@ -8,6 +8,8 @@ use Syndicate::JSONFeed;
 use Syndicate::Stats;
 use JSON::Fast;
 
+my constant MAX-FEED-SIZE = 10 * 1024 * 1024;
+
 unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
 enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
@@ -110,6 +112,8 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
 }
 
 multi sub parse-file(Str $path --> Syndicate::Feed:D) is export {
+    my $size = try { $path.IO.s };
+    die "File too large ($size bytes, max {MAX-FEED-SIZE})" if $size.defined && $size > MAX-FEED-SIZE;
     my $contents = try { slurp($path) };
     without $contents {
         die "Could not read file '$path': $!";

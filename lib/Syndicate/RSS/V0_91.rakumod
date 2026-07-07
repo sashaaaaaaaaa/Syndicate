@@ -26,6 +26,8 @@ has @.skipHours of Int;
 has @.skipDays of Str;
 has Str $.itunes-author;
 has Str $.itunes-summary;
+has XML::Element $!cached-xml;
+has Lock $!xml-lock = Lock.new;
 has Bool $!needs-dc is built;
 has Bool $!needs-media is built;
 has Bool $!needs-itunes is built;
@@ -38,26 +40,25 @@ multi method new(XML::Document $doc) {
     my $channel = $rss.elements(:TAG<channel>)[0];
     die "No channel element" unless $channel;
 
-    my $title   = get-text($channel, "title");
-    my $link    = get-text($channel, "link");
-    my $desc    = get-text($channel, "description");
-    my $lang    = get-text-optional($channel, "language");
-    my $gen     = get-text-optional($channel, "generator");
-    my $cpy     = get-text-optional($channel, "copyright");
-    my $me      = get-text-optional($channel, "managingEditor");
-    my $wm      = get-text-optional($channel, "webMaster");
+    my %common = self.parse-channel-common($channel);
+    my $title   = %common<title>;
+    my $link    = %common<link>;
+    my $desc    = %common<desc>;
+    my $lang    = %common<lang>;
+    my $gen     = %common<gen>;
+    my $cpy     = %common<cpy>;
+    my $me      = %common<me>;
+    my $wm      = %common<wm>;
+    my $docs    = %common<docs>;
+    my $pd      = %common<pd>;
+    my $lbd     = %common<lbd>;
+    my %image   = %common<image>;
+    my $it-author  = %common<it-author>;
+    my $it-summary = %common<it-summary>;
     my $rating  = get-text-optional($channel, "rating");
-    my $docs    = get-text-optional($channel, "docs");
-    my $pd      = parse-date-optional(get-text-optional($channel, "pubDate"));
-    my $lbd     = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
-
-    my %image     = self.parse-image($channel);
     my %textInput = self.parse-textinput($channel);
     my @skipHours = self.parse-skip-hours($channel);
     my @skipDays  = self.parse-skip-days($channel);
-
-    my $it-author  = get-itunes-text($channel, "author");
-    my $it-summary = get-itunes-text($channel, "summary");
 
     my @items;
     my ($needs-dc, $needs-media, $needs-itunes);
@@ -98,6 +99,8 @@ multi method new(Str $xml) {
 }
 
 method XML {
+    $!xml-lock.protect: {
+        $!cached-xml //= do {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('0.91')}));
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;
@@ -134,7 +137,9 @@ method XML {
 
     $channel.append: $_.XML for @.items;
 
-    return $xml;
+    $xml
+        }
+    }
 }
 
 method parse-textinput($channel --> Hash) {

@@ -17,6 +17,8 @@ unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed 
 
 has Str $.about;
 has %.image;
+has XML::Element $!cached-xml;
+has Lock $!xml-lock = Lock.new;
 has Bool $!needs-dc is built;
 has Bool $!needs-media is built;
 has Bool $!needs-content is built;
@@ -38,14 +40,8 @@ multi method new(XML::Document $doc) {
     my $link  = get-text($channel, "link");
     my $desc  = get-text($channel, "description");
     my $gen   = get-text-optional($channel, "generator");
-    my $lang-elem = $channel.elements(:TAG<language>)[0];
-    my $lang;
+    my $lang = get-text-optional($channel, "language");
     my $lang-fallback = False;
-    if $lang-elem {
-        with $lang-elem.contents[0] -> $t {
-            $lang = $t.?text;
-        }
-    }
     unless $lang.defined {
         # No <language> element or empty element — try Dublin Core fallback
         $lang = get-dc-text($channel, "language");
@@ -104,6 +100,8 @@ multi method new(Str $xml) {
 }
 
 method XML {
+    $!xml-lock.protect: {
+        $!cached-xml //= do {
     my $root = XML::Element.new(:name<rdf:RDF>, :attribs({
         'xmlns:rdf' => NS-RDF,
         'xmlns'     => NS-RSS1
@@ -151,7 +149,9 @@ method XML {
 
     $root.append: $_.XML for @.items;
 
-    return $root;
+    $root
+        }
+    }
 }
 
 =begin pod

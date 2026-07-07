@@ -4,7 +4,6 @@ use Syndicate::Feed;
 use Syndicate::Atom::Item;
 use Syndicate::Utils;
 
-my constant NS-ATOM = 'http://www.w3.org/2005/Atom';
 use Syndicate::Stats;
 
 unit class Syndicate::Atom:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;

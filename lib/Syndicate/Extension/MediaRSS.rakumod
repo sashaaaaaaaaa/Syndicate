@@ -3,6 +3,8 @@ use XML;
 use Syndicate::Extensions;
 use Syndicate::Utils;
 
+my constant NS-MEDIA is export = 'http://search.yahoo.com/mrss/';
+
 unit module Syndicate::Extension::MediaRSS:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(:namespace<media>,
@@ -66,7 +68,7 @@ sub get-media-thumbnails($parent --> Array) is export {
 }
 
 sub add-media-declaration(XML::Element $root --> Nil) is export {
-    $root.attribs{'xmlns:media'} = 'http://search.yahoo.com/mrss/'
+    $root.attribs{'xmlns:media'} = NS-MEDIA
         unless $root.attribs{'xmlns:media'}.defined;
 }
 

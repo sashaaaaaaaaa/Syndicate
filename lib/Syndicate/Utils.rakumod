@@ -3,6 +3,8 @@ use XML;
 use XML::Entity;
 use DateTime::Grammar;
 
+my constant NS-ATOM is export = 'http://www.w3.org/2005/Atom';
+
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
 my $entity = XML::Entity.new;

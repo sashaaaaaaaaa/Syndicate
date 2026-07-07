@@ -3,6 +3,8 @@ use XML;
 use Syndicate::Extensions;
 use Syndicate::Utils;
 
+my constant NS-DC is export = 'http://purl.org/dc/elements/1.1/';
+
 unit module Syndicate::Extension::DublinCore:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(:namespace<dc>,
@@ -46,7 +48,7 @@ sub get-dc-texts($parent, Str $tag --> Array) is export {
 }
 
 sub add-dc-declaration(XML::Element $root --> Nil) is export {
-    $root.attribs{'xmlns:dc'} = 'http://purl.org/dc/elements/1.1/'
+    $root.attribs{'xmlns:dc'} = NS-DC
         unless $root.attribs{'xmlns:dc'}.defined;
 }
 

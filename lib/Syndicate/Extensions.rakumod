@@ -75,6 +75,12 @@ sub set-active(@exts, $elem) {
             %present{$prefix} = True if %present{$prefix}:exists;
         }
     }
+    for $elem.attribs.kv -> $k, $v {
+        with $k.index('xmlns:') {
+            my $prefix = $k.substr(6);
+            %present{$prefix} = True if %present{$prefix}:exists;
+        }
+    }
     @exts.kv.map(-> $i, %ext { $i if !%ext<namespace> || %present{%ext<namespace>} }).Set
 }
 

@@ -47,7 +47,7 @@ multi method from-xml(XML::Element $entry-elem) {
     with $entry-elem.elements(:TAG<content>)[0] -> $ce {
         $content-type = $ce.attribs<type> // "text";
         if $content-type eq "xhtml" {
-            $content = try { $ce.nodes».Str.join('').trim };
+            $content = try { $ce.nodes.join('').trim };
             unless $content.defined {
                 Syndicate::Stats.record-error;
                 $content = Str;
@@ -181,7 +181,6 @@ method XML {
 }
 
 method Str {
-    return $!cached-str if $!cached-str.defined;
     $!cache-lock.protect: { $!cached-str //= ~self.XML }
 }
 

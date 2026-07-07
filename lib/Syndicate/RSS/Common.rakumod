@@ -1,10 +1,30 @@
 use v6.d;
 use XML;
 use Syndicate::Utils;
+use Syndicate::Extension::ITunes;
 
 my constant NS-CONTENT is export = 'http://purl.org/rss/1.0/modules/content/';
 
 unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
+
+method parse-channel-common($channel --> Hash) {
+    my %h;
+    %h<title>   = get-text($channel, "title");
+    %h<link>    = get-text($channel, "link");
+    %h<desc>    = get-text($channel, "description");
+    %h<lang>    = get-text-optional($channel, "language");
+    %h<cpy>     = get-text-optional($channel, "copyright");
+    %h<me>      = get-text-optional($channel, "managingEditor");
+    %h<wm>      = get-text-optional($channel, "webMaster");
+    %h<pd>      = parse-date-optional(get-text-optional($channel, "pubDate"));
+    %h<lbd>     = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
+    %h<gen>     = get-text-optional($channel, "generator");
+    %h<docs>    = get-text-optional($channel, "docs");
+    %h<image>   = self.parse-image($channel);
+    %h<it-author>  = get-itunes-text($channel, "author");
+    %h<it-summary> = get-itunes-text($channel, "summary");
+    %h
+}
 
 method parse-image($parent, Bool :$rdf-about = False --> Hash) {
     my %image;

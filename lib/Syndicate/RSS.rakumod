@@ -11,7 +11,6 @@ use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 
-my constant NS-ATOM        = 'http://www.w3.org/2005/Atom';
 my constant ONE-WEEK-MINUTES = 10080;
 
 unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
@@ -29,6 +28,8 @@ has %.image;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.atom-self-link;
+has XML::Element $!cached-xml;
+has Lock $!xml-lock = Lock.new;
 has Bool $!needs-dc is built;
 has Bool $!needs-media is built;
 has Bool $!needs-content is built;
@@ -42,23 +43,23 @@ multi method new(XML::Document $doc) {
     my $channel = $rss.elements(:TAG<channel>)[0];
     die "No channel element" unless $channel;
 
-    my $title   = get-text($channel, "title");
-    my $link    = get-text($channel, "link");
-    my $desc    = get-text($channel, "description");
-    my $lang    = get-text-optional($channel, "language");
-    my $cpy     = get-text-optional($channel, "copyright");
-    my $me      = get-text-optional($channel, "managingEditor");
-    my $wm      = get-text-optional($channel, "webMaster");
-    my $pd      = parse-date-optional(get-text-optional($channel, "pubDate"));
-    my $lbd     = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
+    my %common = self.parse-channel-common($channel);
+    my $title   = %common<title>;
+    my $link    = %common<link>;
+    my $desc    = %common<desc>;
+    my $lang    = %common<lang>;
+    my $cpy     = %common<cpy>;
+    my $me      = %common<me>;
+    my $wm      = %common<wm>;
+    my $pd      = %common<pd>;
+    my $lbd     = %common<lbd>;
+    my $gen     = %common<gen>;
+    my $docs    = %common<docs>;
+    my %image   = %common<image>;
+    my $it-author  = %common<it-author>;
+    my $it-summary = %common<it-summary>;
     my @categories = parse-categories($channel);
-    my $gen     = get-text-optional($channel, "generator");
-    my $docs    = get-text-optional($channel, "docs");
     my $ttl-str = get-text-optional($channel, "ttl");
-    my $it-author  = get-itunes-text($channel, "author");
-    my $it-summary = get-itunes-text($channel, "summary");
-
-    my %image = self.parse-image($channel);
 
     my $atom-self-link = Str;
     # Matches only the literal prefix 'atom'. XML namespace URIs are not
@@ -121,6 +122,8 @@ multi method new(Str $xml) {
 }
 
 method XML {
+    $!xml-lock.protect: {
+        $!cached-xml //= do {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('2.0')}));
     add-dc-declaration($xml)    if $!needs-dc;
     add-media-declaration($xml) if $!needs-media;
@@ -165,7 +168,9 @@ method XML {
 
     $channel.append: $_.XML for @.items;
 
-    return $xml;
+    $xml
+        }
+    }
 }
 
 =begin pod
