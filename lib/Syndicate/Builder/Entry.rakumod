@@ -4,7 +4,6 @@ use Syndicate::RSS::V1_0::Item;
 use Syndicate::Atom::Item;
 use Syndicate::RSS::V0_91::Item;
 use Syndicate::JSONFeed::Item;
-use Syndicate::Stats;
 
 unit class Syndicate::Builder::Entry:ver<0.0.1>:auth<zef:sasha>;
 
