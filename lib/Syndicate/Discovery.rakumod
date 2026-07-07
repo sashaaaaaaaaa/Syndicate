@@ -14,9 +14,12 @@ unit class Syndicate::Discovery:ver<0.0.1>:auth<zef:sasha>;
 
 has HTTP::Tiny $.ua is built(False);
 
-submethod BUILD(Int :$max-redirects = 5, Int :$timeout = 30, :$ua) {
+# The installed HTTP::Tiny (v0.2.6) does not support :verify or :timeout.
+# SSL certificates are not verified — use a custom :$ua (e.g. from Cro)
+# if verification is required. See also: S1 in the audit report.
+submethod BUILD(Int :$max-redirect = 5, :$ua) {
     with $ua { $!ua = $_ }
-    $!ua //= HTTP::Tiny.new(:$max-redirects, :$timeout);
+    $!ua //= HTTP::Tiny.new(:$max-redirect);
 }
 
 method !decode-response($resp --> Str) {
@@ -167,11 +170,13 @@ RSS, Atom, and JSON Feed content types.
 
 =head1 METHODS
 
-=head2 C<fetch(Str $url, Int :$max-redirects = 5, Int :$timeout = 30)>
+=head2 C<fetch(Str $url)>
 
 Fetches a URL and parses the feed. Dies on HTTP errors.
+SSL certificates are not verified by default — pass a custom C<:$ua>
+with proper TLS configuration (e.g. Cro::HTTP::Client) to C<.new>.
 
-=head2 C<discover(Str $url, Int :$max-redirects = 5, Int :$timeout = 30)>
+=head2 C<discover(Str $url)>
 
 Fetches a URL, tries to parse as a feed. If that fails, searches the HTML
 for C<E<lt>linkE<gt>> feed tags and fetches the first discovered feed URL.
