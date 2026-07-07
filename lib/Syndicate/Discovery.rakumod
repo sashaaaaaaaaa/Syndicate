@@ -125,6 +125,16 @@ method base-url(Str $html --> Str) {
     Str
 }
 
+sub normalize-path(Str $path --> Str) {
+    my @parts;
+    for $path.split('/') {
+        when '.' { next }
+        when '..' { @parts.pop if @parts }
+        default  { @parts.push($_) }
+    }
+    @parts.join('/')
+}
+
 method resolve-url(Str $url, Str $base --> Str) {
     return $url if $url.lc.starts-with('http://') || $url.lc.starts-with('https://');
     my $scheme = try { URI.new($base).scheme.lc } // 'https';
@@ -138,6 +148,7 @@ method resolve-url(Str $url, Str $base --> Str) {
         $bp ~~ s/ <-[/]>* $ // unless $bp.ends-with('/');
         $rp = ($bp.chars ?? $bp !! '/') ~ $rp;
     }
+    $rp = normalize-path($rp);
     my $result = $b.clone;
     $result.path($rp);
     $result.query($u.query // "");
