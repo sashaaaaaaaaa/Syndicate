@@ -72,7 +72,7 @@ multi method new(XML::Document $doc) {
     }
 
     my @items;
-    my ($needs-dc, $needs-media, $needs-itunes, $needs-content);
+    my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
     for $channel.elements(:TAG<item>) -> $item-elem {
         my $item = Syndicate::RSS::Item.from-xml($item-elem);
         my ($dc, $media, $itunes, $content) = $item.namespace-flags;

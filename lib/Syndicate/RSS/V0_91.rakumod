@@ -61,7 +61,7 @@ multi method new(XML::Document $doc) {
     my @skipDays  = self.parse-skip-days($channel);
 
     my @items;
-    my ($needs-dc, $needs-media, $needs-itunes);
+    my Bool ($needs-dc, $needs-media, $needs-itunes) = False xx 3;
     for $channel.elements(:TAG<item>) -> $item-elem {
         my $item = Syndicate::RSS::V0_91::Item.from-xml($item-elem);
         my ($dc, $media, $itunes) = $item.namespace-flags;

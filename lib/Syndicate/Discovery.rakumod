@@ -40,7 +40,7 @@ method fetch(Str $url --> Syndicate::Feed:D) {
     my $resp = $.ua.get($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $ct = $resp<headers><content-type>.[0] // '';
-    die "Not a feed — Content-Type: $ct" unless $ct.lc ~~ /:i xml | json | rss | atom /;
+    die "Not a feed — Content-Type: $ct" unless $ct.lc ~~ /:i 'application/' [ atom+xml | rss+xml | feed+json | xml ] | 'text/xml' /;
     my $body = self!decode-response($resp);
     parse-feed($body)
 }

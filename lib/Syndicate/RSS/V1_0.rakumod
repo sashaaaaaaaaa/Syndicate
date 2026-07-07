@@ -36,20 +36,18 @@ multi method new(XML::Document $doc) {
     die "No channel element" unless $channel;
 
     my $about = $channel.attribs{'rdf:about'} // $channel.attribs<about> // Str;
-    my $title = get-text($channel, "title");
-    my $link  = get-text($channel, "link");
-    my $desc  = get-text($channel, "description");
-    my $gen   = get-text-optional($channel, "generator");
-    my $lang = get-text-optional($channel, "language");
+    my %common = self.parse-channel-common($channel);
+    my $title   = %common<title>;
+    my $link    = %common<link>;
+    my $desc    = %common<desc>;
+    my $gen     = %common<gen>;
+    my %image   = self.parse-image($root, :rdf-about);
+    my $lang    = %common<lang>;
     my $lang-fallback = False;
     unless $lang.defined {
-        # No <language> element or empty element — try Dublin Core fallback
         $lang = get-dc-text($channel, "language");
         $lang-fallback = True if $lang.defined;
-
     }
-
-    my %image = self.parse-image($root, :rdf-about);
 
     my @categories;
     for $channel.elements(:TAG<dc:subject>) -> $s {
@@ -59,7 +57,7 @@ multi method new(XML::Document $doc) {
     }
 
     my @items;
-    my ($needs-dc, $needs-media, $needs-itunes, $needs-content);
+    my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
     $needs-dc ||= ?@categories;
     for $root.elements(:TAG<item>) -> $item-elem {
         my $title-el = $item-elem.elements(:TAG<title>)[0];

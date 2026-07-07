@@ -43,9 +43,10 @@ multi method from-xml(XML::Element $item-elem) {
     my $encoded = get-text-optional($item-elem, "content:encoded")
     // get-text-by-ns($item-elem, "encoded", 'http://purl.org/rss/1.0/modules/content/');
 
+    my $author  = get-text-optional($item-elem, "author");
     my %extra;
     run-parsers($item-elem, %extra);
-    my $author = %extra<author> // Str;
+    $author = $author.defined && $author.chars ?? $author !! %extra<author> // Str;
 
     my $updated = %extra<updated>:exists
         ?? parse-date-optional(%extra<updated>)
