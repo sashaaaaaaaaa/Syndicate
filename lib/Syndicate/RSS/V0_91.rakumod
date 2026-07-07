@@ -31,6 +31,7 @@ has Lock $!xml-lock = Lock.new;
 has Bool $!needs-dc is built;
 has Bool $!needs-media is built;
 has Bool $!needs-itunes is built;
+has Bool $!needs-content is built;
 
 multi method new(XML::Document $doc) {
     my $rss = $doc.root;
@@ -61,13 +62,14 @@ multi method new(XML::Document $doc) {
     my @skipDays  = self.parse-skip-days($channel);
 
     my @items;
-    my Bool ($needs-dc, $needs-media, $needs-itunes) = False xx 3;
+    my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
     for $channel.elements(:TAG<item>) -> $item-elem {
         my $item = Syndicate::RSS::V0_91::Item.from-xml($item-elem);
-        my ($dc, $media, $itunes) = $item.namespace-flags;
+        my ($dc, $media, $itunes, $content) = $item.namespace-flags;
         $needs-dc ||= $dc;
         $needs-media ||= $media;
         $needs-itunes ||= $itunes;
+        $needs-content ||= $content;
         @items.push: $item;
     }
     $needs-itunes ||= $it-author.defined || $it-summary.defined;
@@ -86,7 +88,7 @@ multi method new(XML::Document $doc) {
         .rethrow;
     }
     self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays),
-               :$needs-dc, :$needs-media, :$needs-itunes)
+               :$needs-dc, :$needs-media, :$needs-itunes, :$needs-content)
 }
 
 multi method new(Str $xml) {
@@ -105,9 +107,10 @@ method XML {
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;
 
-    add-dc-declaration($xml)    if $!needs-dc;
-    add-media-declaration($xml) if $!needs-media;
-    add-itunes-declaration($xml) if $!needs-itunes;
+    add-dc-declaration($xml)        if $!needs-dc;
+    add-media-declaration($xml)     if $!needs-media;
+    add-itunes-declaration($xml)    if $!needs-itunes;
+    $xml.attribs{'xmlns:content'} = NS-CONTENT if $!needs-content;
 
     add-element($channel, "title",          $.title);
     add-element($channel, "link",           $.link);

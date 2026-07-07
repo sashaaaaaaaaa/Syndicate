@@ -84,6 +84,7 @@ method namespace-flags() {
         $!has-dc-creator || False,
         ?(@!media-contents) || ?(@!media-thumbnails) || $!media-title.defined || $!media-description.defined,
         $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
+        ?($!content.defined && $!content.chars),
     )
 }
 
