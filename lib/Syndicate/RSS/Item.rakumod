@@ -57,7 +57,6 @@ multi method from-xml(XML::Element $item-elem, :$active?) {
     my %enclosure = self!parse-enclosure($item-elem);
 
     my %extra;
-    %extra<author> = $author if $author.defined && $author.chars;
     run-parsers($item-elem, %extra, :$active);
     # %extra keys from extensions: author, has-dc-creator, media-contents,
     #   media-thumbnails, media-title, media-description,
