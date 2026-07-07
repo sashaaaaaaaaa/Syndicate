@@ -5,6 +5,7 @@ unit class Syndicate::Stats:ver<0.0.1>:auth<zef:sasha>;
 my atomicint $feeds-parsed = 0;
 my atomicint $items-parsed = 0;
 my atomicint $errors = 0;
+my $reset-lock = Lock.new;
 
 submethod feeds-parsed { ⚛$feeds-parsed }
 submethod items-parsed { ⚛$items-parsed }
@@ -15,9 +16,11 @@ submethod record-item { $items-parsed⚛++ }
 submethod record-error { $errors⚛++ }
 
 submethod reset {
-    $feeds-parsed ⚛= 0;
-    $items-parsed ⚛= 0;
-    $errors ⚛= 0;
+    $reset-lock.protect: {
+        $feeds-parsed ⚛= 0;
+        $items-parsed ⚛= 0;
+        $errors ⚛= 0;
+    }
 }
 
 =begin pod

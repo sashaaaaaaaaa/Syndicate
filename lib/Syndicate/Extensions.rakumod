@@ -10,7 +10,9 @@ unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
 my @ext-snapshot;
 my $ext-lock = Lock.new;
 
-sub extension-count(--> Int) is export { @ext-snapshot.elems }
+sub extension-count(--> Int) is export {
+    $ext-lock.protect: { @ext-snapshot.elems }
+}
 
 sub remove-last-ext(--> Nil) is export {
     $ext-lock.protect: {
@@ -29,7 +31,7 @@ sub register-ext(:&parse, :&generate, Str :$namespace?) is export {
 }
 
 sub run-parsers($elem, %attrs) is export {
-    my @exts := @ext-snapshot;
+    my @exts = $ext-lock.protect: { @ext-snapshot.List };
     return unless @exts;
     my $active = set-active(@exts, $elem);
     for @exts.kv -> $i, %ext {
@@ -46,7 +48,7 @@ sub run-parsers($elem, %attrs) is export {
 }
 
 sub run-generators($xml, $item) is export {
-    my @exts := @ext-snapshot;
+    my @exts = $ext-lock.protect: { @ext-snapshot.List };
     return unless @exts;
     for @exts -> %ext {
         %ext<generate>($xml, $item);
