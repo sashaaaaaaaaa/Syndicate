@@ -59,11 +59,12 @@ multi method new(XML::Document $doc) {
     my @items;
     my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
     $needs-dc ||= ?@categories;
+    sub has-nonempty-text($elem, $tag) {
+        my $e = $elem.elements(:TAG($tag))[0];
+        $e && $e.contents[0] && $e.contents[0].?text.trim.chars
+    }
     for $root.elements(:TAG<item>) -> $item-elem {
-        my $title-el = $item-elem.elements(:TAG<title>)[0];
-        my $link-el  = $item-elem.elements(:TAG<link>)[0];
-        unless $title-el && $title-el.contents[0] && $title-el.contents[0].?text.trim.chars
-            && $link-el && $link-el.contents[0] && $link-el.contents[0].?text.trim.chars {
+        unless has-nonempty-text($item-elem, "title") && has-nonempty-text($item-elem, "link") {
             note "Skipping RSS 1.0 item without title or link";
             next;
         }

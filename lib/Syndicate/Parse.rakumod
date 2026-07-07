@@ -8,7 +8,9 @@ use Syndicate::JSONFeed;
 use Syndicate::Stats;
 use JSON::Fast;
 
-my constant MAX-FEED-SIZE = 10 * 1024 * 1024;
+my constant MAX-FEED-SIZE    = 10 * 1024 * 1024;
+my constant RSS_VER_091      = "0.91";
+my constant RSS_VER_2        = "2.0";
 
 unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
@@ -37,7 +39,7 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
 multi sub feed-format(Str $name, Str $ver) {
     given $name {
         when 'feed'   { return Atom }
-        when 'rss'    { return $ver eq '0.91' ?? RSS091 !! RSS2 }
+        when 'rss'    { return $ver eq RSS_VER_091 ?? RSS091 !! RSS2 }
         when 'rdf:RDF' | 'RDF' { return RSS1 }
         default { die "Unknown feed format: <$_>" }
     }
