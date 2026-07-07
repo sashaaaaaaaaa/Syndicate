@@ -226,7 +226,7 @@ format's constructor signatures.
 =item C<rss-feed> - returns L<C<Syndicate::RSS>|rakudoc:Syndicate::RSS>
 =item C<atom-feed> - returns L<C<Syndicate::Atom>|rakudoc:Syndicate::Atom>
 =item C<rss091-feed> - returns L<C<Syndicate::RSS::V0_91>|rakudoc:Syndicate::RSS::V0_91>
-=item C<rss1-feed> - returns L<C<Syndicate::RSS::V1_0>|rakudoc:Syndicate::RSS::V1_0>
+=item C<rss1-feed> - returns L<C<Syndicate::RSS::V1_0>|rakudoc:Syndicate::RSS::V1_0> (note: iTunes author/summary are silently dropped — V1_0 lacks those attributes)
 =item C<json-feed> - returns L<C<Syndicate::JSONFeed>|rakudoc:Syndicate::JSONFeed>
 =item C<rss-str> - RSS 2.0 XML string
 =item C<atom-str> - Atom 1.0 XML string

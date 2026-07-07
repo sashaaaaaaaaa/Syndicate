@@ -51,6 +51,8 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $clean = $input.trim;
     die "parse-feed: empty input" unless $clean.chars;
+    die "parse-feed: input too large ({$clean.codes} chars, max {MAX-FEED-SIZE})"
+        if $clean.codes > MAX-FEED-SIZE;
     with try-xml-parse($clean) -> $root-info {
         return parse-feed($root-info<doc>);
     }
