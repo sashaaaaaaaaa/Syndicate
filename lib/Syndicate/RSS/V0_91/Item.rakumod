@@ -33,13 +33,13 @@ multi method new(XML::Element $xml-elem) {
     $item
 }
 
-multi method from-xml(XML::Element $item-elem) {
+multi method from-xml(XML::Element $item-elem, :$active?) {
     my $title = get-text-optional($item-elem, "title");
     my $link  = get-text-optional($item-elem, "link");
     my $desc  = get-text-optional($item-elem, "description");
 
     my %extra;
-    run-parsers($item-elem, %extra);
+    run-parsers($item-elem, %extra, :$active);
     my $author = %extra<author> // Str;
 
     my $updated = %extra<updated>:exists

@@ -41,7 +41,7 @@ multi method new(XML::Element $xml-elem) {
     $item
 }
 
-multi method from-xml(XML::Element $item-elem) {
+multi method from-xml(XML::Element $item-elem, :$active?) {
     my $title   = get-text-optional($item-elem, "title");
     my $link    = get-text-optional($item-elem, "link");
     my $desc    = get-text-optional($item-elem, "description");
@@ -58,7 +58,7 @@ multi method from-xml(XML::Element $item-elem) {
 
     my %extra;
     %extra<author> = $author if $author.defined && $author.chars;
-    run-parsers($item-elem, %extra);
+    run-parsers($item-elem, %extra, :$active);
     # %extra keys from extensions: author, has-dc-creator, media-contents,
     #   media-thumbnails, media-title, media-description,
     #   itunes-author, itunes-summary, itunes-duration

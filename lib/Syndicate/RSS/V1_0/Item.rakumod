@@ -35,7 +35,7 @@ multi method new(XML::Element $xml-elem) {
     $item
 }
 
-multi method from-xml(XML::Element $item-elem) {
+multi method from-xml(XML::Element $item-elem, :$active?) {
     my $about   = $item-elem.attribs{'rdf:about'} // $item-elem.attribs<about> // Str;
     my $title   = get-text-optional($item-elem, "title");
     my $link    = get-text-optional($item-elem, "link");
@@ -45,7 +45,7 @@ multi method from-xml(XML::Element $item-elem) {
 
     my $author  = get-text-optional($item-elem, "author");
     my %extra;
-    run-parsers($item-elem, %extra);
+    run-parsers($item-elem, %extra, :$active);
     $author = $author.defined && $author.chars ?? $author !! %extra<author> // Str;
 
     my $updated = %extra<updated>:exists

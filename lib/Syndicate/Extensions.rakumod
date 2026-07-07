@@ -30,12 +30,12 @@ sub register-ext(:&parse, :&generate, Str :$namespace?) is export {
     }
 }
 
-sub run-parsers($elem, %attrs) is export {
+sub run-parsers($elem, %attrs, :$active?) is export {
     my @exts = $ext-lock.protect: { @ext-snapshot.List };
     return unless @exts;
-    my $active = set-active(@exts, $elem);
+    my $act = $active // set-active(@exts, $elem);
     for @exts.kv -> $i, %ext {
-        next unless $active{$i};
+        next unless $act{$i};
         %ext<parse>($elem, %attrs);
         CATCH {
             when X::Control { .rethrow }
