@@ -52,12 +52,19 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
 
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $clean = $input.trim;
+    $clean .= subst(/^\xFEFF/, '');  # strip BOM for both XML and JSON paths
     die "parse-feed: empty input" unless $clean.chars;
     die "parse-feed: input too large ({$clean.codes} chars, max {MAX-FEED-SIZE})"
         if $clean.codes > MAX-FEED-SIZE;
-    with try-xml-parse($clean) -> $root-info {
-        return parse-feed($root-info<doc>);
+
+    my $looks-like-xml = $clean.starts-with('<');
+    if $looks-like-xml {
+        with try-xml-parse($clean) -> $root-info {
+            return parse-feed($root-info<doc>);
+        }
+        die "parse-feed: XML parsing failed — input is not valid XML";
     }
+
     my $parsed = try { from-json($clean) };
     unless $parsed ~~ Hash
         && $parsed<version>.defined
