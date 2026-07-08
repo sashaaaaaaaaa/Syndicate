@@ -30,5 +30,5 @@ Revision history for Syndicate
     - iTunes podcast (itunes:author, itunes:summary, itunes:duration)
 
     [Testing]
-    - 13 test files with 483 assertions covering parsing, generation,
+    - 13 test files with 528 assertions covering parsing, generation,
       roundtrip, builder API, feed discovery, extensions, and concurrency
