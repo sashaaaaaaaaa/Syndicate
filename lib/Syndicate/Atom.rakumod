@@ -96,8 +96,8 @@ multi method new(XML::Document $doc) {
         :link-self(%link-self), :link-alternate(%link-alternate);
     %bless<updated> = $upd if $upd ~~ DateTime;
     CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
+        when X::Control { .rethrow }
+        default { Syndicate::Stats.record-error; .rethrow }
     }
     self.bless(|%bless, :@items, :@contributors, :categories(@categories))
 }

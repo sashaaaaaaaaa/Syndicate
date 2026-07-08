@@ -55,7 +55,7 @@ multi method new(XML::Document $doc) {
     my $lbd     = %common<lbd>;
     my $gen     = %common<gen>;
     my $docs    = %common<docs>;
-    my %image   = %common<image>;
+    my %image   = self.parse-image($channel);
     my $it-author  = %common<it-author>;
     my $it-summary = %common<it-summary>;
     my @categories = parse-categories($channel);
@@ -103,8 +103,8 @@ multi method new(XML::Document $doc) {
         }
     }
     CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
+        when X::Control { .rethrow }
+        default { Syndicate::Stats.record-error; .rethrow }
     }
     # CATCH covers the entire method scope (Raku phaser semantics),
     # not just the single self.bless call below.

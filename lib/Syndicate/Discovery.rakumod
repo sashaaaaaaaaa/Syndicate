@@ -14,9 +14,10 @@ unit class Syndicate::Discovery:ver<0.0.1>:auth<zef:sasha>;
 
 has HTTP::Tiny $.ua is built(False);
 
-# The installed HTTP::Tiny (v0.2.6) does not support :verify or :timeout.
-# SSL certificates are not verified — use a custom :$ua (e.g. from Cro)
-# if verification is required. See also: S1 in the audit report.
+=begin comment
+TLS: HTTP::Tiny v0.2.6 lacks :verify; SSL certs are not validated.
+Pass a custom :$ua (e.g. from Cro with TLS config) to enforce verification.
+=end comment
 submethod BUILD(Int :$max-redirect = 5, :$ua) {
     with $ua { $!ua = $_ }
     $!ua //= HTTP::Tiny.new(:$max-redirect);
@@ -33,9 +34,24 @@ method !decode-response($resp --> Str) {
 }
 
 method !validate-url(Str $url) {
-    my $scheme = try { URI.new($url).scheme.lc };
+    my $uri = try { URI.new($url) };
+    die "Invalid URL" without $uri;
+    my $scheme = $uri.scheme.lc;
     die "Blocked URL scheme — only http and https are permitted"
         unless $scheme.defined && $scheme ∈ <http https>;
+    my $host = $uri.host.lc;
+    die "Blocked empty host" unless $host.defined && $host.chars;
+    # Reject bare hostnames (no dots) — likely an internal DNS short name
+    die "Blocked host without domain" unless $host.contains('.') || $host eq 'localhost';
+    # Reject private, loopback, and link-local IPv4 addresses
+    if $host ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
+        my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
+        die "Blocked loopback address"    if $a == 127;
+        die "Blocked link-local address"  if $a == 169 && $b == 254;
+        die "Blocked private address"     if $a == 10;
+        die "Blocked private address"     if $a == 192 && $b == 168;
+        die "Blocked private address"     if $a == 172 && 16 <= $b <= 31;
+    }
 }
 
 method fetch(Str $url --> Syndicate::Feed:D) {

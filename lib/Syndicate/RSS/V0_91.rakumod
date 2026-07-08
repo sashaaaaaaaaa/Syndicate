@@ -53,7 +53,7 @@ multi method new(XML::Document $doc) {
     my $docs    = %common<docs>;
     my $pd      = %common<pd>;
     my $lbd     = %common<lbd>;
-    my %image   = %common<image>;
+    my %image   = self.parse-image($channel);
     my $it-author  = %common<it-author>;
     my $it-summary = %common<it-summary>;
     my $rating  = get-text-optional($channel, "rating");
@@ -84,8 +84,8 @@ multi method new(XML::Document $doc) {
     %bless<itunes-author> = $it-author if $it-author.defined;
     %bless<itunes-summary> = $it-summary if $it-summary.defined;
     CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
+        when X::Control { .rethrow }
+        default { Syndicate::Stats.record-error; .rethrow }
     }
     self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays),
                :$needs-dc, :$needs-media, :$needs-itunes, :$needs-content)
@@ -117,7 +117,7 @@ method XML {
     add-element($channel, "description",    $.description);
     add-element($channel, "language",       $.language);
     add-element($channel, "rating",         $.rating);
-    add-element($channel, "copyright",      $.copyright) if $.copyright.defined;
+    add-element($channel, "copyright",      $.copyright);
     add-element($channel, "docs",           $.docs);
     add-element($channel, "managingEditor", $.managingEditor);
     add-element($channel, "webMaster",      $.webMaster);

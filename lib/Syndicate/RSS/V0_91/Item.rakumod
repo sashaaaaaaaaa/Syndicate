@@ -23,13 +23,19 @@ multi method new(Str $xml) {
     die "Invalid RSS 0.91 item XML: $!" unless $doc;
     die "Not an RSS 0.91 item element" unless $doc.root.name eq "item";
     my $item = self.from-xml($doc.root);
-    CATCH { Syndicate::Stats.record-error; .rethrow }
+    CATCH {
+        when X::Control { .rethrow }
+        default { Syndicate::Stats.record-error; .rethrow }
+    }
     $item
 }
 
 multi method new(XML::Element $xml-elem) {
     my $item = self.from-xml($xml-elem);
-    CATCH { Syndicate::Stats.record-error; .rethrow }
+    CATCH {
+        when X::Control { .rethrow }
+        default { Syndicate::Stats.record-error; .rethrow }
+    }
     $item
 }
 

@@ -175,6 +175,11 @@ my ($format, $feed) = parse-feed-with-format($input); # Both, one XML parse
 Provides auto-detection of feed format from raw input and dispatching
 to the appropriate parser class.
 
+B<Security note:> The underlying C<XML> module's behavior on entity
+expansion is version-dependent. In multi-tenant or untrusted-input
+scenarios, consider pre-scanning input or using an external XML parser
+with explicit XXE and billion-laughs protections.
+
 =head1 ENUM C<FeedFormat>
 
 =item C<Atom> - Atom 1.0

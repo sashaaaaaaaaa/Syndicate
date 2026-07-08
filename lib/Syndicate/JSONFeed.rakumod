@@ -73,8 +73,8 @@ multi method new-from-hash(%h) {
         :language(%h<language> // Str);
     %bless<expired> = %h<expired> if %h<expired>:exists;
     CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
+        when X::Control { .rethrow }
+        default { Syndicate::Stats.record-error; .rethrow }
     }
     self.bless(|%bless, :@items)
 }

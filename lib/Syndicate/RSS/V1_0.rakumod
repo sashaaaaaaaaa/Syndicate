@@ -78,8 +78,8 @@ multi method new(XML::Document $doc) {
     }
 
     CATCH {
-        Syndicate::Stats.record-error;
-        .rethrow;
+        when X::Control { .rethrow }
+        default { Syndicate::Stats.record-error; .rethrow }
     }
     self.bless(:$about, :$title, :$link, :description($desc),
                :generator($gen), :language($lang),

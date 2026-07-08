@@ -20,7 +20,6 @@ method parse-channel-common($channel --> Hash) {
     %h<lbd>     = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
     %h<gen>     = get-text-optional($channel, "generator");
     %h<docs>    = get-text-optional($channel, "docs");
-    %h<image>   = self.parse-image($channel);
     %h<it-author>  = get-itunes-text($channel, "author");
     %h<it-summary> = get-itunes-text($channel, "summary");
     %h

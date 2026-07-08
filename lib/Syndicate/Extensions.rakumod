@@ -108,12 +108,21 @@ Register an extension. C<&parse> receives an XML::Element and a mutable
 hash of attributes. C<&generate> receives an XML::Element and the item
 object.
 
+=head2 C<remove-last-ext>
+
+Removes the most recently registered extension. Designed for test
+teardown only. Must not be called concurrently with C<run-parsers>
+or C<run-generators>.
+
 =head2 C<run-parsers($elem, %attrs)>
 
 Runs all registered parse callbacks. Called during RSS item parsing.
+The extension snapshot is read atomically; concurrent calls to
+C<remove-last-ext> during parsing are unsupported.
 
 =head2 C<run-generators($xml, $item)>
 
 Runs all registered generate callbacks. Called during RSS item XML output.
+Same atomic-read caveat as C<run-parsers>.
 
 =end pod
