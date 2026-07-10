@@ -41,16 +41,41 @@ method !validate-url(Str $url) {
         unless $scheme.defined && $scheme ∈ <http https>;
     my $host = $uri.host.lc;
     die "Blocked empty host" unless $host.defined && $host.chars;
-    # Reject bare hostnames (no dots) — likely an internal DNS short name
-    die "Blocked host without domain" unless $host.contains('.') || $host eq 'localhost';
+    # Reject bare hostnames (no dots) — SSRF via internal DNS short names
+    die "Blocked host without domain" unless $host.contains('.');
     # Reject private, loopback, and link-local IPv4 addresses
     if $host ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
         my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
+        die "Blocked unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
         die "Blocked loopback address"    if $a == 127;
         die "Blocked link-local address"  if $a == 169 && $b == 254;
         die "Blocked private address"     if $a == 10;
         die "Blocked private address"     if $a == 192 && $b == 168;
         die "Blocked private address"     if $a == 172 && 16 <= $b <= 31;
+    }
+    # Reject IPv6 loopback, link-local, ULA, and IPv4-mapped addresses
+    if $host ~~ /^ '['? (<[0..9a..f:]>+) ']'? $/ {
+        my $addr = ~$0;
+        die "Blocked IPv6 loopback address"     if $addr eq '::1';
+        die "Blocked IPv6 link-local address"   if $addr.starts-with('fe80') || $addr.starts-with('feb0')
+                                                || $addr.starts-with('fe90') || $addr.starts-with('fea0')
+                                                || $addr.starts-with('feb1') || $addr.starts-with('feb2')
+                                                || $addr.starts-with('feb3') || $addr.starts-with('feb4')
+                                                || $addr.starts-with('feb5') || $addr.starts-with('feb6')
+                                                || $addr.starts-with('feb7') || $addr.starts-with('feb8')
+                                                || $addr.starts-with('feb9') || $addr.starts-with('feba')
+                                                || $addr.starts-with('febb') || $addr.starts-with('febc')
+                                                || $addr.starts-with('febd') || $addr.starts-with('febe')
+                                                || $addr.starts-with('febf');
+        die "Blocked IPv6 unique-local address" if $addr.starts-with('fc') || $addr.starts-with('fd');
+        # Check IPv4-mapped IPv6 (::ffff:x.x.x.x)
+        if $addr ~~ /^ '::ffff:' (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
+            my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
+            die "Blocked mapped loopback"      if $a == 127;
+            die "Blocked mapped unspecified"   if $a == 0 && $b == 0 && $c == 0 && $d == 0;
+            die "Blocked mapped private"       if $a == 10 || $a == 192 && $b == 168
+                                              || $a == 172 && 16 <= $b <= 31;
+        }
     }
 }
 
@@ -83,8 +108,13 @@ method discover(Str $url --> Syndicate::Feed:D) {
 method find-feeds(Str $html, Str $base-url --> Array) {
     my @feeds;
     my $base = self.base-url($html) // $base-url;
+    # Strip HTML comments, <script>, and <style> blocks to avoid
+    # false-positive link detection inside them.
+    my $clean = $html.subst(:g, / '<!--' .*? '-->' /)
+                     .subst(:g, / '<script' .*? '</script>' /)
+                     .subst(:g, / '<style'  .*? '</style>' /);
 
-    for $html.comb($link-tag) -> $tag {
+    for $clean.comb($link-tag) -> $tag {
         my %attr = self!parse-attrs($tag);
         next unless %attr<rel> && %attr<rel>.lc eq 'alternate';
         my $tv = (%attr<type> // "").lc;
@@ -98,19 +128,7 @@ method find-feeds(Str $html, Str $base-url --> Array) {
 }
 
 method !find-first-feed(Str $html, Str $base-url) {
-    my $base = self.base-url($html) // $base-url;
-
-    for $html.comb($link-tag) -> $tag {
-        my %attr = self!parse-attrs($tag);
-        next unless %attr<rel> && %attr<rel>.lc eq 'alternate';
-        my $tv = (%attr<type> // "").lc;
-        next unless $tv eq 'application/rss+xml'
-                  || $tv eq 'application/atom+xml'
-                  || $tv eq 'application/feed+json';
-        next unless %attr<href>.defined;
-        return self.resolve-url(%attr<href>, $base);
-    }
-    return;
+    self.find-feeds($html, $base-url)[0]
 }
 
 method !parse-attrs(Str $tag --> Map) {

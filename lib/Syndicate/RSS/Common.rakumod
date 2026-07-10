@@ -45,7 +45,7 @@ method !build-xml-elements($parent, %data, *@keys) {
     for @keys -> $key {
         with %data{$key} {
             # ~$_ stringifies the value; callers pass Str or Numeric values
-            $parent.append: XML::Element.new(:name($key), :nodes([encode-entities(~$_)])) if $_.chars;
+            $parent.append: XML::Element.new(:name($key), :nodes([encode-entities(~$_)])) if ~$_;
         }
     }
 }

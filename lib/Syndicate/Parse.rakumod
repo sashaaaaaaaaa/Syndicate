@@ -10,7 +10,6 @@ use JSON::Fast;
 
 my constant MAX-FEED-SIZE    = 10 * 1024 * 1024;
 my constant RSS_VER_091      = "0.91";
-my constant RSS_VER_2        = "2.0";
 
 unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
@@ -20,6 +19,7 @@ enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 # Use parse-feed-with-format() when both format and feed are needed.
 multi sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
+    $clean .= subst(/^\xFEFF/, '');
     die "feed-format: empty input" unless $clean.chars;
 
     with try-xml-parse($clean) -> $root {
@@ -102,6 +102,7 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
 
 multi sub parse-feed-with-format(Str $input --> List) is export {
     my $clean = $input.trim;
+    $clean .= subst(/^\xFEFF/, '');
     die "parse-feed-with-format: empty input" unless $clean.chars;
 
     with try-xml-parse($clean) -> $root-info {
@@ -137,7 +138,7 @@ multi sub parse-file(IO::Path $path --> Syndicate::Feed:D) is export {
 }
 
 sub try-xml-parse(Str $clean) {
-    my $stripped = $clean.subst(/^\xFEFF/, '').trim-leading;
+    my $stripped = $clean.trim-leading;
     return Nil if $stripped.starts-with('{') || $stripped.starts-with('[');
     root-element($stripped)
 }

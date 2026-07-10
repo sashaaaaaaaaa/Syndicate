@@ -27,10 +27,13 @@ has Lock $!cache-lock = Lock.new;
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid Atom entry XML: $!" unless $doc;
-    my $item = self.from-xml($doc.root);
-    CATCH {
-        when X::Control { .rethrow }
-        default { Syndicate::Stats.record-error; .rethrow }
+    my $item;
+    {
+        $item = self.from-xml($doc.root);
+        CATCH {
+            when X::Control { .rethrow }
+            default { Syndicate::Stats.record-error; .rethrow }
+        }
     }
     $item
 }

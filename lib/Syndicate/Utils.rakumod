@@ -40,7 +40,7 @@ sub get-text-optional($parent, $tag --> Str) is export {
     # "element empty". Use .defined to distinguish from a found value.
     with $parent.elements(:TAG($tag))[0] -> $e {
         with $e.contents[0] -> $t {
-            my $text = ($t.?text // Str).trim;
+            my $text = ($t.?text // "").trim;
             return $text.defined && $text.chars ?? decode-entities($text) !! Str;
         }
     }
@@ -51,7 +51,7 @@ sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
     my $e = $parent.elements(:TAG($local-name), :namespace($ns-uri))[0];
     with $e {
         with $e.contents[0] -> $t {
-            my $text = ($t.?text // Str).trim;
+            my $text = ($t.?text // "").trim;
             return $text.defined && $text.chars ?? decode-entities($text) !! Str;
         }
     }

@@ -30,10 +30,13 @@ multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid RSS item XML: $!" unless $doc;
     die "Not an RSS item element" unless $doc.root.name eq "item";
-    my $item = self.from-xml($doc.root);
-    CATCH {
-        when X::Control { .rethrow }
-        default { Syndicate::Stats.record-error; .rethrow }
+    my $item;
+    {
+        $item = self.from-xml($doc.root);
+        CATCH {
+            when X::Control { .rethrow }
+            default { Syndicate::Stats.record-error; .rethrow }
+        }
     }
     $item
 }
@@ -148,7 +151,7 @@ method !parse-enclosure(XML::Element $item-elem) {
 
 method namespace-flags() {
     (
-        $!has-dc-creator || False,
+        $!has-dc-creator,
         ?(@!media-contents) || ?(@!media-thumbnails) || $!media-title.defined || $!media-description.defined,
         $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
         ?($!content.defined && $!content.chars),

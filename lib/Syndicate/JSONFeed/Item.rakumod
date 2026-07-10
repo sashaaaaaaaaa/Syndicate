@@ -27,7 +27,7 @@ has Hash $!cached-hash;
 has Lock $!cache-lock = Lock.new;
 has Lock $!hash-lock = Lock.new;
 
-method new-from-hash(%h) {
+multi method new-from-hash(%h) {
     my $title   = %h<title> // Str;
     my $link    = %h<url> // Str;
     my $summary = %h<summary> // Str;
