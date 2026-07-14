@@ -24,6 +24,7 @@ has Lock $!cache-lock = Lock.new;
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
     die "Invalid RSS 1.0 item XML: $!" unless $doc;
+    die "Not an RSS 1.0 item element" unless $doc.root.name eq "item";
     my $item;
     {
         $item = self.from-xml($doc.root);

@@ -73,6 +73,9 @@ multi method from-xml(XML::Element $item-elem, :$active?) {
     # Prefer explicit <author> over dc:creator to match RSS 2.0 element priority
     $author = $author.defined && $author.chars ?? $author !! %extra<author> // Str;
     # dc:subject is intentionally not stored here — only V1_0 items track @.dc-subjects
+    my $dc-updated = %extra<updated>:exists
+        ?? parse-date-optional(%extra<updated>)
+        !! Nil;
 
     my @media-contents    = @(%extra<media-contents>    // []);
     my @media-thumbnails  = @(%extra<media-thumbnails>  // []);
@@ -93,6 +96,7 @@ multi method from-xml(XML::Element $item-elem, :$active?) {
         :itunes-summary(%extra<itunes-summary> // Str),
         :itunes-duration(%extra<itunes-duration> // Str);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
+    %bless<updated> //= $dc-updated if $dc-updated ~~ DateTime;
     my $item = self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails);
     Syndicate::Stats.record-item;
     $item
@@ -134,7 +138,7 @@ method XML {
 method !parse-guid(XML::Element $item-elem) {
     my $guid-elem = $item-elem.elements(:TAG<guid>)[0];
     return (Str, True) unless $guid-elem;
-    my $guid = $guid-elem.contents[0].?text // Str;
+    my $guid = decode-entities($guid-elem.contents[0].?text // Str);
     my $is-permalink = ($guid-elem.attribs<isPermaLink> // "true") eq "true";
     ($guid, $is-permalink)
 }

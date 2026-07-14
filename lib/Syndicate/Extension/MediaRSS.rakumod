@@ -45,7 +45,7 @@ sub get-media-contents($parent --> Array) is export {
         %c<url>      = $e.attribs<url>      // Str;
         %c<type>     = $e.attribs<type>     // Str;
         %c<medium>   = $e.attribs<medium>   // Str;
-        %c<duration> = +$e.attribs<duration> if $e.attribs<duration>.defined;
+        %c<duration> = try +$e.attribs<duration> // $e.attribs<duration> if $e.attribs<duration>.defined;
         %c<fileSize> = +$e.attribs<fileSize> if $e.attribs<fileSize>.defined;
         %c<width>    = +$e.attribs<width>    if $e.attribs<width>.defined;
         %c<height>   = +$e.attribs<height>   if $e.attribs<height>.defined;
