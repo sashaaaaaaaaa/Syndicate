@@ -18,8 +18,8 @@ has Str $.rights;
 has Str $.icon;
 has Str $.logo;
 has @.contributors of Hash;
-has %.link-self of Str;
-has %.link-alternate of Str;
+has $.link-self;   # Array of Hash — stored as itemized Array to avoid flattening in bless
+has $.link-alternate;  # Array of Hash
 has DateTime $!computed-updated;
 has XML::Element $!cached-xml;
 has Lock $!xml-lock = Lock.new;
@@ -63,21 +63,21 @@ multi method new(XML::Document $doc) {
         @contributors.push: %c;
     }
 
-    my %link-self;
-    my %link-alternate;
+    my @link-self;
+    my @link-alternate;
     my $primary-link = Str;
     for $feed.elements(:TAG<link>) {
         my $rel = .attribs<rel> // "alternate";
         my $href = .attribs<href> // "";
         if $rel eq "self" {
-            %link-self = (href => $href, type => .attribs<type> // Str);
+            @link-self.push: %( href => $href, type => .attribs<type> // Str );
         }
         elsif $rel eq "alternate" {
-            %link-alternate = (href => $href, type => .attribs<type> // Str);
-            $primary-link = $href unless $primary-link;
+            @link-alternate.push: %( href => $href, type => .attribs<type> // Str );
+            $primary-link ||= $href;
         }
     }
-    $primary-link ||= %link-self<href>;
+    $primary-link ||= @link-self[0]<href> if @link-self;
 
     my @items;
     for $feed.elements(:TAG<entry>) -> $entry-elem {
@@ -92,14 +92,14 @@ multi method new(XML::Document $doc) {
         :$rights,
         :$author, :language($lang),
         :generator($gen), :$icon, :$logo,
-        :author-detail(%author-detail),
-        :link-self(%link-self), :link-alternate(%link-alternate);
+        :author-detail(%author-detail);
     %bless<updated> = $upd if $upd ~~ DateTime;
     CATCH {
         when X::Control { .rethrow }
         default { Syndicate::Stats.record-error; .rethrow }
     }
-    self.bless(|%bless, :@items, :@contributors, :categories(@categories))
+    self.bless(|%bless, :@items, :@contributors, :categories(@categories),
+               :link-self($(@link-self)), :link-alternate($(@link-alternate)))
 }
 
 multi method new(Str $xml) {
@@ -132,15 +132,19 @@ method XML {
         add-element($xml, "title",     $.title);
         add-element($xml, "subtitle",  $.subtitle);
 
-        if $.link.defined {
-            my %link-attr = :href(encode-entities($.link)), :rel<alternate>;
-            %link-attr<type> = %!link-alternate<type> if %!link-alternate<type>.defined;
-            $xml.append: XML::Element.new(:name<link>, :attribs(%link-attr));
+        if $!link-alternate.defined {
+            for @($!link-alternate) -> %link {
+                my %link-attr = :href(encode-entities(%link<href>)), :rel<alternate>;
+                %link-attr<type> = %link<type> if %link<type>.defined;
+                $xml.append: XML::Element.new(:name<link>, :attribs(%link-attr));
+            }
         }
-        if %!link-self<href>.defined {
-            my %attr = :href(encode-entities(%!link-self<href>)), :rel<self>;
-            %attr<type> = %!link-self<type> if %!link-self<type>.defined;
-            $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
+        if $!link-self.defined {
+            for @($!link-self) -> %link {
+                my %attr = :href(encode-entities(%link<href>)), :rel<self>;
+                %attr<type> = %link<type> if %link<type>.defined;
+                $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
+            }
         }
 
         if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
@@ -209,7 +213,7 @@ Parses and generates Atom 1.0 feeds. Does L<C<Syndicate::Feed>|rakudoc:Syndicate
 =item C<$.icon> - Feed icon URL
 =item C<$.logo> - Feed logo URL
 =item C<@.contributors> - Array of contributor hashes
-=item C<%.link-self> - Self link hash (href, type)
-=item C<%.link-alternate> - Alternate link hash (href, type)
+=item C<@.link-self> - Self link hashes (href, type)
+=item C<@.link-alternate> - Alternate link hashes (href, type)
 
 =end pod

@@ -105,7 +105,7 @@ method atom-feed {
     %bless<icon>          = $!icon        if $!icon.defined;
     %bless<logo>          = $!logo        if $!logo.defined;
     %bless<author-detail> = %author-detail;
-    %bless<updated>       = $.updated;
+    %bless<updated>       = $.updated  if $.updated.defined;
     my @cats = @!categories;
     Syndicate::Atom.new(|%bless, :@items, :categories(@cats))
 }

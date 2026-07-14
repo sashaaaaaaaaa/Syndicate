@@ -25,6 +25,11 @@ register-ext(:namespace<dc>,
         with $item.?has-dc-creator {
             add-dc-element($xml, "creator", $item.author) if $_ && $item.author.defined;
         }
+        # V1_0 items track dc-subjects; V1_0 stores updated as dc:date
+        if $item.?dc-subjects.defined {
+            add-dc-element($xml, "date", $item.updated.Str) if $item.updated.defined;
+            add-dc-element($xml, "subject", $_) for $item.dc-subjects.list;
+        }
     }
 );
 

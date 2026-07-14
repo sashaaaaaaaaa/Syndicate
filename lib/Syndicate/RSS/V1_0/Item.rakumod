@@ -103,12 +103,6 @@ method XML {
     }
 
     run-generators($xml, self);
-    if $.updated.defined {
-        add-dc-element($xml, "date", $.updated.Str);
-    }
-    for @.dc-subjects -> $s {
-        add-dc-element($xml, "subject", $s);
-    }
     $xml
 }
 

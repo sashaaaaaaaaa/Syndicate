@@ -61,9 +61,15 @@ sub run-generators($xml, $item) is export {
 }
 
 sub all-descendant-elements($n) {
-    $n ~~ XML::Element
-        ?? ($n, |$n.nodes.map({ all-descendant-elements($_) }).flat)
-        !! Empty
+    gather {
+        my @stack = $n;
+        while @stack {
+            my $e = @stack.shift;
+            next unless $e ~~ XML::Element;
+            take $e;
+            @stack.unshift: $e.nodes.Slip if $e ~~ XML::Element;
+        }
+    }
 }
 
 sub set-active(@exts, $elem) {
@@ -80,6 +86,7 @@ sub set-active(@exts, $elem) {
             my $prefix = $name.substr(0, $i);
             %present{$prefix} = True if %present{$prefix}:exists;
         }
+        last if so %present.values.all;
     }
     for $elem.attribs.kv -> $k, $v {
         with $k.index('xmlns:') {

@@ -45,7 +45,7 @@ my $atom = Syndicate::Atom.new(
     :id("http://example.com/atom"),
     :description("Testing atom roundtrip"),
     :updated(DateTime.new("2025-06-15T10:00:00Z")),
-    :link-self({ href => "http://example.com/atom", type => "application/atom+xml" }),
+    :link-self([ $(%( href => "http://example.com/atom", type => "application/atom+xml" )) ]),
     :items([
         Syndicate::Atom::Item.new(
             :title("Entry 1"),
@@ -61,7 +61,7 @@ like $atom-xml, / 'type="application/atom+xml"' /, "Atom self-link type preserve
 
 my $parsed-atom = Syndicate::Atom.new($atom-xml);
 is $parsed-atom.title, "Roundtrip Atom", "Atom roundtrip title";
-is $parsed-atom.link-self<type>, "application/atom+xml", "Atom self-link type roundtrips";
+is $parsed-atom.link-self[0]<type>, "application/atom+xml", "Atom self-link type roundtrips";
 is $parsed-atom.items.elems, 1, "Atom roundtrip item count";
 
 # --- RSS 0.91 skipHours/skipDays/textInput roundtrip ---

@@ -23,8 +23,8 @@ isa-ok $feed.updated, DateTime, "updated is DateTime";
 is $feed.updated.year, 2025, "updated year";
 
 is $feed.link, "http://example.com", "feed link (alternate)";
-is $feed.link-self<href>, "http://example.com/atom.xml", "feed link-self href";
-is $feed.link-alternate<href>, "http://example.com", "feed link-alternate href";
+is $feed.link-self[0]<href>, "http://example.com/atom.xml", "feed link-self href";
+is $feed.link-alternate[0]<href>, "http://example.com", "feed link-alternate href";
 
 ok $feed.author-detail<name>.defined, "feed author-detail name defined";
 is $feed.author-detail<name>, "Test Author", "feed author-detail name";

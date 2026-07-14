@@ -83,9 +83,6 @@ method XML {
     add-element($xml, "title",       $.title);
     add-element($xml, "link",        $.link);
     add-element($xml, "description", $.summary);
-    if $.content.defined && $.content.chars {
-        $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
-    }
     run-generators($xml, self);
     $xml
 }
@@ -99,7 +96,7 @@ method namespace-flags() {
         $!has-dc-creator,
         ?(@!media-contents) || ?(@!media-thumbnails) || $!media-title.defined || $!media-description.defined,
         $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
-        ?($!content.defined && $!content.chars),
+        False,  # V0_91 does not support content:encoded
     )
 }
 
