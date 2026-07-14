@@ -115,7 +115,7 @@ method build-json-item {
 
     my $item-id = $!id // $!link // Str;
     my $c = $!content // Str;
-    my %bless = :title($!title // Str), :link($!link // Str),
+    my %bless = :title($!title // Str),
         :id($item-id),
         :summary($!summary // Str);
     if $c.defined {
@@ -165,11 +165,10 @@ method build-atom-item {
         :content($!content // Str),
         :content-type($!content-type // Str),
         :rights($!rights // Str);
-    if $!updated.defined {
-        %bless<updated> = $!updated;
-    } else {
-        %bless<updated> = DateTime.now;
-    }
+    # Atom requires updated per spec; fall back to published, then to now
+    %bless<updated> = $!updated if $!updated.defined;
+    %bless<updated> //= $!published if $!published.defined;
+    %bless<updated> //= DateTime.now;
     %bless<published> = $!published if $!published.defined;
     my @cats = @!categories;
     Syndicate::Atom::Item.new(|%bless, :categories(@cats))

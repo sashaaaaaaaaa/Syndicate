@@ -67,6 +67,9 @@ method add-entry {
 method entries { @!entries }
 
 method rss-feed {
+    die "RSS 2.0 feed requires title"   unless $!title.defined;
+    die "RSS 2.0 feed requires link"    unless $!link.defined;
+    die "RSS 2.0 feed requires description" unless $!description.defined;
     my @items = @!entries.map(*.build-rss-item);
     my %bless;
     %bless<title>             = $!title          if $!title.defined;
@@ -108,6 +111,8 @@ method atom-feed {
 }
 
 method rss091-feed {
+    die "RSS 0.91 feed requires title" unless $!title.defined;
+    die "RSS 0.91 feed requires link"  unless $!link.defined;
     my @items = @!entries.map(*.build-v0_91-item);
     my %bless;
     %bless<title>           = $!title        if $!title.defined;
@@ -124,6 +129,7 @@ method rss091-feed {
 }
 
 method json-feed {
+    die "JSON Feed requires title" unless $!title.defined;
     my @items = @!entries.map(*.build-json-item);
     my %author;
     %author<name> = $!author-name if $!author-name.defined;
@@ -143,6 +149,8 @@ method json-feed {
 }
 
 method rss1-feed {
+    die "RSS 1.0 feed requires title" unless $!title.defined;
+    die "RSS 1.0 feed requires link"  unless $!link.defined;
     my @items = @!entries.map(*.build-v1_0-item);
     my $about = $!id // $!link // Str;
     my %bless;
@@ -196,6 +204,13 @@ say $fb.json-str;   # JSON Feed
 Accumulates feed and entry data through a uniform API, then generates
 output in any supported format. Eliminates the need to learn each
 format's constructor signatures.
+
+B<Note:> The C<updated> timestamp is mapped to C<pubDate> in RSS (2.0,
+0.91) and to C<updated> in Atom. These have different semantics
+(publication vs last modification) — the builder intentionally uses a
+single source of truth for simplicity. Use L<C<Syndicate::Builder::Entry>|rakudoc:Syndicate::Builder::Entry>'s
+C<published> method when you need distinct publication and modification
+timestamps in Atom output.
 
 =head1 METHODS
 
