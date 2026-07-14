@@ -100,6 +100,9 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
     my $clean = $input.trim;
     $clean .= subst(/^\xFEFF/, '');
     die "parse-feed-with-format: empty input" unless $clean.chars;
+    my $bytes = $clean.encode.bytes;
+    die "parse-feed-with-format: input too large ($bytes bytes, max {MAX-FEED-SIZE})"
+        if $bytes > MAX-FEED-SIZE;
 
     with try-xml-parse($clean) -> $root-info {
         my $format = feed-format($root-info<name>, $root-info<ver>);

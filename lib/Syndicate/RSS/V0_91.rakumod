@@ -78,11 +78,10 @@ multi method new(XML::Document $doc) {
         :language($lang), :generator($gen), :copyright($cpy),
         :managingEditor($me), :webMaster($wm),
         :rating($rating), :$docs,
-        :image(%image), :textInput(%textInput);
+        :image(%image), :textInput(%textInput),
+        :itunes-author($it-author), :itunes-summary($it-summary);
     %bless<pubDate> = $pd if $pd ~~ DateTime;
     %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
-    %bless<itunes-author> = $it-author if $it-author.defined;
-    %bless<itunes-summary> = $it-summary if $it-summary.defined;
     CATCH {
         when X::Control { .rethrow }
         default { Syndicate::Stats.record-error; .rethrow }

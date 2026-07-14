@@ -149,7 +149,7 @@ method build-v1_0-item {
         :has-dc-creator($!author-name.defined);
     %bless<updated> = $!updated if $!updated.defined;
     my @dc-subjects = @!categories;
-    Syndicate::RSS::V1_0::Item.new(|%bless, :@dc-subjects)
+    Syndicate::RSS::V1_0::Item.new(|%bless, :categories(@!categories), :@dc-subjects)
 }
 
 method build-atom-item {
