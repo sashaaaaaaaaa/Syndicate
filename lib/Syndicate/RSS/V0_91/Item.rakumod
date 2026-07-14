@@ -1,62 +1,15 @@
 use v6.d;
 use XML;
-use Syndicate::Item;
+use Syndicate::RSS::Item::Common;
 use DateTime::Format::RFC2822;
 my constant $RFC2822 = DateTime::Format::RFC2822.new;
 use Syndicate::Utils;
 use Syndicate::Extensions;
 use Syndicate::Stats;
 
-unit class Syndicate::RSS::V0_91::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
+unit class Syndicate::RSS::V0_91::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::RSS::Item::Common;
 
-has Bool $.has-dc-creator;
-has Str $.guid;
-has Bool $.guid-is-permalink = True;
-has @.categories of Str;
-has Str $.comments;
-has %.enclosure of Str;
-has Str $.source;
-has @.media-contents of Hash;
-has @.media-thumbnails of Hash;
-has @.media-groups of Hash;
-has Str $.media-title;
-has Str $.media-description;
-has Str $.itunes-author;
-has Str $.itunes-summary;
-has Str $.itunes-duration;
-has Set $.active-ext;
-has Str $!cached-str;
-has Lock $!cache-lock = Lock.new;
-
-multi method new(Str $xml) {
-    my $doc = try { XML::Document.new($xml) };
-    unless $doc {
-        Syndicate::Stats.record-error;
-        die "Invalid RSS 0.91 item XML: $!";
-    }
-    unless $doc.root.name eq "item" {
-        Syndicate::Stats.record-error;
-        die "Not an RSS 0.91 item element";
-    }
-    my $item;
-    {
-        $item = self.from-xml($doc.root);
-        CATCH {
-            when X::Control { .rethrow }
-            default { Syndicate::Stats.record-error; .rethrow }
-        }
-    }
-    $item
-}
-
-multi method new(XML::Element $xml-elem) {
-    my $item = self.from-xml($xml-elem);
-    CATCH {
-        when X::Control { .rethrow }
-        default { Syndicate::Stats.record-error; .rethrow }
-    }
-    $item
-}
+method !item-type-name { "RSS 0.91 item" }
 
 method from-xml(XML::Element $item-elem, :$active?) {
     my $title = get-text-optional($item-elem, "title");
@@ -127,28 +80,6 @@ method XML {
     $xml
 }
 
-method Str {
-    $!cache-lock.protect: { $!cached-str //= ~self.XML }
-}
-
-method !parse-guid(XML::Element $item-elem) {
-    my $guid-elem = $item-elem.elements(:TAG<guid>)[0];
-    return (Str, True) unless $guid-elem;
-    my $guid = decode-entities($guid-elem.contents[0].?text // Str);
-    my $is-permalink = ($guid-elem.attribs<isPermaLink> // "true") eq "true";
-    ($guid, $is-permalink)
-}
-
-method !parse-enclosure(XML::Element $item-elem) {
-    my %enclosure;
-    with $item-elem.elements(:TAG<enclosure>)[0] {
-        %enclosure<url>    = .attribs<url>    // Str;
-        %enclosure<length> = .attribs<length> // Str;
-        %enclosure<type>   = .attribs<type>   // Str;
-    }
-    %enclosure
-}
-
 method namespace-flags() {
     (
         $!has-dc-creator,
@@ -166,7 +97,7 @@ Syndicate::RSS::V0_91::Item - RSS 0.91 item
 
 =head1 DESCRIPTION
 
-An RSS 0.91 item. Does L<C<Syndicate::Item>|rakudoc:Syndicate::Item>.
+An RSS 0.91 item. Does L<C<Syndicate::RSS::Item::Common>|rakudoc:Syndicate::RSS::Item::Common>.
 Only supports title, link, and description — no metadata fields.
 
 =end pod
