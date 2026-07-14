@@ -133,7 +133,9 @@ method XML {
         add-element($xml, "subtitle",  $.subtitle);
 
         if $.link.defined {
-            $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link)), :rel<alternate>}));
+            my %link-attr = :href(encode-entities($.link)), :rel<alternate>;
+            %link-attr<type> = %!link-alternate<type> if %!link-alternate<type>.defined;
+            $xml.append: XML::Element.new(:name<link>, :attribs(%link-attr));
         }
         if %!link-self<href>.defined {
             my %attr = :href(encode-entities(%!link-self<href>)), :rel<self>;

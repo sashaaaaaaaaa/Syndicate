@@ -32,7 +32,8 @@ register-ext(:namespace<media>,
 sub get-media-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("media:$tag"))[0] -> $e {
         with $e.contents[0] -> $t {
-            return decode-entities($t.?text // Str);
+            my $text = ($t.?text // "").trim;
+            return $text.defined && $text.chars ?? decode-entities($text) !! Str;
         }
     }
     Str

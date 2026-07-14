@@ -134,7 +134,9 @@ method XML {
     $xml.attribs{'xml:lang'} = $.xml-lang if $.xml-lang.defined;
     add-element($xml, "title",   $.title);
     $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link // "")), :rel<alternate>})) if $.link.defined && $.link.chars;
-    add-element($xml, "id",      $.id // $.link // "");
+    if $.id.defined && $.id.chars {
+        add-element($xml, "id", $.id);
+    }
     add-element($xml, "summary", $.summary);
 
     if $.content.defined {

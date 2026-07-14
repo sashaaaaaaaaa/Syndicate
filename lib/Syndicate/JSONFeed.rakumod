@@ -39,7 +39,7 @@ multi method new-from-hash(%h) {
         unless $version.starts-with(JSONFEED-VERSION-PREFIX) && $version.chars > JSONFEED-VERSION-PREFIX.chars;
     my $title       = %h<title> // Str;
     die "JSON Feed requires title" unless $title.defined && $title.chars;
-    my $link        = %h<home_page_url> // %h<feed_url> // Str;
+    my $link        = %h<home_page_url> // Str;
     my $desc        = %h<description> // Str;
     my $gen         = %h<generator> // Str;
 
