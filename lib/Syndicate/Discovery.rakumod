@@ -53,21 +53,25 @@ method !validate-url(Str $url) {
         die "Blocked private address"     if $a == 192 && $b == 168;
         die "Blocked private address"     if $a == 172 && 16 <= $b <= 31;
     }
-    # Reject IPv6 loopback, link-local, ULA, and IPv4-mapped addresses
+    # Check IPv4-mapped IPv6 (::ffff:x.x.x.x) — must happen before the pure-IPv6
+    # regex because dots in the mapped suffix are excluded from the hex-only class.
+    if $host ~~ /^ '['? '::ffff:' (\d+ '.' \d+ '.' \d+ '.' \d+) ']'? $/ {
+        my $mapped = ~$0;
+        die "Blocked mapped unspecified address" if $mapped ~~ /^ '0.0.0.0' $/;
+        if $mapped ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
+            my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
+            die "Blocked mapped loopback"      if $a == 127;
+            die "Blocked mapped link-local"   if $a == 169 && $b == 254;
+            die "Blocked mapped private"      if $a == 10 || $a == 192 && $b == 168
+                                                  || $a == 172 && 16 <= $b <= 31;
+        }
+    }
+    # Reject IPv6 loopback, link-local, and ULA
     if $host ~~ /^ '['? (<[0..9a..f:]>+) ']'? $/ {
         my $addr = ~$0;
         die "Blocked IPv6 loopback address"     if $addr eq '::1';
         die "Blocked IPv6 link-local address"   if $addr ~~ /^ fe <[89a..b]> /;
         die "Blocked IPv6 unique-local address" if $addr.starts-with('fc') || $addr.starts-with('fd');
-        # Check IPv4-mapped IPv6 (::ffff:x.x.x.x)
-        if $addr ~~ /^ '::ffff:' (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
-            my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
-            die "Blocked mapped loopback"      if $a == 127;
-            die "Blocked mapped link-local"   if $a == 169 && $b == 254;
-            die "Blocked mapped unspecified"  if $a == 0 && $b == 0 && $c == 0 && $d == 0;
-            die "Blocked mapped private"      if $a == 10 || $a == 192 && $b == 168
-                                              || $a == 172 && 16 <= $b <= 31;
-        }
     }
 }
 

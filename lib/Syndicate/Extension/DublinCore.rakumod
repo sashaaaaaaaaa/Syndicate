@@ -22,13 +22,16 @@ register-ext(:namespace<dc>,
         %attrs<dc-subjects> = @subjects if @subjects;
     },
     generate => sub ($xml, $item) {
-        with $item.?has-dc-creator {
-            add-dc-element($xml, "creator", $item.author) if $_ && $item.author.defined;
+        with $item.?has-dc-creator -> $v {
+            if $v {
+                add-dc-element($xml, "creator", ~$item.author) if $item.author.defined;
+                with $item.updated -> $dt {
+                    add-dc-element($xml, "date", ~$dt);
+                }
+            }
         }
-        # V1_0 items track dc-subjects; V1_0 stores updated as dc:date
-        if $item.?dc-subjects.defined {
-            add-dc-element($xml, "date", $item.updated.Str) if $item.updated.defined;
-            add-dc-element($xml, "subject", $_) for $item.dc-subjects.list;
+        with $item.?dc-subjects -> @s {
+            add-dc-element($xml, "subject", $_) for @s;
         }
     }
 );

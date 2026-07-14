@@ -94,12 +94,12 @@ multi method new(XML::Document $doc) {
     %bless<pubDate> = $pd if $pd ~~ DateTime;
     %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
     if $ttl-str.defined && $ttl-str.chars {
-        %bless<ttl> = try { $ttl-str.Int };
-        unless %bless<ttl>.defined {
+        my $ttl = try { $ttl-str.Int };
+        if $ttl.defined {
+            note "ttl of $ttl minutes exceeds recommended maximum of {ONE-WEEK-MINUTES} (1 week)" if $ttl > ONE-WEEK-MINUTES;
+            %bless<ttl> = $ttl;
+        } else {
             note "Invalid ttl value: $ttl-str";
-        }
-        with %bless<ttl> {
-            note "ttl of $_ minutes exceeds recommended maximum of {ONE-WEEK-MINUTES} (1 week)" if $_ > ONE-WEEK-MINUTES;
         }
     }
     CATCH {

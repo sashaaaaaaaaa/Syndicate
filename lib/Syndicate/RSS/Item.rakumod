@@ -18,6 +18,7 @@ has %.enclosure of Str;
 has Str $.source;
 has @.media-contents of Hash;
 has @.media-thumbnails of Hash;
+has @.media-groups of Hash;
 has Str $.media-title;
 has Str $.media-description;
 has Str $.itunes-author;
@@ -85,6 +86,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
 
     my @media-contents    = @(%extra<media-contents>    // []);
     my @media-thumbnails  = @(%extra<media-thumbnails>  // []);
+    my @media-groups      = @(%extra<media-groups>      // []);
     my $media-title       = %extra<media-title>         // Str;
     my $media-description = %extra<media-description>   // Str;
 
@@ -103,7 +105,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
         :itunes-duration(%extra<itunes-duration> // Str);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
     %bless<updated> //= $dc-updated if $dc-updated ~~ DateTime;
-    my $item = self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails);
+    my $item = self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails, :@media-groups);
     Syndicate::Stats.record-item;
     $item
 }
@@ -162,7 +164,7 @@ method !parse-enclosure(XML::Element $item-elem) {
 method namespace-flags() {
     (
         $!has-dc-creator,
-        ?(@!media-contents) || ?(@!media-thumbnails) || $!media-title.defined || $!media-description.defined,
+        ?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined,
         $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
         ?($!content.defined && $!content.chars),
     )

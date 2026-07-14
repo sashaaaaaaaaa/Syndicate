@@ -14,12 +14,15 @@ register-ext(:namespace<media>,
         %attrs<media-contents> = @mc if @mc;
         my @mt = get-media-thumbnails($elem);
         %attrs<media-thumbnails> = @mt if @mt;
+        my @mg = get-media-groups($elem);
+        %attrs<media-groups> = @mg if @mg;
         with get-media-text($elem, "title")       { %attrs<media-title>       = $_ }
         with get-media-text($elem, "description") { %attrs<media-description> = $_ }
     },
     generate => sub ($xml, $item) {
         add-media-content-element($xml, $_) for @($item.?media-contents // []);
         add-media-thumbnail-element($xml, $_) for @($item.?media-thumbnails // []);
+        add-media-group-element($xml, $_) for @($item.?media-groups // []);
         with $item.?media-title -> $v {
             $xml.append: XML::Element.new(:name<media:title>, :nodes([encode-entities($v)])) if $v.chars;
         }
@@ -82,6 +85,27 @@ sub add-media-content-element(XML::Element $parent, %content --> Nil) is export 
     $e.attribs<fileSize> = encode-entities(~%content<fileSize>) if %content<fileSize>.defined;
     $e.attribs<width>    = encode-entities(~%content<width>)    if %content<width>.defined;
     $e.attribs<height>   = encode-entities(~%content<height>)   if %content<height>.defined;
+    $parent.append: $e;
+}
+
+sub get-media-groups($parent --> Array) is export {
+    my @groups;
+    for $parent.elements(:TAG<media:group>) -> $g {
+        my @gc = get-media-contents($g);
+        my @gt = get-media-thumbnails($g);
+        next unless @gc || @gt;
+        my %group;
+        %group<media-contents>   = @gc if @gc;
+        %group<media-thumbnails> = @gt if @gt;
+        @groups.push: %group;
+    }
+    @groups
+}
+
+sub add-media-group-element(XML::Element $parent, %group --> Nil) is export {
+    my $e = XML::Element.new(:name<media:group>);
+    add-media-content-element($e, $_) for @(%group<media-contents> // []);
+    add-media-thumbnail-element($e, $_) for @(%group<media-thumbnails> // []);
     $parent.append: $e;
 }
 

@@ -28,24 +28,35 @@ sub parse(Str $input --> Syndicate::Feed:D) is export {
     parse-feed($input)
 }
 
+my constant MAX-FEED-SIZE = 10 * 1024 * 1024;
+
+sub sanitize-input(Str $input --> Str) {
+    my $clean = $input.trim;
+    $clean .= subst(/^\xFEFF/, '');
+    die "empty input" unless $clean.chars;
+    my $bytes = $clean.encode.bytes;
+    die "input too large ($bytes bytes, max {MAX-FEED-SIZE})" if $bytes > MAX-FEED-SIZE;
+    $clean
+}
+
 sub parse-rss(Str $xml --> Syndicate::RSS) is export {
-    Syndicate::RSS.new($xml)
+    Syndicate::RSS.new(sanitize-input($xml))
 }
 
 sub parse-atom(Str $xml --> Syndicate::Atom) is export {
-    Syndicate::Atom.new($xml)
+    Syndicate::Atom.new(sanitize-input($xml))
 }
 
 sub parse-json(Str $json --> Syndicate::JSONFeed) is export {
-    Syndicate::JSONFeed.new($json)
+    Syndicate::JSONFeed.new(sanitize-input($json))
 }
 
 sub parse-rss1(Str $xml --> Syndicate::RSS::V1_0) is export {
-    Syndicate::RSS::V1_0.new($xml)
+    Syndicate::RSS::V1_0.new(sanitize-input($xml))
 }
 
 sub parse-rss091(Str $xml --> Syndicate::RSS::V0_91) is export {
-    Syndicate::RSS::V0_91.new($xml)
+    Syndicate::RSS::V0_91.new(sanitize-input($xml))
 }
 
 =begin pod

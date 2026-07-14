@@ -39,7 +39,7 @@ sub run-parsers($elem, %attrs, :$active?) is export {
             when X::Control { .rethrow }
             default {
                 Syndicate::Stats.record-error;
-                note "Extension parse callback failed: $_";
+                note "Extension parse callback failed: $_\n{.backtrace}";
             }
         }
     }
@@ -54,7 +54,7 @@ sub run-generators($xml, $item) is export {
             when X::Control { .rethrow }
             default {
                 Syndicate::Stats.record-error;
-                note "Extension generate callback failed: $_";
+                note "Extension generate callback failed: $_\n{.backtrace}";
             }
         }
     }

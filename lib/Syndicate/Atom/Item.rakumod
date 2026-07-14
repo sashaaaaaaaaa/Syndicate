@@ -11,6 +11,8 @@ submethod TWEAK {
         my $label = $!id.defined ?? $!id !! $!title.defined ?? $!title !! "<unnamed>";
         die "Atom entry '$label' requires an 'updated' timestamp";
     }
+    die "Atom entry requires 'id'"   unless $!id.defined   && $!id.chars;
+    die "Atom entry requires 'title'" unless $!title.defined && $!title.chars;
 }
 
 has Str $.xml-lang;
@@ -21,6 +23,8 @@ has Str $.content-type;
 has Str $.rights;
 has %.source-feed;
 has @.contributors of Hash;
+has @.link-alternate of Hash;
+has XML::Element $!cached-xml;
 has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 
@@ -59,7 +63,9 @@ method from-xml(XML::Element $entry-elem) {
     with $entry-elem.elements(:TAG<content>)[0] -> $ce {
         $content-type = $ce.attribs<type> // "text";
         if $content-type eq "xhtml" {
-            $content = try { $ce.nodes.join('').trim };
+            with $ce.elements[0] -> $xhtml-div {
+                $content = ~$xhtml-div;
+            }
             unless $content.defined {
                 Syndicate::Stats.record-error;
                 $content = Str;
@@ -76,12 +82,14 @@ method from-xml(XML::Element $entry-elem) {
     my $rights   = get-text-optional($entry-elem, "rights");
     my $lang     = $entry-elem.attribs{'xml:lang'} // Str;
 
+    my @link-alternate;
     my $link = Str;
     for $entry-elem.elements(:TAG<link>) {
         my $rel = .attribs<rel> // "alternate";
+        my $href = .attribs<href> // "";
         if $rel eq "alternate" {
-            $link = .attribs<href> // "";
-            last;
+            @link-alternate.push: %( href => $href, type => .attribs<type> // Str );
+            $link ||= $href;
         }
     }
 
@@ -127,71 +135,83 @@ method from-xml(XML::Element $entry-elem) {
         :source-feed(%source-feed);
     %bless<updated> = $updated if $updated ~~ DateTime;
     %bless<published> = $pub if $pub ~~ DateTime;
-    my $item = self.bless(|%bless, :@contributors, :categories(@categories));
+    my $item = self.bless(|%bless, :@link-alternate, :@contributors, :categories(@categories));
     Syndicate::Stats.record-item;
     $item
 }
 
 method XML {
-    my $xml = XML::Element.new(:name<entry>);
-    $xml.attribs{'xml:lang'} = $.xml-lang if $.xml-lang.defined;
-    add-element($xml, "title",   $.title);
-    $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link // "")), :rel<alternate>})) if $.link.defined && $.link.chars;
-    if $.id.defined && $.id.chars {
-        add-element($xml, "id", $.id);
-    }
-    add-element($xml, "summary", $.summary);
-
-    if $.content.defined {
-        my %attribs = :type($.content-type // "text");
-        my @nodes;
-        if %attribs<type> eq "xhtml" {
-            my $xhtml = try { XML::Document.new($.content) };
-            @nodes = $xhtml ?? [$xhtml.root] !! [$.content];
-        } else {
-            @nodes = [encode-entities($.content)];
+    $!cache-lock.protect: {
+        return $!cached-xml if $!cached-xml.defined;
+        my $xml = XML::Element.new(:name<entry>);
+        $xml.attribs{'xml:lang'} = $.xml-lang if $.xml-lang.defined;
+        add-element($xml, "title",   $.title);
+        if @!link-alternate {
+            for @!link-alternate -> %link {
+                my %attr = :href(encode-entities(%link<href>)), :rel<alternate>;
+                %attr<type> = %link<type> if %link<type>.defined;
+                $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
+            }
+        } elsif $.link.defined && $.link.chars {
+            $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link)), :rel<alternate>}));
         }
-        $xml.append: XML::Element.new(:name<content>, :attribs(%attribs), :nodes(@nodes));
-    }
-
-    my $upd = $.updated;
-    $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
-    if $.published.defined {
-        $xml.append: XML::Element.new(:name<published>, :nodes([$.published.Str]));
-    }
-    if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
-        my $author = XML::Element.new(:name<author>);
-        add-element($author, "name",  %!author-detail<name>);
-        add-element($author, "email", %!author-detail<email>);
-        add-element($author, "uri",   %!author-detail<uri>);
-        $xml.append: $author;
-    }
-
-    for @.categories -> $cat {
-        $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
-    }
-
-    for @.contributors -> %c {
-        my $c = XML::Element.new(:name<contributor>);
-        add-element($c, "name",  %c<name>);
-        add-element($c, "email", %c<email>);
-        add-element($c, "uri",   %c<uri>);
-        $xml.append: $c;
-    }
-
-    if %!source-feed {
-        my $s = XML::Element.new(:name<source>);
-        add-element($s, "title", %!source-feed<title>);
-        add-element($s, "id",    %!source-feed<id>);
-        $s.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities(%!source-feed<link> // "")), :rel<alternate>})) if %!source-feed<link>.defined;
-        if %!source-feed<updated>.defined {
-            $s.append: XML::Element.new(:name<updated>, :nodes([%!source-feed<updated>.Str]));
+        if $.id.defined && $.id.chars {
+            add-element($xml, "id", $.id);
         }
-        $xml.append: $s;
-    }
+        add-element($xml, "summary", $.summary);
 
-    add-element($xml, "rights", $.rights);
-    return $xml;
+        if $.content.defined {
+            my %attribs = :type($.content-type // "text");
+            my @nodes;
+            if %attribs<type> eq "xhtml" {
+                my $xhtml = try { XML::Document.new($.content) };
+                @nodes = $xhtml ?? [$xhtml.root] !! [$.content];
+            } else {
+                @nodes = [encode-entities($.content)];
+            }
+            $xml.append: XML::Element.new(:name<content>, :attribs(%attribs), :nodes(@nodes));
+        }
+
+        my $upd = $.updated;
+        $xml.append: XML::Element.new(:name<updated>, :nodes([$upd.Str]));
+        if $.published.defined {
+            $xml.append: XML::Element.new(:name<published>, :nodes([$.published.Str]));
+        }
+        if %!author-detail<name>.defined || %!author-detail<email>.defined || %!author-detail<uri>.defined {
+            my $author = XML::Element.new(:name<author>);
+            add-element($author, "name",  %!author-detail<name>);
+            add-element($author, "email", %!author-detail<email>);
+            add-element($author, "uri",   %!author-detail<uri>);
+            $xml.append: $author;
+        }
+
+        for @.categories -> $cat {
+            $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
+        }
+
+        for @.contributors -> %c {
+            my $c = XML::Element.new(:name<contributor>);
+            add-element($c, "name",  %c<name>);
+            add-element($c, "email", %c<email>);
+            add-element($c, "uri",   %c<uri>);
+            $xml.append: $c;
+        }
+
+        if %!source-feed {
+            my $s = XML::Element.new(:name<source>);
+            add-element($s, "title", %!source-feed<title>);
+            add-element($s, "id",    %!source-feed<id>);
+            $s.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities(%!source-feed<link> // "")), :rel<alternate>})) if %!source-feed<link>.defined;
+            if %!source-feed<updated>.defined {
+                $s.append: XML::Element.new(:name<updated>, :nodes([%!source-feed<updated>.Str]));
+            }
+            $xml.append: $s;
+        }
+
+        add-element($xml, "rights", $.rights);
+        $!cached-xml = $xml;
+        $xml
+    }
 }
 
 method Str {

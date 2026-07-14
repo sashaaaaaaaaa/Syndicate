@@ -8,15 +8,16 @@ my constant NS-ATOM is export = 'http://www.w3.org/2005/Atom';
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
 my $entity = XML::Entity.new;
+my $entity-lock = Lock.new;
 
 sub decode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
-    $entity.decode($text)
+    $entity-lock.protect: { $entity.decode($text) }
 }
 
 sub encode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
-    $entity.encode($text)
+    $entity-lock.protect: { $entity.encode($text) }
 }
 
 sub add-element($parent, $name, $value --> Nil) is export {

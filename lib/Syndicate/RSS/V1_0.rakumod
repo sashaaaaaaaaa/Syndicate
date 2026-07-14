@@ -17,6 +17,8 @@ unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed 
 
 has Str $.about;
 has %.image;
+has Str $.itunes-author;
+has Str $.itunes-summary;
 has XML::Element $!cached-xml;
 has Lock $!xml-lock = Lock.new;
 has Bool $!needs-dc is built;
@@ -49,6 +51,9 @@ multi method new(XML::Document $doc) {
         $lang-fallback = True if $lang.defined;
     }
 
+    my $it-author  = %common<it-author>;
+    my $it-summary = %common<it-summary>;
+
     my @categories;
     for $channel.elements(:TAG<dc:subject>) -> $s {
         with $s.contents[0] -> $t {
@@ -59,6 +64,7 @@ multi method new(XML::Document $doc) {
     my @items;
     my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
     $needs-dc ||= ?@categories;
+    $needs-itunes ||= $it-author.defined || $it-summary.defined;
     sub has-nonempty-text($elem, $tag) {
         my $e = $elem.elements(:TAG($tag))[0];
         $e && $e.contents[0] && $e.contents[0].?text.trim.chars
@@ -84,6 +90,7 @@ multi method new(XML::Document $doc) {
     self.bless(:$about, :$title, :$link, :description($desc),
                :generator($gen), :language($lang),
                :image(%image),
+               :itunes-author($it-author), :itunes-summary($it-summary),
                 :lang-from-dc($lang-fallback),
                :$needs-dc, :$needs-media, :$needs-itunes, :$needs-content,
                :categories(@categories), :@items)
@@ -118,6 +125,8 @@ method XML {
     add-element($channel, "link",        $.link);
     add-element($channel, "description", $.description);
     add-element($channel, "generator",   $.generator);
+    add-itunes-element($channel, "author", $.itunes-author) if $.itunes-author.defined;
+    add-itunes-element($channel, "summary", $.itunes-summary) if $.itunes-summary.defined;
     if $.language.defined {
         if $!lang-from-dc {
             add-dc-element($channel, "language", $.language);

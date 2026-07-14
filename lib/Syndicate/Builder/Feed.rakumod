@@ -71,6 +71,7 @@ method rss-feed {
     die "RSS 2.0 feed requires link"    unless $!link.defined;
     die "RSS 2.0 feed requires description" unless $!description.defined;
     my @items = @!entries.map(*.build-rss-item);
+    my @cats = @!categories;
     my %bless;
     %bless<title>             = $!title          if $!title.defined;
     %bless<link>              = $!link           if $!link.defined;
@@ -82,12 +83,14 @@ method rss-feed {
     %bless<itunes-author>     = $!itunes-author  if $!itunes-author.defined;
     %bless<itunes-summary>    = $!itunes-summary if $!itunes-summary.defined;
     %bless<atom-self-link>    = $!atom-self-link if $!atom-self-link.defined;
-    %bless<pubDate>           = $.updated        if $.updated.defined;
-    Syndicate::RSS.new(|%bless, :categories(@!categories), :@items)
+    %bless<lastBuildDate>     = $.updated        if $.updated.defined;
+    Syndicate::RSS.new(|%bless, :categories(@cats), :@items)
 }
 
 method atom-feed {
     my @items = @!entries.map(*.build-atom-item);
+    die "Atom feed requires title"   unless $!title.defined;
+    die "Atom feed requires link"    unless $!link.defined;
     my %author-detail;
     %author-detail<name>  = $!author-name  if $!author-name.defined;
     %author-detail<email> = $!author-email if $!author-email.defined;
@@ -122,7 +125,7 @@ method rss091-feed {
     %bless<copyright>       = $!rights       if $!rights.defined;
     %bless<managingEditor>  = $!author-email if $!author-email.defined;
     %bless<generator>       = $!generator    if $!generator.defined;
-    %bless<pubDate>         = $!updated      if $!updated.defined;
+    %bless<lastBuildDate>   = $!updated      if $!updated.defined;
     %bless<itunes-author>  = $!itunes-author  if $!itunes-author.defined;
     %bless<itunes-summary> = $!itunes-summary if $!itunes-summary.defined;
     Syndicate::RSS::V0_91.new(|%bless, :@items)
@@ -152,6 +155,7 @@ method rss1-feed {
     die "RSS 1.0 feed requires title" unless $!title.defined;
     die "RSS 1.0 feed requires link"  unless $!link.defined;
     my @items = @!entries.map(*.build-v1_0-item);
+    my @cats = @!categories;
     my $about = $!id // $!link // Str;
     my %bless;
     %bless<title>       = $!title       if $!title.defined;
@@ -160,7 +164,7 @@ method rss1-feed {
     %bless<about>       = $about        if $about.defined && $about.chars;
     %bless<generator>   = $!generator   if $!generator.defined;
     %bless<language>    = $!language    if $!language.defined;
-    Syndicate::RSS::V1_0.new(|%bless, :categories(@!categories), :@items)
+    Syndicate::RSS::V1_0.new(|%bless, :categories(@cats), :@items)
 }
 
 method rss-str     { ~$.rss-feed     }

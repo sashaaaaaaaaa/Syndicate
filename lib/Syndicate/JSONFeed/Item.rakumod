@@ -40,7 +40,9 @@ multi method new-from-hash(%h) {
 
     my @authors;
     with %h<authors> -> $a {
+        die "JSON Feed Item 'authors' must be an array, got {$a.^name}" unless $a ~~ Array;
         for @$a {
+            die "JSON Feed Item 'authors' elements must be objects, got {$_.^name}" unless $_ ~~ Hash;
             @authors.push: %(
                 name   => .<name> // Str,
                 url    => .<url> // Str,

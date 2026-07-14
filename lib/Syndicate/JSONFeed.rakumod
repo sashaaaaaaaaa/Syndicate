@@ -70,7 +70,7 @@ multi method new-from-hash(%h) {
         :icon(%h<icon> // Str),
         :favicon(%h<favicon> // Str),
         :author(%author),
-        :language(%h<language> // Str);
+        :language(%h<locale> // %h<language> // Str);
     %bless<expired> = %h<expired> if %h<expired>:exists;
     CATCH {
         when X::Control { .rethrow }
@@ -92,7 +92,7 @@ method to-hash {
             %h<next_url>      = $.next_url      if $.next_url.defined;
             %h<icon>          = $.icon          if $.icon.defined;
             %h<favicon>       = $.favicon       if $.favicon.defined;
-            %h<language>      = $.language      if $.language.defined;
+            %h<locale>        = $.language      if $.language.defined;
             %h<generator>     = $.generator     if $.generator.defined;
             %h<expired>       = $.expired       if $.expired.defined;
 
@@ -112,7 +112,9 @@ method to-hash {
         }
     }
     my %h = %($!cached-hash);
-    %h<items> = %h<items>.clone if %h<items>:exists;
+    if %h<items>:exists {
+        %h<items> = @(%h<items>.map(*.clone))
+    }
     %h
 }
 
