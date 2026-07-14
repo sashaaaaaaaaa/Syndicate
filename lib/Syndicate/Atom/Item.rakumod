@@ -47,7 +47,7 @@ multi method new(XML::Element $xml-elem) {
     $item
 }
 
-multi method from-xml(XML::Element $entry-elem) {
+method from-xml(XML::Element $entry-elem) {
     my $id       = get-text($entry-elem, "id");
     my $title    = get-text($entry-elem, "title");
     my $summary  = get-text-optional($entry-elem, "summary");

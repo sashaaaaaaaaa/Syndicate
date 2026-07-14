@@ -45,7 +45,7 @@ multi method new(XML::Element $xml-elem) {
     $item
 }
 
-multi method from-xml(XML::Element $item-elem, :$active?) {
+method from-xml(XML::Element $item-elem, :$active?) {
     my $about   = $item-elem.attribs{'rdf:about'} // $item-elem.attribs<about> // Str;
     my $title   = get-text-optional($item-elem, "title");
     my $link    = get-text-optional($item-elem, "link");

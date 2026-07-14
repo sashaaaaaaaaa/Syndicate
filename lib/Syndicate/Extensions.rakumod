@@ -60,6 +60,12 @@ sub run-generators($xml, $item) is export {
     }
 }
 
+sub all-descendant-elements($n) {
+    $n ~~ XML::Element
+        ?? ($n, |$n.nodes.map({ all-descendant-elements($_) }).flat)
+        !! Empty
+}
+
 sub set-active(@exts, $elem) {
     my @prefixes = @exts.map({ .<namespace> }).grep(*.defined);
     return @exts.keys.Set unless @prefixes;
@@ -68,7 +74,7 @@ sub set-active(@exts, $elem) {
     with $check.index(':') -> $i {
         %present{$check.substr(0, $i)} = True;
     }
-    for $elem.nodes.grep(XML::Element) -> $e {
+    for all-descendant-elements($elem).skip(1) -> $e {
         my $name = $e.name;
         with $name.index(':') -> $i {
             my $prefix = $name.substr(0, $i);
@@ -81,7 +87,7 @@ sub set-active(@exts, $elem) {
             %present{$prefix} = True if %present{$prefix}:exists;
         }
     }
-    @exts.kv.map(-> $i, %ext { $i if !%ext<namespace> || %present{%ext<namespace>} }).Set
+    @exts.kv.map(-> $i, %ext { $i if !%ext<namespace> || %present{%ext<namespace>} }).grep(*.defined).Set
 }
 
 =begin pod
