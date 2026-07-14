@@ -63,11 +63,12 @@ sub run-generators($xml, $item) is export {
 sub all-descendant-elements($n) {
     gather {
         my @stack = $n;
-        while @stack {
-            my $e = @stack.shift;
+        my $i = 0;
+        while $i < @stack.elems {
+            my $e = @stack[$i++];
             next unless $e ~~ XML::Element;
             take $e;
-            @stack.unshift: $e.nodes.Slip if $e ~~ XML::Element;
+            @stack.push: $e.nodes.Slip if $e ~~ XML::Element;
         }
     }
 }

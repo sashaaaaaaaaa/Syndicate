@@ -62,9 +62,10 @@ multi method new(XML::Document $doc) {
     my $ttl-str = get-text-optional($channel, "ttl");
 
     my $atom-self-link = Str;
-    # Matches only the literal prefix 'atom'. XML namespace URIs are not
-    # tracked by the XML module, so alternate prefixes are missed (rare).
-    for $channel.elements(:TAG<atom:link>) -> $l {
+    for $channel.elements -> $l {
+        next unless $l ~~ XML::Element;
+        my $ln = $l.name;
+        next unless $ln.contains(':') && $ln.split(':')[1] eq 'link';
         if ($l.attribs<rel> // "") eq "self" {
             $atom-self-link = $l.attribs<href> // Str;
             last;
