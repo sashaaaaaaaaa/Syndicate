@@ -54,8 +54,8 @@ multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $clean = $input.trim;
     $clean .= subst(/^\xFEFF/, '');  # strip BOM for both XML and JSON paths
     die "parse-feed: empty input" unless $clean.chars;
-    die "parse-feed: input too large ({$clean.codes} chars, max {MAX-FEED-SIZE})"
-        if $clean.codes > MAX-FEED-SIZE;
+    die "parse-feed: input too large ({$clean.encode.bytes} bytes, max {MAX-FEED-SIZE})"
+        if $clean.encode.bytes > MAX-FEED-SIZE;
 
     my $looks-like-xml = $clean.starts-with('<');
     if $looks-like-xml {

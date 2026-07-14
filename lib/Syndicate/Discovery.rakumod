@@ -57,23 +57,15 @@ method !validate-url(Str $url) {
     if $host ~~ /^ '['? (<[0..9a..f:]>+) ']'? $/ {
         my $addr = ~$0;
         die "Blocked IPv6 loopback address"     if $addr eq '::1';
-        die "Blocked IPv6 link-local address"   if $addr.starts-with('fe80') || $addr.starts-with('feb0')
-                                                || $addr.starts-with('fe90') || $addr.starts-with('fea0')
-                                                || $addr.starts-with('feb1') || $addr.starts-with('feb2')
-                                                || $addr.starts-with('feb3') || $addr.starts-with('feb4')
-                                                || $addr.starts-with('feb5') || $addr.starts-with('feb6')
-                                                || $addr.starts-with('feb7') || $addr.starts-with('feb8')
-                                                || $addr.starts-with('feb9') || $addr.starts-with('feba')
-                                                || $addr.starts-with('febb') || $addr.starts-with('febc')
-                                                || $addr.starts-with('febd') || $addr.starts-with('febe')
-                                                || $addr.starts-with('febf');
+        die "Blocked IPv6 link-local address"   if $addr ~~ /^ fe <[89a..b]> /;
         die "Blocked IPv6 unique-local address" if $addr.starts-with('fc') || $addr.starts-with('fd');
         # Check IPv4-mapped IPv6 (::ffff:x.x.x.x)
         if $addr ~~ /^ '::ffff:' (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
             my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
             die "Blocked mapped loopback"      if $a == 127;
-            die "Blocked mapped unspecified"   if $a == 0 && $b == 0 && $c == 0 && $d == 0;
-            die "Blocked mapped private"       if $a == 10 || $a == 192 && $b == 168
+            die "Blocked mapped link-local"   if $a == 169 && $b == 254;
+            die "Blocked mapped unspecified"  if $a == 0 && $b == 0 && $c == 0 && $d == 0;
+            die "Blocked mapped private"      if $a == 10 || $a == 192 && $b == 168
                                               || $a == 172 && 16 <= $b <= 31;
         }
     }
@@ -111,8 +103,8 @@ method find-feeds(Str $html, Str $base-url --> Array) {
     # Strip HTML comments, <script>, and <style> blocks to avoid
     # false-positive link detection inside them.
     my $clean = $html.subst(:g, / '<!--' .*? '-->' /)
-                     .subst(:g, / '<script' .*? '</script>' /)
-                     .subst(:g, / '<style'  .*? '</style>' /);
+                     .subst(:g, /:i '<script' .*? '</script>' /)
+                     .subst(:g, /:i '<style'  .*? '</style>' /);
 
     for $clean.comb($link-tag) -> $tag {
         my %attr = self!parse-attrs($tag);
