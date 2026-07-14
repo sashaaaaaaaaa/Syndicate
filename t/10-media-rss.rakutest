@@ -3,7 +3,7 @@ use Test;
 use lib 'lib';
 use Syndicate;
 
-plan 32;
+plan 50;
 
 my $xml = slurp "t/data/rss2-media.xml";
 my $feed = Syndicate::RSS.new($xml);
@@ -56,5 +56,38 @@ my $rt = Syndicate::RSS.new($str);
 is $rt.items[0].media-contents.elems, 1, "roundtrip media:content count";
 is $rt.items[0].media-contents[0]<url>, "http://example.com/video.mp4", "roundtrip media:content url";
 is $rt.items[0].media-title, "Video: Syndication Explained", "roundtrip media:title";
+
+# ===== HH:MM:SS duration, multiple media:content, entity encoding =====
+my $xml2 = slurp "t/data/rss2-media-hhmmss.xml";
+my $feed2 = Syndicate::RSS.new($xml2);
+isa-ok $feed2, Syndicate::RSS, "Parsed HH:MM:SS Media RSS feed";
+
+is $feed2.items.elems, 3, "3 items in HH:MM:SS test feed";
+
+# Item 0 — HH:MM:SS duration should not crash, stored as string fallback
+my $i2 = $feed2.items[0];
+is $i2.title, "HH:MM:SS Duration", "HH:MM:SS item title";
+is $i2.media-contents.elems, 1, "HH:MM:SS item has 1 media:content";
+ok $i2.media-contents[0]<duration>.defined, "HH:MM:SS duration is defined";
+is $i2.media-contents[0]<duration>, "1:02:15", "HH:MM:SS duration preserved as string";
+
+# Item 1 — Multiple media:content elements (C30)
+my $i3 = $feed2.items[1];
+is $i3.title, "Multiple Contents", "multi-content item title";
+is $i3.media-contents.elems, 3, "multi-content item has 3 media:content elements";
+is $i3.media-contents[0]<url>, "http://example.com/video.mp4", "multi-content[0] url";
+is $i3.media-contents[0]<duration>, "120", "multi-content[0] duration";
+is $i3.media-contents[1]<url>, "http://example.com/audio.mp3", "multi-content[1] url";
+is $i3.media-contents[1]<duration>, "1800", "multi-content[1] duration";
+is $i3.media-contents[2]<url>, "http://example.com/thumb.jpg", "multi-content[2] url";
+is $i3.media-contents[2]<medium>, "image", "multi-content[2] medium";
+
+# Roundtrip for HH:MM:SS feed (C31 — generation test)
+my $str2 = ~$feed2;
+my $rt2 = Syndicate::RSS.new($str2);
+isa-ok $rt2, Syndicate::RSS, "HH:MM:SS roundtrip parsed";
+is $rt2.items.elems, 3, "HH:MM:SS roundtrip item count";
+is $rt2.items[0].media-contents[0]<duration>, "1:02:15", "HH:MM:SS roundtrip duration";
+is $rt2.items[1].media-contents.elems, 3, "multi-content roundtrip count";
 
 done-testing;

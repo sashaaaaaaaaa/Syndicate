@@ -26,7 +26,10 @@ has Lock $!cache-lock = Lock.new;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
-    die "Invalid Atom entry XML: $!" unless $doc;
+    unless $doc {
+        Syndicate::Stats.record-error;
+        die "Invalid Atom entry XML: $!";
+    }
     my $item;
     {
         $item = self.from-xml($doc.root);

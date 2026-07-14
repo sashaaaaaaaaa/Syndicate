@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Test Media RSS HH:MM:SS</title>
+    <link>http://example.com</link>
+    <description>Media RSS with HH:MM:SS duration and multiple content elements</description>
+    <item>
+      <title>HH:MM:SS Duration</title>
+      <link>http://example.com/hhmmss</link>
+      <description>Item with HH:MM:SS duration format</description>
+      <media:content url="http://example.com/video.mp4" type="video/mp4" medium="video" duration="1:02:15"/>
+    </item>
+    <item>
+      <title>Multiple Contents</title>
+      <link>http://example.com/multi</link>
+      <description>Item with multiple media:content elements</description>
+      <media:content url="http://example.com/video.mp4" type="video/mp4" medium="video" duration="120"/>
+      <media:content url="http://example.com/audio.mp3" type="audio/mpeg" medium="audio" duration="1800"/>
+      <media:content url="http://example.com/thumb.jpg" type="image/jpeg" medium="image"/>
+    </item>
+    <item>
+      <title>Entity Encoding</title>
+      <link>http://example.com/entity</link>
+      <description>Item with &amp; entities in attributes</description>
+      <media:content url="http://example.com/a&amp;b.mp4" type="video/mp4" medium="video"/>
+    </item>
+  </channel>
+</rss>

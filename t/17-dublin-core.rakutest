@@ -1,0 +1,103 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+
+plan 12;
+
+# ===== RSS 2.0 with dc:date (should populate $.updated) =====
+my $rss2-xml = q:to/END/;
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>DC Test Feed</title>
+    <link>http://example.com</link>
+    <description>Testing dc:date</description>
+    <item>
+      <title>Item with dc:date</title>
+      <link>http://example.com/1</link>
+      <description>First item</description>
+      <dc:date>2025-06-15T12:00:00Z</dc:date>
+    </item>
+    <item>
+      <title>Item with pubDate only</title>
+      <link>http://example.com/2</link>
+      <description>Second item</description>
+      <pubDate>Mon, 16 Jun 2025 10:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Item with both</title>
+      <link>http://example.com/3</link>
+      <description>Third item</description>
+      <pubDate>Sun, 17 Jun 2025 08:00:00 GMT</pubDate>
+      <dc:date>2025-06-18T12:00:00Z</dc:date>
+    </item>
+  </channel>
+</rss>
+END
+
+my $feed = Syndicate::RSS.new($rss2-xml);
+isa-ok $feed, Syndicate::RSS, "Parsed RSS 2.0 with dc:date";
+
+is $feed.items.elems, 3, "3 items parsed";
+
+# Item 0: dc:date only — should map to updated
+isa-ok $feed.items[0].updated, DateTime, "item with dc:date only has DateTime updated";
+is $feed.items[0].updated.year, 2025, "dc:date year";
+is $feed.items[0].updated.month, 6, "dc:date month";
+is $feed.items[0].updated.day, 15, "dc:date day";
+
+# Item 1: pubDate only — should still work
+isa-ok $feed.items[1].updated, DateTime, "item with pubDate only has DateTime updated";
+is $feed.items[1].updated.year, 2025, "pubDate year";
+
+# Item 2: both — pubDate should take priority
+isa-ok $feed.items[2].updated, DateTime, "item with both has DateTime updated";
+is $feed.items[2].updated.day, 17, "pubDate takes priority over dc:date";
+
+# ===== RSS 0.91 with dc:date =====
+my $rss091-xml = q:to/END/;
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="0.91" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>DC Test 0.91</title>
+    <link>http://example.com</link>
+    <description>Testing dc:date in 0.91</description>
+    <item>
+      <title>Item 1</title>
+      <link>http://example.com/1</link>
+      <description>Item 1</description>
+      <dc:date>2025-07-01T00:00:00Z</dc:date>
+    </item>
+  </channel>
+</rss>
+END
+
+my $rss091-feed = Syndicate::RSS::V0_91.new($rss091-xml);
+isa-ok $rss091-feed.items[0].updated, DateTime, "RSS 0.91 dc:date maps to updated";
+
+# ===== RSS 1.0 with dc:date =====
+my $rss1-xml = q:to/END/;
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns="http://purl.org/rss/1.0/"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel rdf:about="http://example.com">
+    <title>DC Test 1.0</title>
+    <link>http://example.com</link>
+    <description>Testing dc:date in 1.0</description>
+    <items><rdf:Seq><rdf:li rdf:resource="http://example.com/1"/></rdf:Seq></items>
+  </channel>
+  <item rdf:about="http://example.com/1">
+    <title>Item 1</title>
+    <link>http://example.com/1</link>
+    <description>Item 1</description>
+    <dc:date>2025-08-01T00:00:00Z</dc:date>
+  </item>
+</rdf:RDF>
+END
+
+my $rss1-feed = Syndicate::RSS::V1_0.new($rss1-xml);
+isa-ok $rss1-feed.items[0].updated, DateTime, "RSS 1.0 dc:date maps to updated";
+
+done-testing;

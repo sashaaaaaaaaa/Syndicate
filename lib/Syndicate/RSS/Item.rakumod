@@ -28,8 +28,14 @@ has Lock $!cache-lock = Lock.new;
 
 multi method new(Str $xml) {
     my $doc = try { XML::Document.new($xml) };
-    die "Invalid RSS item XML: $!" unless $doc;
-    die "Not an RSS item element" unless $doc.root.name eq "item";
+    unless $doc {
+        Syndicate::Stats.record-error;
+        die "Invalid RSS item XML: $!";
+    }
+    unless $doc.root.name eq "item" {
+        Syndicate::Stats.record-error;
+        die "Not an RSS item element";
+    }
     my $item;
     {
         $item = self.from-xml($doc.root);
