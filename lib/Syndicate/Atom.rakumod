@@ -18,8 +18,8 @@ has Str $.rights;
 has Str $.icon;
 has Str $.logo;
 has @.contributors of Hash;
-has $.link-self;   # Array of Hash — stored as itemized Array to avoid flattening in bless
-has $.link-alternate;  # Array of Hash
+has @.link-self of Hash;
+has @.link-alternate of Hash;
 has DateTime $!computed-updated;
 has XML::Element $!cached-xml;
 has Lock $!xml-lock = Lock.new;
@@ -99,7 +99,7 @@ multi method new(XML::Document $doc) {
         default { Syndicate::Stats.record-error; .rethrow }
     }
     self.bless(|%bless, :@items, :@contributors, :categories(@categories),
-               :link-self($(@link-self)), :link-alternate($(@link-alternate)))
+               :@link-self, :@link-alternate)
 }
 
 multi method new(Str $xml) {
@@ -132,15 +132,15 @@ method XML {
         add-element($xml, "title",     $.title);
         add-element($xml, "subtitle",  $.subtitle);
 
-        if $!link-alternate.defined {
-            for @($!link-alternate) -> %link {
+        if @!link-alternate {
+            for @!link-alternate -> %link {
                 my %link-attr = :href(encode-entities(%link<href>)), :rel<alternate>;
                 %link-attr<type> = %link<type> if %link<type>.defined;
                 $xml.append: XML::Element.new(:name<link>, :attribs(%link-attr));
             }
         }
-        if $!link-self.defined {
-            for @($!link-self) -> %link {
+        if @!link-self {
+            for @!link-self -> %link {
                 my %attr = :href(encode-entities(%link<href>)), :rel<self>;
                 %attr<type> = %link<type> if %link<type>.defined;
                 $xml.append: XML::Element.new(:name<link>, :attribs(%attr));

@@ -24,6 +24,7 @@ has Str $.media-description;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.itunes-duration;
+has Set $.active-ext;
 has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 
@@ -73,7 +74,8 @@ method from-xml(XML::Element $item-elem, :$active?) {
     my %enclosure = self!parse-enclosure($item-elem);
 
     my %extra;
-    run-parsers($item-elem, %extra, :$active);
+    my $act = $active // set-active(active-extensions, $item-elem);
+    run-parsers($item-elem, %extra, :active($act));
     # %extra keys from extensions: author, has-dc-creator, media-contents,
     #   media-thumbnails, media-title, media-description,
     #   itunes-author, itunes-summary, itunes-duration
@@ -105,7 +107,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
         :itunes-duration(%extra<itunes-duration> // Str);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
     %bless<updated> //= $dc-updated if $dc-updated ~~ DateTime;
-    my $item = self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails, :@media-groups);
+    my $item = self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails, :@media-groups, :active-ext($act));
     Syndicate::Stats.record-item;
     $item
 }
@@ -138,7 +140,7 @@ method XML {
     }
     add-element($xml, "source", $.source);
 
-    run-generators($xml, self);
+    run-generators($xml, self, :active($!active-ext));
 
     return $xml;
 }

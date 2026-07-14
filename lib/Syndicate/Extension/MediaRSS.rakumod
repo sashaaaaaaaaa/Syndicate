@@ -7,7 +7,7 @@ my constant NS-MEDIA is export = 'http://search.yahoo.com/mrss/';
 
 unit module Syndicate::Extension::MediaRSS:ver<0.0.1>:auth<zef:sasha>;
 
-register-ext(:namespace<media>,
+register-ext(:namespace<media>, :namespace-uri(NS-MEDIA),
     parse => sub ($elem, %attrs) {
         return unless $elem.elements.first({ .name.starts-with('media:') });
         my @mc = get-media-contents($elem);

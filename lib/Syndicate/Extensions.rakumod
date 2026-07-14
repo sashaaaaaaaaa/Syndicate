@@ -20,10 +20,10 @@ sub remove-last-ext(--> Nil) is export {
     }
 }
 
-sub register-ext(:&parse, :&generate, Str :$namespace?) is export {
+sub register-ext(:&parse, :&generate, Str :$namespace?, Str :$namespace-uri?) is export {
     $ext-lock.protect: {
         my @new = @ext-snapshot.List;
-        @new.push: %(:&parse, :&generate, :$namespace);
+        @new.push: %(:&parse, :&generate, :$namespace, :$namespace-uri);
         @ext-snapshot = @new;
     }
 }
@@ -45,10 +45,11 @@ sub run-parsers($elem, %attrs, :$active?) is export {
     }
 }
 
-sub run-generators($xml, $item) is export {
+sub run-generators($xml, $item, :$active?) is export {
     my @exts = @ext-snapshot;
     return unless @exts;
-    for @exts -> %ext {
+    for @exts.kv -> $i, %ext {
+        next if $active.defined && !$active{$i};
         %ext<generate>($xml, $item);
         CATCH {
             when X::Control { .rethrow }
@@ -73,7 +74,9 @@ sub all-descendant-elements($n) {
     }
 }
 
-sub set-active(@exts, $elem) {
+sub active-extensions(--> List) is export { @ext-snapshot }
+
+sub set-active(@exts, $elem) is export {
     my @prefixes = @exts.map({ .<namespace> }).grep(*.defined);
     return @exts.keys.Set unless @prefixes;
     my %present = @prefixes.map({ $_ => False });
@@ -92,7 +95,11 @@ sub set-active(@exts, $elem) {
     for $elem.attribs.kv -> $k, $v {
         with $k.index('xmlns:') {
             my $prefix = $k.substr(6);
-            %present{$prefix} = True if %present{$prefix}:exists;
+            next unless %present{$prefix}:exists;
+            my $uri-ok = so @exts.first({
+                .<namespace> eq $prefix && (!.<namespace-uri> || .<namespace-uri> eq $v)
+            });
+            %present{$prefix} = True if $uri-ok;
         }
     }
     @exts.kv.map(-> $i, %ext { $i if !%ext<namespace> || %present{%ext<namespace>} }).grep(*.defined).Set

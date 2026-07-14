@@ -5,7 +5,7 @@ use Syndicate::Utils;
 
 unit module Syndicate::Extension::ITunes:ver<0.0.1>:auth<zef:sasha>;
 
-register-ext(:namespace<itunes>,
+register-ext(:namespace<itunes>, :namespace-uri('http://www.itunes.com/dtds/podcast-1.0.dtd'),
     parse => sub ($elem, %attrs) {
         return unless $elem.elements.first({ .name.starts-with('itunes:') });
         %attrs<itunes-author>   = get-itunes-text($elem, "author");

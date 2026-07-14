@@ -7,7 +7,7 @@ my constant NS-DC is export = 'http://purl.org/dc/elements/1.1/';
 
 unit module Syndicate::Extension::DublinCore:ver<0.0.1>:auth<zef:sasha>;
 
-register-ext(:namespace<dc>,
+register-ext(:namespace<dc>, :namespace-uri(NS-DC),
     parse => sub ($elem, %attrs) {
         return unless $elem.elements.first({ .name.starts-with('dc:') });
         my $creator = get-dc-text($elem, "creator");
