@@ -70,14 +70,35 @@ sub parse-categories($parent --> Array) is export {
     @categories
 }
 
+sub normalize-date-str(Str $str --> Str) {
+    my $s = $str;
+    $s .= subst(/ (\d ** 1..2) ':' (\d ** 2) ':' (\d ** 2) \s* (<[PA]>M) /, -> $/ {
+        my $h = +$0;
+        if ~$2 eq 'AM' { $h = 0 if $h == 12 }
+        else           { $h += 12 if $h < 12 }
+        sprintf "%02d:%02d:%02d", $h, +$1, +$2;
+    });
+    $s .= subst(:g, / << EST >> /, '-0500');
+    $s .= subst(:g, / << EDT >> /, '-0400');
+    $s .= subst(:g, / << CST >> /, '-0600');
+    $s .= subst(:g, / << CDT >> /, '-0500');
+    $s .= subst(:g, / << MST >> /, '-0700');
+    $s .= subst(:g, / << MDT >> /, '-0600');
+    $s .= subst(:g, / << PST >> /, '-0800');
+    $s .= subst(:g, / << PDT >> /, '-0700');
+    $s
+}
+
 sub parse-date(Str $str --> DateTime) is export {
     die "parse-date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
-    datetime-interpret($str.trim) // die "parse-date: cannot parse '$str'"
+    my $normalized = normalize-date-str($str.trim);
+    datetime-interpret($normalized) // die "parse-date: cannot parse '$str'"
 }
 
 sub parse-date-optional(Str $str) is export {
     return Nil unless $str.defined && $str.trim.chars > 0;
-    datetime-interpret($str.trim) // Nil
+    my $normalized = normalize-date-str($str.trim);
+    datetime-interpret($normalized) // Nil
 }
 
 =begin pod

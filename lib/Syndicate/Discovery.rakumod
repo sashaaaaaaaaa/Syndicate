@@ -106,7 +106,12 @@ method find-feeds(Str $html, Str $base-url --> Array) {
     my $base = self.base-url($html) // $base-url;
     # Strip HTML comments, <script>, and <style> blocks to avoid
     # false-positive link detection inside them.
-    my $clean = $html.subst(:g, / '<!--' .*? '-->' | '<script' .*? '</script>' | '<style' .*? '</style>' /, :i, :s);
+    # Uses negated char classes instead of .*? to avoid O(n²) backtracking.
+    my $clean = $html.chars > MAX-FEED-SIZE
+        ?? $html
+        !! $html.subst(:g,
+            / '<!--' <-[-]>* '-->' | '<script' <-[<]>* '</script>' | '<style' <-[<]>* '</style>' /,
+            :i);
 
     for $clean.comb($link-tag) -> $tag {
         my %attr = self!parse-attrs($tag);
