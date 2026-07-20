@@ -25,9 +25,10 @@ has Str $!author-email;
 has Str $!author-uri;
 has @!categories;
 has @!entries;
-has Str $!itunes-author;
-has Str $!itunes-summary;
-has Str $!atom-self-link;
+    has Str $!itunes-author;
+    has Str $!itunes-summary;
+    has Str $!atom-self-link;
+    has %.image;
 
 method title(Str $v?)       { $!title = $v if $v.defined; $!title }
 method link(Str $v?)        { $!link = $v if $v.defined; $!link }
@@ -52,6 +53,15 @@ method author(Str :$name, Str :$email, Str :$uri) {
 method itunes-author(Str $v?)   { $!itunes-author = $v if $v.defined; $!itunes-author }
 method itunes-summary(Str $v?)  { $!itunes-summary = $v if $v.defined; $!itunes-summary }
 method atom-self-link(Str $v?)  { $!atom-self-link = $v if $v.defined; $!atom-self-link }
+
+method image(Str :$url, Str :$title, Str :$link, Int :$width, Int :$height) {
+    %!image<url>    = $url    if $url.defined;
+    %!image<title>   = $title  if $title.defined;
+    %!image<link>    = $link   if $link.defined;
+    %!image<width>   = ~$width  if $width.defined;
+    %!image<height>  = ~$height if $height.defined;
+    %!image
+}
 
 method category(Str $v?) {
     @!categories.push: $v if $v.defined;
@@ -84,6 +94,7 @@ method rss-feed {
     %bless<itunes-summary>    = $!itunes-summary if $!itunes-summary.defined;
     %bless<atom-self-link>    = $!atom-self-link if $!atom-self-link.defined;
     %bless<lastBuildDate>     = $.updated        if $.updated.defined;
+    %bless<image> = %!image;
     Syndicate::RSS.new(|%bless, :categories(@cats), :@items)
 }
 
@@ -128,6 +139,7 @@ method rss091-feed {
     %bless<lastBuildDate>   = $!updated      if $!updated.defined;
     %bless<itunes-author>  = $!itunes-author  if $!itunes-author.defined;
     %bless<itunes-summary> = $!itunes-summary if $!itunes-summary.defined;
+    %bless<image> = %!image;
     Syndicate::RSS::V0_91.new(|%bless, :@items)
 }
 
@@ -166,6 +178,7 @@ method rss1-feed {
     %bless<language>       = $!language       if $!language.defined;
     %bless<itunes-author>  = $!itunes-author  if $!itunes-author.defined;
     %bless<itunes-summary> = $!itunes-summary if $!itunes-summary.defined;
+    %bless<image> = %!image;
     Syndicate::RSS::V1_0.new(|%bless, :categories(@cats), :@items)
 }
 

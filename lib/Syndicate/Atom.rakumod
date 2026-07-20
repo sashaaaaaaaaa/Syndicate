@@ -22,10 +22,7 @@ has @.link-self of Hash;
 has @.link-alternate of Hash;
 has DateTime $!computed-updated;
 has XML::Element $!cached-xml;
-has Lock $!xml-lock = Lock.new;
-
-submethod TWEAK {
-}
+    has Lock $!xml-lock = Lock.new;
 
 multi method new(XML::Document $doc) {
     my $feed = $doc.root;

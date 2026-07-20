@@ -111,13 +111,13 @@ method to-hash {
 
             %h
         }
-    }
-    $!cached-hash-cloned //= do {
-        my %h = %($!cached-hash);
-        if %h<items>:exists {
-            %h<items> = @(%h<items>.map(*.clone))
+        $!cached-hash-cloned //= do {
+            my %h = %($!cached-hash);
+            if %h<items>:exists {
+                %h<items> = @(%h<items>.map(*.clone))
+            }
+            %h
         }
-        %h
     }
 }
 

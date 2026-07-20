@@ -66,7 +66,7 @@ sub all-descendant-elements($n, :$max = 10_000) {
         my @stack = $n;
         my $i = 0;
         while $i < @stack.elems {
-            die "all-descendant-elements: exceeded $max element limit" if $i > $max;
+            die "all-descendant-elements: exceeded $max element limit" if $i >= $max;
             my $e = @stack[$i++];
             next unless $e ~~ XML::Element;
             take $e;

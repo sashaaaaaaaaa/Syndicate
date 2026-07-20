@@ -4,6 +4,18 @@ use XML::Entity;
 use DateTime::Grammar;
 
 my constant NS-ATOM is export = 'http://www.w3.org/2005/Atom';
+my constant %TZ-OFFSET = (
+    'EST'  => '-0500', 'EDT'  => '-0400',
+    'CST'  => '-0600', 'CDT'  => '-0500',
+    'MST'  => '-0700', 'MDT'  => '-0600',
+    'PST'  => '-0800', 'PDT'  => '-0700',
+    'CET'  => '+0100', 'CEST' => '+0200',
+    'EET'  => '+0200', 'EEST' => '+0300',
+    'IST'  => '+0530', 'HKT'  => '+0800',
+    'JST'  => '+0900', 'AEST' => '+1000',
+    'AEDT' => '+1100', 'NZST' => '+1200',
+    'NZDT' => '+1300',
+);
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
@@ -78,25 +90,15 @@ sub normalize-date-str(Str $str --> Str) {
         else           { $h += 12 if $h < 12 }
         sprintf "%02d:%02d:%02d", $h, +$1, +$2;
     });
-    $s .= subst(:g, / << EST >> /, '-0500');
-    $s .= subst(:g, / << EDT >> /, '-0400');
-    $s .= subst(:g, / << CST >> /, '-0600');
-    $s .= subst(:g, / << CDT >> /, '-0500');
-    $s .= subst(:g, / << MST >> /, '-0700');
-    $s .= subst(:g, / << MDT >> /, '-0600');
-    $s .= subst(:g, / << PST >> /, '-0800');
-    $s .= subst(:g, / << PDT >> /, '-0700');
-    $s .= subst(:g, / << CET >> /, '+0100');
-    $s .= subst(:g, / << CEST >> /, '+0200');
-    $s .= subst(:g, / << EET >> /, '+0200');
-    $s .= subst(:g, / << EEST >> /, '+0300');
-    $s .= subst(:g, / << IST >> /, '+0530');
-    $s .= subst(:g, / << HKT >> /, '+0800');
-    $s .= subst(:g, / << JST >> /, '+0900');
-    $s .= subst(:g, / << AEST >> /, '+1000');
-    $s .= subst(:g, / << AEDT >> /, '+1100');
-    $s .= subst(:g, / << NZST >> /, '+1200');
-    $s .= subst(:g, / << NZDT >> /, '+1300');
+    $s .= subst(:g, /
+        << EST >> | << EDT >> | << CST >> | << CDT >> |
+        << MST >> | << MDT >> | << PST >> | << PDT >> |
+        << CET >> | << CEST >> | << EET >> | << EEST >> |
+        << IST >> | << HKT >> | << JST >> |
+        << AEST >> | << AEDT >> | << NZST >> | << NZDT >>
+    /, {
+        %TZ-OFFSET{~$/}
+    });
     $s
 }
 

@@ -23,8 +23,10 @@ has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.itunes-duration;
 has Set $.active-ext;
-has Str $!cached-str;
-has Lock $!cache-lock = Lock.new;
+    has Str $!cached-str;
+    has Lock $!cache-lock = Lock.new;
+    has XML::Element $!cached-xml;
+    has Lock $!xml-lock = Lock.new;
 
 method !item-type-name { "RSS item" }
 

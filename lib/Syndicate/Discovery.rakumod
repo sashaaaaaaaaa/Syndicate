@@ -13,14 +13,16 @@ my constant $base-tag = rx:i/ '<base' <-[>]>* ['/>' | '>'] /;
 unit class Syndicate::Discovery:ver<0.0.1>:auth<zef:sasha>;
 
 has HTTP::Tiny $.ua is built(False);
+has Int $!max-redirect = 5;
 
 =begin comment
 TLS: HTTP::Tiny v0.2.6 lacks :verify; SSL certs are not validated.
 Pass a custom :$ua (e.g. from Cro with TLS config) to enforce verification.
 =end comment
-submethod BUILD(Int :$max-redirect = 0, :$ua) {
+submethod BUILD(Int :$max-redirect = 5, :$ua) {
     with $ua { $!ua = $_ }
-    $!ua //= HTTP::Tiny.new(:$max-redirect);
+    $!ua //= HTTP::Tiny.new(:max-redirect(0));
+    $!max-redirect = $max-redirect;
 }
 
 method !resolve-redirect-url(Str $original, Str $location) {
@@ -31,7 +33,7 @@ method !resolve-redirect-url(Str $original, Str $location) {
 }
 
 method !fetch-url(Str $url is copy) {
-    my $max = 5;
+    my $max = $!max-redirect;
     loop {
         self!validate-url($url);
         my $resp = $.ua.get($url);
@@ -77,17 +79,33 @@ method !validate-url(Str $url) {
     }
     # Check IPv4-mapped IPv6 (::ffff:x.x.x.x) — must happen before the pure-IPv6
     # regex because dots in the mapped suffix are excluded from the hex-only class.
-    if $host ~~ /^ '['? '::ffff:' (\d+ '.' \d+ '.' \d+ '.' \d+) ']'? $/ {
-        my $mapped = ~$0;
-        die "Blocked mapped unspecified address" if $mapped ~~ /^ '0.0.0.0' $/;
-        if $mapped ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
+    # Also catches hex-encoded forms like ::ffff:c0a8:0101.
+    if $host ~~ /^ '['? '::ffff:' (.+) ']'? $/ {
+        my $suffix = ~$0;
+        if $suffix ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
             my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
+            die "Blocked mapped unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
+            die "Blocked mapped loopback"      if $a == 127;
+            die "Blocked mapped link-local"   if $a == 169 && $b == 254;
+            die "Blocked mapped private"      if $a == 10 || $a == 192 && $b == 168
+                                                  || $a == 172 && 16 <= $b <= 31;
+        } else {
+            my $hex-str = $suffix.split(':').map({ .chars == 4 ?? $_ !! sprintf('%04s', $_) }).join;
+            die "Invalid IPv4-mapped IPv6 suffix: $suffix" unless $hex-str.chars == 8 && $hex-str ~~ /^<[0..9a..f]>+$/;
+            my $ip = :16($hex-str);
+            my $a = ($ip +> 24) +& 0xFF;
+            my $b = ($ip +> 16) +& 0xFF;
+            my $c = ($ip +> 8) +& 0xFF;
+            my $d = $ip +& 0xFF;
+            die "Blocked mapped unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
             die "Blocked mapped loopback"      if $a == 127;
             die "Blocked mapped link-local"   if $a == 169 && $b == 254;
             die "Blocked mapped private"      if $a == 10 || $a == 192 && $b == 168
                                                   || $a == 172 && 16 <= $b <= 31;
         }
     }
+    # Reject zone IDs (e.g. fe80::1%eth0) before the pure-IPv6 regex
+    die "Blocked IPv6 address with zone ID" if $host.contains('%');
     # Reject IPv6 loopback, link-local, and ULA
     if $host ~~ /^ '['? (<[0..9a..f:]>+) ']'? $/ {
         my $addr = ~$0;

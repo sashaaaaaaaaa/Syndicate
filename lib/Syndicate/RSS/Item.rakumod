@@ -64,36 +64,40 @@ method from-xml(XML::Element $item-elem, :$active?) {
 }
 
 method XML {
-    my $xml = XML::Element.new(:name<item>);
-    add-element($xml, "title", $.title);
-    add-element($xml, "link",  $.link);
-    if $.guid.defined && $.guid.chars {
-        my $guid-elem = XML::Element.new(:name<guid>, :nodes([encode-entities($.guid)]));
-        $guid-elem.attribs<isPermaLink> = $.guid-is-permalink ?? "true" !! "false";
-        $xml.append: $guid-elem;
-    }
-    add-element($xml, "description", $.summary);
-    if $.content.defined && $.content.chars {
-        $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
-    }
-    if $.updated.defined {
-        $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
-    }
-    add-element($xml, "author",   $.author);
-    add-element($xml, "category", $_) for @.categories;
-    add-element($xml, "comments", $.comments);
-    if %.enclosure<url>.defined && %.enclosure<url>.chars {
-        my $enc = XML::Element.new(:name<enclosure>);
-        $enc.attribs<url> = encode-entities(%.enclosure<url>);
-        $enc.attribs<length> = encode-entities(%.enclosure<length>) if %.enclosure<length>.defined && %.enclosure<length>.chars;
-        $enc.attribs<type>   = encode-entities(%.enclosure<type>)   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
-        $xml.append: $enc;
-    }
-    add-element($xml, "source", $.source);
+    $!xml-lock.protect: {
+        return $!cached-xml if $!cached-xml.defined;
+        my $xml = XML::Element.new(:name<item>);
+        add-element($xml, "title", $.title);
+        add-element($xml, "link",  $.link);
+        if $.guid.defined && $.guid.chars {
+            my $guid-elem = XML::Element.new(:name<guid>, :nodes([encode-entities($.guid)]));
+            $guid-elem.attribs<isPermaLink> = $.guid-is-permalink ?? "true" !! "false";
+            $xml.append: $guid-elem;
+        }
+        add-element($xml, "description", $.summary);
+        if $.content.defined && $.content.chars {
+            $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
+        }
+        if $.updated.defined {
+            $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
+        }
+        add-element($xml, "author",   $.author);
+        add-element($xml, "category", $_) for @.categories;
+        add-element($xml, "comments", $.comments);
+        if %.enclosure<url>.defined && %.enclosure<url>.chars {
+            my $enc = XML::Element.new(:name<enclosure>);
+            $enc.attribs<url> = encode-entities(%.enclosure<url>);
+            $enc.attribs<length> = encode-entities(%.enclosure<length>) if %.enclosure<length>.defined && %.enclosure<length>.chars;
+            $enc.attribs<type>   = encode-entities(%.enclosure<type>)   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
+            $xml.append: $enc;
+        }
+        add-element($xml, "source", $.source);
 
-    run-generators($xml, self, :active($!active-ext));
+        run-generators($xml, self, :active($!active-ext));
 
-    return $xml;
+        $!cached-xml = $xml;
+        $xml
+    }
 }
 
 method namespace-flags() {

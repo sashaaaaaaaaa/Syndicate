@@ -112,12 +112,12 @@ method to-hash {
             }
             %h
         }
-    }
-    $!cached-hash-cloned //= do {
-        my %h = %($!cached-hash);
-        %h<authors> = %h<authors>.map(*.clone).Array if %h<authors>:exists;
-        %h<tags> = %h<tags>.clone if %h<tags>:exists;
-        %h
+        $!cached-hash-cloned //= do {
+            my %h = %($!cached-hash);
+            %h<authors> = %h<authors>.map(*.clone).Array if %h<authors>:exists;
+            %h<tags> = %h<tags>.clone if %h<tags>:exists;
+            %h
+        }
     }
 }
 
