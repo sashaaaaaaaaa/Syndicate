@@ -162,8 +162,10 @@ method rss1-feed {
     %bless<link>        = $!link        if $!link.defined;
     %bless<description> = $!description if $!description.defined;
     %bless<about>       = $about        if $about.defined && $about.chars;
-    %bless<generator>   = $!generator   if $!generator.defined;
-    %bless<language>    = $!language    if $!language.defined;
+    %bless<generator>      = $!generator      if $!generator.defined;
+    %bless<language>       = $!language       if $!language.defined;
+    %bless<itunes-author>  = $!itunes-author  if $!itunes-author.defined;
+    %bless<itunes-summary> = $!itunes-summary if $!itunes-summary.defined;
     Syndicate::RSS::V1_0.new(|%bless, :categories(@cats), :@items)
 }
 

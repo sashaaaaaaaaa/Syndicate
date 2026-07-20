@@ -25,7 +25,6 @@ has XML::Element $!cached-xml;
 has Lock $!xml-lock = Lock.new;
 
 submethod TWEAK {
-    self!cache-updated;
 }
 
 multi method new(XML::Document $doc) {
@@ -124,6 +123,7 @@ method !cache-updated {
 }
 
 method XML {
+    self!cache-updated;
     $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns(NS-ATOM)}));

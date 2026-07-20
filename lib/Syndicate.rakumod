@@ -100,9 +100,10 @@ billion-laughs protections. Feed URLs fetched via L<C<Syndicate::Discovery>|raku
 are restricted to http/https schemes.
 
 B<Note:> The C<parse-rss>, C<parse-atom>, C<parse-json>, C<parse-rss1>, and
-C<parse-rss091> subs call format constructors directly, bypassing the BOM
-stripping, size limit, and input trimming that L<C<parse-feed>|rakudoc:Syndicate::Parse> enforces.
-For untrusted input, use C<parse()> instead of the format-specific subs.
+C<parse-rss091> subs each apply BOM stripping, size limits, and input trimming
+via the same C<sanitize-input> routine used by C<parse-feed>. Use the format-
+specific subs when you already know the feed format and want a dedicated
+return type.
 
 =head1 EXPORTED SUBS
 

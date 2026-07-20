@@ -18,9 +18,31 @@ has HTTP::Tiny $.ua is built(False);
 TLS: HTTP::Tiny v0.2.6 lacks :verify; SSL certs are not validated.
 Pass a custom :$ua (e.g. from Cro with TLS config) to enforce verification.
 =end comment
-submethod BUILD(Int :$max-redirect = 5, :$ua) {
+submethod BUILD(Int :$max-redirect = 0, :$ua) {
     with $ua { $!ua = $_ }
     $!ua //= HTTP::Tiny.new(:$max-redirect);
+}
+
+method !resolve-redirect-url(Str $original, Str $location) {
+    return $location if $location.starts-with('http://') || $location.starts-with('https://');
+    my $uri = try { URI.new($original) } // die "Cannot resolve redirect from $original";
+    $uri.path($location);
+    ~$uri
+}
+
+method !fetch-url(Str $url is copy) {
+    my $max = 5;
+    loop {
+        self!validate-url($url);
+        my $resp = $.ua.get($url);
+        if my $location = $resp<headers><location> {
+            my $loc = $location ~~ Array ?? $location[0] !! $location;
+            die "Too many redirects" if --$max < 0;
+            $url = self!resolve-redirect-url($url, $loc);
+            next;
+        }
+        return $resp;
+    }
 }
 
 method !decode-response($resp --> Str) {
@@ -76,18 +98,18 @@ method !validate-url(Str $url) {
 }
 
 method fetch(Str $url --> Syndicate::Feed:D) {
-    self!validate-url($url);
-    my $resp = $.ua.get($url);
+    my $resp = self!fetch-url($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $ct = $resp<headers><content-type>.[0] // '';
-    die "Not a feed — Content-Type: $ct" unless $ct.lc ~~ /:i 'application/' [ atom+xml | rss+xml | feed+json | xml ] | 'text/xml' /;
+    unless $ct.lc ~~ /:i 'application/' [ atom+xml | rss+xml | feed+json | xml ] | 'text/xml' / {
+        die "Unexpected Content-Type: '$ct' — expected application/atom+xml, application/rss+xml, application/feed+json, or text/xml";
+    }
     my $body = self!decode-response($resp);
     parse-feed($body)
 }
 
 method discover(Str $url --> Syndicate::Feed:D) {
-    self!validate-url($url);
-    my $resp = $.ua.get($url);
+    my $resp = self!fetch-url($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $body = self!decode-response($resp);
 

@@ -74,7 +74,7 @@ sub normalize-date-str(Str $str --> Str) {
     my $s = $str;
     $s .= subst(/ (\d ** 1..2) ':' (\d ** 2) ':' (\d ** 2) \s* (<[PA]>M) /, -> $/ {
         my $h = +$0;
-        if ~$2 eq 'AM' { $h = 0 if $h == 12 }
+        if ~$3 eq 'AM' { $h = 0 if $h == 12 }
         else           { $h += 12 if $h < 12 }
         sprintf "%02d:%02d:%02d", $h, +$1, +$2;
     });
@@ -86,6 +86,17 @@ sub normalize-date-str(Str $str --> Str) {
     $s .= subst(:g, / << MDT >> /, '-0600');
     $s .= subst(:g, / << PST >> /, '-0800');
     $s .= subst(:g, / << PDT >> /, '-0700');
+    $s .= subst(:g, / << CET >> /, '+0100');
+    $s .= subst(:g, / << CEST >> /, '+0200');
+    $s .= subst(:g, / << EET >> /, '+0200');
+    $s .= subst(:g, / << EEST >> /, '+0300');
+    $s .= subst(:g, / << IST >> /, '+0530');
+    $s .= subst(:g, / << HKT >> /, '+0800');
+    $s .= subst(:g, / << JST >> /, '+0900');
+    $s .= subst(:g, / << AEST >> /, '+1000');
+    $s .= subst(:g, / << AEDT >> /, '+1100');
+    $s .= subst(:g, / << NZST >> /, '+1200');
+    $s .= subst(:g, / << NZDT >> /, '+1300');
     $s
 }
 

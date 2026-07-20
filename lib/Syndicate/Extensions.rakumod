@@ -61,11 +61,12 @@ sub run-generators($xml, $item, :$active?) is export {
     }
 }
 
-sub all-descendant-elements($n) {
+sub all-descendant-elements($n, :$max = 10_000) {
     gather {
         my @stack = $n;
         my $i = 0;
         while $i < @stack.elems {
+            die "all-descendant-elements: exceeded $max element limit" if $i > $max;
             my $e = @stack[$i++];
             next unless $e ~~ XML::Element;
             take $e;
