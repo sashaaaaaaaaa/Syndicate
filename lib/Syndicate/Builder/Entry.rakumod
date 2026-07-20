@@ -22,8 +22,11 @@ has Str $!content;
 has Str $!content-type;
 has Str $!media-title;
 has Str $!media-description;
-has @!media-contents;
-has @!media-thumbnails;
+    has @!media-contents;
+    has @!media-thumbnails;
+    has Str $!comments;
+    has Str $!source;
+    has %.enclosure;
 
 method title(Str $v?)      { $!title = $v if $v.defined; $!title }
 method link(Str $v?)       { $!link = $v if $v.defined; $!link }
@@ -75,6 +78,17 @@ method category(Str $v?) {
     @!categories
 }
 
+method comments(Str $v?) { $!comments = $v if $v.defined; $!comments }
+
+method source(Str $v?)   { $!source = $v if $v.defined; $!source }
+
+method enclosure(Str :$url, Str :$length, Str :$type) {
+    %!enclosure<url>    = $url    if $url.defined;
+    %!enclosure<length> = $length if $length.defined;
+    %!enclosure<type>   = $type   if $type.defined;
+    %!enclosure
+}
+
 method build-rss-item {
     my $item-id = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
@@ -87,7 +101,10 @@ method build-rss-item {
         :guid($item-id),
         :media-title($!media-title // Str),
         :media-description($!media-description // Str);
-    %bless<updated> = $!updated if $!updated.defined;
+    %bless<updated>  = $!updated if $!updated.defined;
+    %bless<comments>  = $!comments if $!comments.defined;
+    %bless<source>    = $!source if $!source.defined;
+    %bless<enclosure> = %!enclosure if %!enclosure;
     Syndicate::RSS::Item.new(|%bless,
         :categories(@!categories),
         :media-contents(@!media-contents),
@@ -100,7 +117,10 @@ method build-v0_91-item {
         :summary($!summary // Str),
         :id($item-id),
         :content($!content // Str);
-    %bless<author> = $!author-name if $!author-name.defined;
+    %bless<author>   = $!author-name if $!author-name.defined;
+    %bless<comments>  = $!comments if $!comments.defined;
+    %bless<source>    = $!source if $!source.defined;
+    %bless<enclosure> = %!enclosure if %!enclosure;
     # has-dc-creator is intentionally not set — V0_91 does not use dc:
     # namespace. The xmlns:dc declaration should only appear in formats
     # that support Dublin Core (RSS 2.0, RSS 1.0).
@@ -147,7 +167,10 @@ method build-v1_0-item {
 
         :author($!author-name // Str),
         :has-dc-creator($!author-name.defined);
-    %bless<updated> = $!updated if $!updated.defined;
+    %bless<updated>  = $!updated if $!updated.defined;
+    %bless<comments>  = $!comments if $!comments.defined;
+    %bless<source>    = $!source if $!source.defined;
+    %bless<enclosure> = %!enclosure if %!enclosure;
     my @dc-subjects = @!categories;
     Syndicate::RSS::V1_0::Item.new(|%bless, :categories(@!categories), :@dc-subjects)
 }
