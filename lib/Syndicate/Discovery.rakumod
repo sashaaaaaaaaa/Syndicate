@@ -26,10 +26,8 @@ submethod BUILD(Int :$max-redirect = 5, :$ua) {
 }
 
 method !resolve-redirect-url(Str $original, Str $location) {
-    return $location if $location.starts-with('http://') || $location.starts-with('https://');
-    my $uri = try { URI.new($original) } // die "Cannot resolve redirect from $original";
-    $uri.path($location);
-    ~$uri
+    return $location if $location.lc.starts-with('http://') || $location.lc.starts-with('https://');
+    self.resolve-url($location, $original)
 }
 
 method !fetch-url(Str $url is copy) {
@@ -47,10 +45,15 @@ method !fetch-url(Str $url is copy) {
     }
 }
 
+sub header-value($h) {
+    $h ~~ Array ?? $h[0] // '' !! $h // ''
+}
+
 method !decode-response($resp --> Str) {
     my $charset = 'utf-8';
-    with $resp<headers><content-type>.[0] {
-        for .lc.split(';') {
+    with $resp<headers><content-type> {
+        my $ct = header-value($_);
+        for $ct.lc.split(';') {
             .trim ~~ /^charset\s* \= \s* (<[^\s;]>+)/ and $charset = ~$0.subst(/<[\'\"]>/, '', :g);
         }
     }
@@ -65,10 +68,14 @@ method !validate-url(Str $url) {
         unless $scheme.defined && $scheme ∈ <http https>;
     my $host = $uri.host.lc;
     die "Blocked empty host" unless $host.defined && $host.chars;
+    # Strip brackets so all subsequent checks work with bare addresses
+    $host .= subst(/ ^ '[' | ']' $ /, '');
     # Reject bare hostnames (no dots) — SSRF via internal DNS short names
     die "Blocked host without domain" unless $host.contains('.');
     # Reject private, loopback, and link-local IPv4 addresses
     if $host ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
+        my @octets = (~$0, ~$1, ~$2, ~$3);
+        die "Blocked IPv4 address with octal notation" if @octets.first({ .chars > 1 && .starts-with('0') });
         my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
         die "Blocked unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
         die "Blocked loopback address"    if $a == 127;
@@ -77,10 +84,8 @@ method !validate-url(Str $url) {
         die "Blocked private address"     if $a == 192 && $b == 168;
         die "Blocked private address"     if $a == 172 && 16 <= $b <= 31;
     }
-    # Check IPv4-mapped IPv6 (::ffff:x.x.x.x) — must happen before the pure-IPv6
-    # regex because dots in the mapped suffix are excluded from the hex-only class.
-    # Also catches hex-encoded forms like ::ffff:c0a8:0101.
-    if $host ~~ /^ '['? '::ffff:' (.+) ']'? $/ {
+    # Check IPv4-mapped IPv6 (::ffff:x.x.x.x or ::ffff:hex:hex)
+    if $host ~~ /^ '::ffff:' (.+) $/ {
         my $suffix = ~$0;
         if $suffix ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
             my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
@@ -91,7 +96,7 @@ method !validate-url(Str $url) {
                                                   || $a == 172 && 16 <= $b <= 31;
         } else {
             my $hex-str = $suffix.split(':').map({ .chars == 4 ?? $_ !! sprintf('%04s', $_) }).join;
-            die "Invalid IPv4-mapped IPv6 suffix: $suffix" unless $hex-str.chars == 8 && $hex-str ~~ /^<[0..9a..f]>+$/;
+            die "Blocked mapped unspecified address" unless $hex-str.chars == 8 && $hex-str ~~ /^<[0..9a..f]>+$/;
             my $ip = :16($hex-str);
             my $a = ($ip +> 24) +& 0xFF;
             my $b = ($ip +> 16) +& 0xFF;
@@ -104,10 +109,19 @@ method !validate-url(Str $url) {
                                                   || $a == 172 && 16 <= $b <= 31;
         }
     }
+    # Check IPv4-compatible IPv6 (::127.0.0.1, 0:0:0:0:0:0:127.0.0.1)
+    if $host ~~ /^ (<[0..9a..f:]>+) (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
+        my ($a, $b, $c, $d) = (+$1, +$2, +$3, +$4);
+        die "Blocked mapped unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
+        die "Blocked mapped loopback"      if $a == 127;
+        die "Blocked mapped link-local"   if $a == 169 && $b == 254;
+        die "Blocked mapped private"      if $a == 10 || $a == 192 && $b == 168
+                                              || $a == 172 && 16 <= $b <= 31;
+    }
     # Reject zone IDs (e.g. fe80::1%eth0) before the pure-IPv6 regex
     die "Blocked IPv6 address with zone ID" if $host.contains('%');
     # Reject IPv6 loopback, link-local, and ULA
-    if $host ~~ /^ '['? (<[0..9a..f:]>+) ']'? $/ {
+    if $host ~~ /^ (<[0..9a..f:]>+) $/ {
         my $addr = ~$0;
         die "Blocked IPv6 loopback address"     if $addr eq '::1';
         die "Blocked IPv6 link-local address"   if $addr ~~ /^ fe <[89a..b]> /;
@@ -118,10 +132,9 @@ method !validate-url(Str $url) {
 method fetch(Str $url --> Syndicate::Feed:D) {
     my $resp = self!fetch-url($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
-    my $ct = $resp<headers><content-type>.[0] // '';
-    unless $ct.lc ~~ /:i 'application/' [ atom+xml | rss+xml | feed+json | xml ] | 'text/xml' / {
-        die "Unexpected Content-Type: '$ct' — expected application/atom+xml, application/rss+xml, application/feed+json, or text/xml";
-    }
+    my $ct = header-value($resp<headers><content-type>);
+    die "Unexpected Content-Type: '$ct' — expected application/atom+xml, application/rss+xml, application/feed+json, or text/xml"
+        unless $ct.lc ~~ /:i 'application/' [ atom+xml | rss+xml | feed+json | xml ] | 'text/xml' /;
     my $body = self!decode-response($resp);
     parse-feed($body)
 }
