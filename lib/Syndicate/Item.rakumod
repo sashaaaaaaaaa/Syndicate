@@ -10,6 +10,18 @@ has DateTime $.updated;
 has Str $.id;
 has Str $.content;
 
+method to-hash {
+    my %h;
+    %h<title>   = $.title   if $.title.defined;
+    %h<link>    = $.link    if $.link.defined;
+    %h<summary> = $.summary if $.summary.defined;
+    %h<author>  = $.author  if $.author.defined;
+    %h<updated> = $.updated.Str if $.updated.defined;
+    %h<id>      = $.id      if $.id.defined;
+    %h<content> = $.content if $.content.defined;
+    %h
+}
+
 =begin pod
 
 =head1 NAME

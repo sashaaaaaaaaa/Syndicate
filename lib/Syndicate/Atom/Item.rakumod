@@ -86,9 +86,9 @@ method from-xml(XML::Element $entry-elem) {
     my $link = Str;
     for $entry-elem.elements(:TAG<link>) {
         my $rel = .attribs<rel> // "alternate";
-        my $href = .attribs<href> // "";
+        my $href = decode-entities(.attribs<href> // "");
         if $rel eq "alternate" {
-            @link-alternate.push: %( href => $href, type => .attribs<type> // Str );
+            @link-alternate.push: %( href => $href, type => decode-entities(.attribs<type> // Str) );
             $link ||= $href;
         }
     }

@@ -16,6 +16,17 @@ method items() { @!items.List }
 has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 
+method to-hash {
+    my %h;
+    %h<title>       = $.title       if $.title.defined;
+    %h<link>        = $.link        if $.link.defined;
+    %h<description> = $.description if $.description.defined;
+    %h<generator>   = $.generator   if $.generator.defined;
+    %h<language>    = $.language    if $.language.defined;
+    %h<items> = @!items.map(*.to-hash).Array if @!items;
+    %h
+}
+
 method Str {
     $!cache-lock.protect: {
         $!cached-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ self.XML.Str

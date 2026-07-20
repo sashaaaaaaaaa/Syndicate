@@ -69,9 +69,9 @@ method !parse-guid(XML::Element $item-elem) {
 method !parse-enclosure(XML::Element $item-elem) {
     my %enclosure;
     with $item-elem.elements(:TAG<enclosure>)[0] {
-        %enclosure<url>    = .attribs<url>    // Str;
-        %enclosure<length> = .attribs<length> // Str;
-        %enclosure<type>   = .attribs<type>   // Str;
+        %enclosure<url>    = decode-entities(.attribs<url>    // Str);
+        %enclosure<length> = decode-entities(.attribs<length> // Str);
+        %enclosure<type>   = decode-entities(.attribs<type>   // Str);
     }
     %enclosure
 }

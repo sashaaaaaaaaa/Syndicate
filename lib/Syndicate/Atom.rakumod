@@ -68,12 +68,12 @@ multi method new(XML::Document $doc) {
     my $primary-link = Str;
     for $feed.elements(:TAG<link>) {
         my $rel = .attribs<rel> // "alternate";
-        my $href = .attribs<href> // "";
+        my $href = decode-entities(.attribs<href> // "");
         if $rel eq "self" {
-            @link-self.push: %( href => $href, type => .attribs<type> // Str );
+            @link-self.push: %( href => $href, type => decode-entities(.attribs<type> // Str) );
         }
         elsif $rel eq "alternate" {
-            @link-alternate.push: %( href => $href, type => .attribs<type> // Str );
+            @link-alternate.push: %( href => $href, type => decode-entities(.attribs<type> // Str) );
             $primary-link ||= $href;
         }
     }
