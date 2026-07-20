@@ -61,20 +61,6 @@ sub run-generators($xml, $item, :$active?) is export {
     }
 }
 
-sub all-descendant-elements($n, :$max = 10_000) {
-    gather {
-        my @stack = $n;
-        my $i = 0;
-        while $i < @stack.elems {
-            die "all-descendant-elements: exceeded $max element limit" if $i >= $max;
-            my $e = @stack[$i++];
-            next unless $e ~~ XML::Element;
-            take $e;
-            @stack.push: $e.nodes.Slip if $e ~~ XML::Element;
-        }
-    }
-}
-
 sub active-extensions(--> List) is export { @ext-snapshot }
 
 sub set-active(@exts, $elem) is export {
@@ -85,13 +71,29 @@ sub set-active(@exts, $elem) is export {
     with $check.index(':') -> $i {
         %present{$check.substr(0, $i)} = True;
     }
-    for all-descendant-elements($elem).skip(1) -> $e {
-        my $name = $e.name;
-        with $name.index(':') -> $i {
-            my $prefix = $name.substr(0, $i);
-            %present{$prefix} = True if %present{$prefix}:exists;
+    # Walk descendants to find which namespace prefixes are actually
+    # used in the element tree. Inlined instead of calling a gather/take
+    # sub to avoid Seq allocation overhead. Root element is passed
+    # through the stack (so children are discovered) but its prefix
+    # check is skipped (already handled above).
+    {
+        my @stack = $elem;
+        my $max = 10_000;
+        my $i = 0;
+        while $i < @stack.elems {
+            die "all-descendant-elements: exceeded $max element limit" if $i >= $max;
+            my $e = @stack[$i++];
+            next unless $e ~~ XML::Element;
+            if $i > 1 {
+                my $name = $e.name;
+                with $name.index(':') -> $j {
+                    my $prefix = $name.substr(0, $j);
+                    %present{$prefix} = True if %present{$prefix}:exists;
+                }
+                last if so %present.values.all;
+            }
+            @stack.push: $e.nodes.Slip;
         }
-        last if so %present.values.all;
     }
     # Second pass: check xmlns: attributes on the element itself.
     # These are checked after the descendant name loop because they
