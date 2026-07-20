@@ -47,5 +47,6 @@ called on the type object directly (no instantiation needed).
 =item C<record-feed> - Increment feed counter
 =item C<record-item> - Increment item counter
 =item C<record-error> - Increment error counter
+=item C<reset> - Reset all counters to 0. Should be called between test suites.
 
 =end pod

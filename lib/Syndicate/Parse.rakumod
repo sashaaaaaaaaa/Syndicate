@@ -7,8 +7,7 @@ use Syndicate::Atom;
 use Syndicate::JSONFeed;
 use Syndicate::Stats;
 use JSON::Fast;
-
-my constant MAX-FEED-SIZE    = 10 * 1024 * 1024;
+my constant MAX-FEED-SIZE is export = 10 * 1024 * 1024;
 my constant RSS_VER_091      = "0.91";
 
 unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
@@ -142,7 +141,7 @@ sub try-parse-json(Str $input) {
 }
 
 sub try-xml-parse(Str $clean) {
-    my $stripped = $clean.trim-leading;
+    my $stripped = $clean;
     return Nil if $stripped.starts-with('{') || $stripped.starts-with('[');
     root-element($stripped)
 }

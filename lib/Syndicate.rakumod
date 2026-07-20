@@ -28,7 +28,7 @@ sub parse(Str $input --> Syndicate::Feed:D) is export {
     parse-feed($input)
 }
 
-my constant MAX-FEED-SIZE = 10 * 1024 * 1024;
+# imported from Syndicate::Parse (line 19)
 
 sub sanitize-input(Str $input --> Str) {
     my $clean = $input.trim;

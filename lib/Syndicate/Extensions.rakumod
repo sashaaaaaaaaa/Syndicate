@@ -92,6 +92,10 @@ sub set-active(@exts, $elem) is export {
         }
         last if so %present.values.all;
     }
+    # Second pass: check xmlns: attributes on the element itself.
+    # These are checked after the descendant name loop because they
+    # are the authoritative declaration — but they can only set a
+    # prefix to True (never back to False).
     for $elem.attribs.kv -> $k, $v {
         with $k.index('xmlns:') {
             my $prefix = $k.substr(6);
