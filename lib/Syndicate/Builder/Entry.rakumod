@@ -75,7 +75,7 @@ method author(Str :$name, Str :$email, Str :$uri) {
 
 method category(Str $v?) {
     @!categories.push: $v if $v.defined;
-    @!categories
+    @!categories.List
 }
 
 method comments(Str $v?) { $!comments = $v if $v.defined; $!comments }
