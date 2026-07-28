@@ -16,8 +16,9 @@ has HTTP::Tiny $.ua is built(False);
 has Int $!max-redirect = 5;
 
 =begin comment
-TLS: HTTP::Tiny v0.2.6 lacks :verify; SSL certs are not validated.
-Pass a custom :$ua (e.g. from Cro with TLS config) to enforce verification.
+TLS: HTTP::Tiny (v0.2.7) and IO::Socket::SSL do not support certificate
+verification. Pass a custom :$ua (e.g. Cro::HTTP::Client) for verified
+TLS connections.
 =end comment
 submethod BUILD(Int :$max-redirect = 5, :$ua) {
     with $ua { $!ua = $_ }
@@ -270,8 +271,12 @@ RSS, Atom, and JSON Feed content types.
 =head2 C<fetch(Str $url)>
 
 Fetches a URL and parses the feed. Dies on HTTP errors.
-SSL certificates are not verified by default — pass a custom C<:$ua>
-with proper TLS configuration (e.g. Cro::HTTP::Client) to C<.new>.
+
+B<Security note:> SSL/TLS certificates are B<not> verified by the default
+C<HTTP::Tiny> user agent. Neither HTTP::Tiny nor the underlying
+IO::Socket::SSL module support certificate verification. For connections
+requiring TLS verification, pass a custom C<:$ua> using L<Cro::HTTP|rakudoc:Cro::HTTP>
+or L<HTTP::UserAgent|rakudoc:HTTP::UserAgent> instead.
 
 =head2 C<discover(Str $url)>
 
