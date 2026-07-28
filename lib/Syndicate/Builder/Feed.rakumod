@@ -140,7 +140,7 @@ method rss091-feed {
     %bless<itunes-author>  = $!itunes-author  if $!itunes-author.defined;
     %bless<itunes-summary> = $!itunes-summary if $!itunes-summary.defined;
     %bless<image> = %!image;
-    note "Warning: RSS 0.91 does not support feed-level categories; @!categories.elems categories dropped"
+    note "Warning: RSS 0.91 does not support feed-level categories; {@!categories.elems} categories dropped"
         if @!categories;
     Syndicate::RSS::V0_91.new(|%bless, :@items)
 }

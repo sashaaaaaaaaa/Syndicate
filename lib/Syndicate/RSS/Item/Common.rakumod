@@ -64,7 +64,8 @@ method !parse-guid(XML::Element $item-elem) {
     my $guid-elem = $item-elem.elements(:TAG<guid>)[0];
     return (Str, True) unless $guid-elem;
     my $guid = decode-entities($guid-elem.contents[0].?text // Str);
-    my $is-permalink = ($guid-elem.attribs<isPermaLink> // "true") eq "true";
+    my $raw = ($guid-elem.attribs<isPermaLink> // "true").lc;
+    my $is-permalink = $raw eq "true" || $raw eq "1";
     ($guid, $is-permalink)
 }
 

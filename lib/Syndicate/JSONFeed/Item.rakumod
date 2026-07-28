@@ -59,7 +59,11 @@ multi method new-from-hash(%h) {
     my @tags;
     @tags = @(%h<tags>) if %h<tags>:exists;
 
-    my $content = %h<content_html> // %h<content_text> // Str;
+    my $content = %h<content_html>.defined && %h<content_html>.chars
+        ?? %h<content_html>
+        !! %h<content_text>.defined && %h<content_text>.chars
+            ?? %h<content_text>
+            !! Str;
     my %bless = :$title, :$link, :summary($summary),
         :$id,
         :$content,

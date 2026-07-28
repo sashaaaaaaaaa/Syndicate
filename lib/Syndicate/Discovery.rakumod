@@ -71,6 +71,8 @@ method !validate-url(Str $url) {
     die "Blocked empty host" unless $host.defined && $host.chars;
     # Strip brackets so all subsequent checks work with bare addresses
     $host .= subst(/ ^ '[' | ']' $ /, '');
+    # Strip trailing dot (DNS absolute form) so bare-hostname check catches internal.
+    $host .= subst(/ '.' $ /, '');
     # Reject bare hostnames (no dots) — SSRF via internal DNS short names
     die "Blocked host without domain" unless $host.contains('.');
     # Reject private, loopback, and link-local IPv4 addresses
@@ -79,6 +81,7 @@ method !validate-url(Str $url) {
         die "Blocked IPv4 address with octal notation" if @octets.first({ .chars > 1 && .starts-with('0') });
         my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
         die "Blocked unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
+        die "Blocked address on zero network" if $a == 0;
         die "Blocked loopback address"    if $a == 127;
         die "Blocked link-local address"  if $a == 169 && $b == 254;
         die "Blocked private address"     if $a == 10;
@@ -96,7 +99,7 @@ method !validate-url(Str $url) {
             die "Blocked mapped private"      if $a == 10 || $a == 192 && $b == 168
                                                   || $a == 172 && 16 <= $b <= 31;
         } else {
-            my $hex-str = $suffix.split(':').map({ .chars == 4 ?? $_ !! sprintf('%04s', $_) }).join;
+            my $hex-str = $suffix.split(':').map({ .chars == 4 ?? $_ !! sprintf('%04x', :16($_)) }).join;
             die "Blocked mapped unspecified address" unless $hex-str.chars == 8 && $hex-str ~~ /^<[0..9a..f]>+$/;
             my $ip = :16($hex-str);
             my $a = ($ip +> 24) +& 0xFF;
@@ -127,6 +130,7 @@ method !validate-url(Str $url) {
     if $host ~~ /^ (<[0..9a..f:]>+) $/ {
         my $addr = ~$0;
         die "Blocked IPv6 loopback address"     if $addr eq '::1';
+        die "Blocked IPv6 unspecified address"   if $addr eq '::';
         die "Blocked IPv6 link-local address"   if $addr ~~ /^ fe <[89a..b]> /;
         die "Blocked IPv6 unique-local address" if $addr.starts-with('fc') || $addr.starts-with('fd');
     }
@@ -165,7 +169,7 @@ method find-feeds(Str $html, Str $base-url --> Array) {
     # Uses non-greedy .*? to handle nested HTML tags within blocks
     # (e.g., <span> inside <script>), unlike the previous negated-char-class
     # approach which stopped at any '<' character.
-    my $clean = $html.chars > MAX-FEED-SIZE
+    my $clean = $html.encode.bytes > MAX-FEED-SIZE
         ?? $html
         !! $html.subst(:g,
             / '<!--' .*? '-->'

@@ -58,7 +58,8 @@ multi method new(XML::Document $doc) {
     my @categories;
     for $channel.elements(:TAG<dc:subject>) -> $s {
         with $s.contents[0] -> $t {
-            @categories.push: $t.?text if $t.?text.defined;
+            my $text = $t.?text // "";
+            @categories.push: decode-entities($text) if $text.chars;
         }
     }
 

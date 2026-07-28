@@ -14,6 +14,7 @@ method items() { @!items.List }
 # Any mutation to attributes after the first call to .Str or .to-hash
 # will not be reflected in the cached output.
 has Hash $!cached-str;
+has Str  $!cached-xml-str;
 has Lock $!cache-lock = Lock.new;
 
 method to-hash {
@@ -29,7 +30,8 @@ method to-hash {
 
 method Str(:$encoding = 'UTF-8') {
     $!cache-lock.protect: {
-        $!cached-str{$encoding} //= '<?xml version="1.0" encoding="' ~ $encoding ~ '"?>' ~ "\n" ~ self.XML.Str
+        $!cached-xml-str //= self.XML.Str;
+        $!cached-str{$encoding} //= '<?xml version="1.0" encoding="' ~ $encoding ~ '"?>' ~ "\n" ~ $!cached-xml-str
     }
 }
 
