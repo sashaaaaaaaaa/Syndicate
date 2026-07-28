@@ -4,6 +4,8 @@ use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Extensions;
 use Syndicate::Stats;
+use DateTime::Format::RFC2822;
+my constant $RFC2822 = DateTime::Format::RFC2822.new;
 
 unit role Syndicate::RSS::Item::Common:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -14,6 +16,8 @@ has @.categories of Str;
 has Str $.comments;
 has %.enclosure of Str;
 has Str $.source;
+has Str $.about;
+has @.dc-subjects of Str;
 has @.media-contents of Hash;
 has @.media-thumbnails of Hash;
 has @.media-groups of Hash;
@@ -81,6 +85,53 @@ method !parse-enclosure(XML::Element $item-elem) {
 
 method Str {
     $!cache-lock.protect: { $!cached-str //= ~self.XML }
+}
+
+method XML {
+    $!xml-lock.protect: {
+        return $!cached-xml if $!cached-xml.defined;
+        my $xml = XML::Element.new(:name<item>);
+        $xml.attribs{'rdf:about'} = $.about if $.about.defined;
+        add-element($xml, "title", $.title);
+        add-element($xml, "link",  $.link);
+        if $.guid.defined && $.guid.chars {
+            my $guid-elem = XML::Element.new(:name<guid>, :nodes([encode-entities($.guid)]));
+            $guid-elem.attribs<isPermaLink> = $.guid-is-permalink ?? "true" !! "false";
+            $xml.append: $guid-elem;
+        }
+        add-element($xml, "description", $.summary);
+        if $.content.defined && $.content.chars {
+            $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
+        }
+        if $.updated.defined {
+            $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
+        }
+        add-element($xml, "author",   $.author);
+        add-element($xml, "category", $_) for @.categories;
+        add-element($xml, "comments", $.comments);
+        if %.enclosure<url>.defined && %.enclosure<url>.chars {
+            my $enc = XML::Element.new(:name<enclosure>);
+            $enc.attribs<url> = encode-entities(%.enclosure<url>);
+            $enc.attribs<length> = encode-entities(%.enclosure<length>) if %.enclosure<length>.defined && %.enclosure<length>.chars;
+            $enc.attribs<type>   = encode-entities(%.enclosure<type>)   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
+            $xml.append: $enc;
+        }
+        add-element($xml, "source", $.source);
+
+        run-generators($xml, self, :active($!active-ext));
+
+        $!cached-xml = $xml;
+        $xml
+    }
+}
+
+method namespace-flags() {
+    (
+        $!has-dc-creator,
+        ?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined,
+        $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
+        ?($.content.defined && $.content.chars),
+    )
 }
 
 =begin pod
