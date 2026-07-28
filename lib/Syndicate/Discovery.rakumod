@@ -162,11 +162,15 @@ method find-feeds(Str $html, Str $base-url --> Array) {
     my $base = self.base-url($html) // $base-url;
     # Strip HTML comments, <script>, and <style> blocks to avoid
     # false-positive link detection inside them.
-    # Uses negated char classes instead of .*? to avoid O(n²) backtracking.
+    # Uses non-greedy .*? to handle nested HTML tags within blocks
+    # (e.g., <span> inside <script>), unlike the previous negated-char-class
+    # approach which stopped at any '<' character.
     my $clean = $html.chars > MAX-FEED-SIZE
         ?? $html
         !! $html.subst(:g,
-            / '<!--' <-[-]>* '-->' | '<script' <-[<]>* '</script>' | '<style' <-[<]>* '</style>' /,
+            / '<!--' .*? '-->'
+            | '<script' [<-[>]>]* '>' .*? '</script>'
+            | '<style'  [<-[>]>]* '>' .*? '</style>' /,
             :i);
 
     for $clean.comb($link-tag) -> $tag {
