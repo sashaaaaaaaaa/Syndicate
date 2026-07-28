@@ -112,6 +112,8 @@ method !validate-url(Str $url) {
     }
     # Check IPv4-compatible IPv6 (::127.0.0.1, 0:0:0:0:0:0:127.0.0.1)
     if $host ~~ /^ (<[0..9a..f:]>+) (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
+        my @octets = (~$1, ~$2, ~$3, ~$4);
+        die "Blocked IPv6 with octal notation" if @octets.first({ .chars > 1 && .starts-with('0') });
         my ($a, $b, $c, $d) = (+$1, +$2, +$3, +$4);
         die "Blocked mapped unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
         die "Blocked mapped loopback"      if $a == 127;
