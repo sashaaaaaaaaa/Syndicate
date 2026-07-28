@@ -99,12 +99,7 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
 }
 
 multi sub parse-feed-with-format(Str $input --> List) is export {
-    my $clean = $input.trim;
-    $clean .= subst(/^\xFEFF/, '');
-    die "parse-feed-with-format: empty input" unless $clean.chars;
-    my $bytes = $clean.encode.bytes;
-    die "parse-feed-with-format: input too large ($bytes bytes, max {MAX-FEED-SIZE})"
-        if $bytes > MAX-FEED-SIZE;
+    my $clean = sanitize-input($input);
 
     with try-xml-parse($clean) -> $root-info {
         my $format = feed-format($root-info<name>, $root-info<ver>);
@@ -122,8 +117,8 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
 }
 
 multi sub parse-file(Str $path --> Syndicate::Feed:D) is export {
-    my $size = try { $path.IO.s };
-    die "File too large ($size bytes, max {MAX-FEED-SIZE})" if $size.defined && $size > MAX-FEED-SIZE;
+    my $size = $path.IO.s;
+    die "File too large ($size bytes, max {MAX-FEED-SIZE})" if $size > MAX-FEED-SIZE;
     my $contents = try { slurp($path) };
     without $contents {
         die "Could not read file '$path': $!";
