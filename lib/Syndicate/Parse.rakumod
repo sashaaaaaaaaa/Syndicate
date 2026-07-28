@@ -20,6 +20,9 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = $input.trim;
     $clean .= subst(/^\xFEFF/, '');
     die "feed-format: empty input" unless $clean.chars;
+    my $bytes = $clean.encode.bytes;
+    die "feed-format: input too large ($bytes bytes, max {MAX-FEED-SIZE})"
+        if $bytes > MAX-FEED-SIZE;
 
     with try-xml-parse($clean) -> $root {
         return feed-format($root<name>, $root<ver>);
