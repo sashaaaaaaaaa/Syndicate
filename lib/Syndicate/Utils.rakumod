@@ -39,13 +39,13 @@ sub add-element($parent, $name, $value --> Nil) is export {
 
 sub get-text($parent, $tag --> Str) is export {
     my $e = $parent.elements(:TAG($tag))[0];
-    die "Missing required element <$tag>" without $e;
+    die "Missing required element <$tag> in <{$parent.name}>" without $e;
     with $e.contents[0] -> $t {
         my $text = ($t.?text // "").trim;
-        die "Empty required element <$tag>" unless $text.chars;
+        die "Empty required element <$tag> in <{$parent.name}>" unless $text.chars;
         return decode-entities($text);
     }
-    die "Element <$tag> has no child nodes"
+    die "Element <$tag> in <{$parent.name}> has no child nodes"
 }
 
 sub get-text-optional($parent, $tag --> Str) is export {
