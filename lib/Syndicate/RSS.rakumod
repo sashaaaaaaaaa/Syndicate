@@ -64,7 +64,7 @@ multi method new(XML::Document $doc) {
     for $channel.elements -> $l {
         next unless $l ~~ XML::Element;
         my $ln = $l.name;
-        next unless $ln.contains(':') && $ln.split(':')[1] eq 'link';
+        next unless $ln.ends-with(':link');
         if ($l.attribs<rel> // "") eq "self" {
             $atom-self-link = $l.attribs<href> // Str;
             last;
