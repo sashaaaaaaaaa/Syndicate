@@ -13,6 +13,11 @@ use Syndicate::Extensions;
 my constant NS-RDF     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 my constant NS-RSS1    = 'http://purl.org/rss/1.0/';
 
+my sub has-nonempty-text($elem, $tag --> Bool) {
+    my $e = $elem.elements(:TAG($tag))[0]
+        or return False;
+    so $e.contents.first({ .?text.defined && .?text.trim.chars })
+}
 
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
@@ -67,10 +72,6 @@ multi method new(XML::Document $doc) {
     my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
     $needs-dc ||= ?@categories;
     $needs-itunes ||= $it-author.defined || $it-summary.defined;
-    sub has-nonempty-text($elem, $tag) {
-        my $e = $elem.elements(:TAG($tag))[0];
-        $e && $e.contents[0] && $e.contents[0].?text.trim.chars
-    }
     my $feed-active = set-active(active-extensions, $root);
     for $root.elements(:TAG<item>) -> $item-elem {
         unless has-nonempty-text($item-elem, "title") && has-nonempty-text($item-elem, "link") {

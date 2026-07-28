@@ -13,8 +13,7 @@ method items() { @!items.List }
 # Caches assume the feed object is immutable after construction.
 # Any mutation to attributes after the first call to .Str or .to-hash
 # will not be reflected in the cached output.
-has Hash $!cached-str;
-has Str  $!cached-xml-str;
+has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 
 method to-hash {
@@ -28,10 +27,9 @@ method to-hash {
     %h
 }
 
-method Str(:$encoding = 'UTF-8') {
+method Str {
     $!cache-lock.protect: {
-        $!cached-xml-str //= self.XML.Str;
-        $!cached-str{$encoding} //= '<?xml version="1.0" encoding="' ~ $encoding ~ '"?>' ~ "\n" ~ $!cached-xml-str
+        $!cached-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ self.XML.Str
     }
 }
 

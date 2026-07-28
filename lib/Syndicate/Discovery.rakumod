@@ -74,7 +74,7 @@ method !validate-url(Str $url) {
     # Strip trailing dot (DNS absolute form) so bare-hostname check catches internal.
     $host .= subst(/ '.' $ /, '');
     # Reject bare hostnames (no dots) — SSRF via internal DNS short names
-    die "Blocked host without domain" unless $host.contains('.');
+    die "Blocked host without domain" unless $host.contains('.') || $host.contains(':');
     # Reject private, loopback, and link-local IPv4 addresses
     if $host ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
         my @octets = (~$0, ~$1, ~$2, ~$3);
@@ -141,7 +141,7 @@ method fetch(Str $url --> Syndicate::Feed:D) {
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $ct = header-value($resp<headers><content-type>);
     die "Unexpected Content-Type: '$ct' — expected application/atom+xml, application/rss+xml, application/feed+json, or text/xml"
-        unless $ct.lc ~~ /:i 'application/' [ atom+xml | rss+xml | feed+json | xml ] | 'text/xml' /;
+        unless $ct.lc ~~ /^ :i 'application/' [ atom+xml | rss+xml | feed+json | xml ] | 'text/xml' $/;
     my $body = self!decode-response($resp);
     parse-feed($body)
 }

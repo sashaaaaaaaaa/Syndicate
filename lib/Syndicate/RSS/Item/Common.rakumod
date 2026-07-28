@@ -27,6 +27,7 @@ has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.itunes-duration;
 has Set $.active-ext;
+has Bool $!is-rdf is built = False;
     has Str $!cached-str;
     has Lock $!cache-lock = Lock.new;
     has XML::Element $!cached-xml;
@@ -91,7 +92,7 @@ method XML {
     $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         my $xml = XML::Element.new(:name<item>);
-        $xml.attribs{'rdf:about'} = $.about if $.about.defined;
+        $xml.attribs{'rdf:about'} = $.about if $!is-rdf && $.about.defined;
         add-element($xml, "title", $.title);
         add-element($xml, "link",  $.link);
         if $.guid.defined && $.guid.chars {

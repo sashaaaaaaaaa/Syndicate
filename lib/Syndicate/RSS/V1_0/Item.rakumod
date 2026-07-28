@@ -56,7 +56,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
         :itunes-author(%extra<itunes-author> // Str),
         :itunes-summary(%extra<itunes-summary> // Str),
         :itunes-duration(%extra<itunes-duration> // Str),
-        :active-ext($act));
+        :active-ext($act), :is-rdf);
     Syndicate::Stats.record-item;
     $item
 }

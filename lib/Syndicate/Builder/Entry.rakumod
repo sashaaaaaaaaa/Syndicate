@@ -172,7 +172,7 @@ method build-v1_0-item {
     %bless<source>    = $!source if $!source.defined;
     %bless<enclosure> = %!enclosure if %!enclosure;
     my @dc-subjects = @!categories;
-    Syndicate::RSS::V1_0::Item.new(|%bless, :categories(@!categories), :@dc-subjects)
+    Syndicate::RSS::V1_0::Item.new(|%bless, :categories(@!categories), :@dc-subjects, :is-rdf)
 }
 
 method build-atom-item {
