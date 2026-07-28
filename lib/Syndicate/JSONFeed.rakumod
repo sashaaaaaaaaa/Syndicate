@@ -82,6 +82,11 @@ multi method new-from-hash(%h) {
 
 method to-hash {
     $!hash-lock.protect: {
+        # Both caches are computed lazily on first call. The cloned version
+        # (returned to callers) deep-clones items to prevent mutation of
+        # the cached state. Note: the first .to-hash call determines the
+        # cached encoding — subsequent calls return the same cached result
+        # regardless of any parameters.
         $!cached-hash //= do {
             my %h;
             %h<version>       = $.version;
