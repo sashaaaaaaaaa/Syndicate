@@ -285,6 +285,11 @@ or L<HTTP::UserAgent|rakudoc:HTTP::UserAgent> instead.
 Fetches a URL, tries to parse as a feed. If that fails, searches the HTML
 for C<E<lt>linkE<gt>> feed tags and fetches the first discovered feed URL.
 
+B<Security note:> DNS rebinding within the validation/request window is
+theoretically possible but impractical for single-request feed fetching.
+The validation runs immediately before each HTTP request, making the
+TOCTOU window very small.
+
 =head2 C<find-feeds(Str $html, Str $base-url --> Array)>
 
 Returns an array of feed URLs found in HTML by scanning C<E<lt>linkE<gt>>
