@@ -27,30 +27,24 @@ sub parse(Str $input --> Syndicate::Feed:D) is export {
     parse-feed($input)
 }
 
-# imported from Syndicate::Parse (line 19)
-
-sub sanitize-input(Str $input --> Str) {
-    Syndicate::Parse::sanitize-input($input)
-}
-
 sub parse-rss(Str $xml --> Syndicate::RSS) is export {
-    Syndicate::RSS.new(sanitize-input($xml))
+    Syndicate::RSS.new(Syndicate::Parse::sanitize-input($xml))
 }
 
 sub parse-atom(Str $xml --> Syndicate::Atom) is export {
-    Syndicate::Atom.new(sanitize-input($xml))
+    Syndicate::Atom.new(Syndicate::Parse::sanitize-input($xml))
 }
 
 sub parse-json(Str $json --> Syndicate::JSONFeed) is export {
-    Syndicate::JSONFeed.new(sanitize-input($json))
+    Syndicate::JSONFeed.new(Syndicate::Parse::sanitize-input($json))
 }
 
 sub parse-rss1(Str $xml --> Syndicate::RSS::V1_0) is export {
-    Syndicate::RSS::V1_0.new(sanitize-input($xml))
+    Syndicate::RSS::V1_0.new(Syndicate::Parse::sanitize-input($xml))
 }
 
 sub parse-rss091(Str $xml --> Syndicate::RSS::V0_91) is export {
-    Syndicate::RSS::V0_91.new(sanitize-input($xml))
+    Syndicate::RSS::V0_91.new(Syndicate::Parse::sanitize-input($xml))
 }
 
 =begin pod

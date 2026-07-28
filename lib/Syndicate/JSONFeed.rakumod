@@ -19,7 +19,6 @@ has Str $.favicon;
 has %.author of Str;
 has Bool $.expired;
 has Hash $!cached-hash;
-has Hash $!cached-hash-cloned;
 has Lock $!hash-lock = Lock.new;
 has Str $!cached-json;
 has Lock $!json-lock = Lock.new;
@@ -116,13 +115,11 @@ method to-hash {
 
             %h
         }
-        $!cached-hash-cloned //= do {
-            my %h = %($!cached-hash);
-            if %h<items>:exists {
-                %h<items> = @(%h<items>.map(*.clone))
-            }
-            %h
+        my %h = %($!cached-hash);
+        if %h<items>:exists {
+            %h<items> = @(%h<items>.map(*.clone))
         }
+        %h
     }
 }
 

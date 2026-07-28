@@ -19,9 +19,11 @@ sub sanitize-input(Str $input --> Str) is export {
     $clean .= subst(/^\xFEFF/, '');
     die "empty input" unless $clean.chars;
     die "input too large ({$clean.chars} chars)" if $clean.chars > MAX-FEED-SIZE;
-    my $bytes = $clean.encode.bytes;
-    die "input too large ($bytes bytes, max {MAX-FEED-SIZE})"
-        if $bytes > MAX-FEED-SIZE;
+    if $clean.chars > MAX-FEED-SIZE / 4 {
+        my $bytes = $clean.encode.bytes;
+        die "input too large ($bytes bytes, max {MAX-FEED-SIZE})"
+            if $bytes > MAX-FEED-SIZE;
+    }
     $clean
 }
 

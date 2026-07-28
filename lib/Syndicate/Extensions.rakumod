@@ -107,7 +107,7 @@ sub set-active(@exts, $elem) is export {
                 }
                 last if so %present.values.all;
             }
-            @stack.push: $e.nodes.Slip;
+            @stack.append: $e.nodes;
         }
     }
     # Third pass: check xmlns: attributes on root element.

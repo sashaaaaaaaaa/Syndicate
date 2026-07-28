@@ -76,6 +76,7 @@ multi method new(XML::Document $doc) {
     for $root.elements(:TAG<item>) -> $item-elem {
         unless has-nonempty-text($item-elem, "title") && has-nonempty-text($item-elem, "link") {
             note "Skipping RSS 1.0 item without title or link";
+            Syndicate::Stats.record-error;
             next;
         }
         my $item = Syndicate::RSS::V1_0::Item.from-xml($item-elem, :active($feed-active));

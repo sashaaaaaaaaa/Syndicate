@@ -169,13 +169,11 @@ method find-feeds(Str $html, Str $base-url --> Array) {
     # Uses non-greedy .*? to handle nested HTML tags within blocks
     # (e.g., <span> inside <script>), unlike the previous negated-char-class
     # approach which stopped at any '<' character.
-    my $clean = $html.encode.bytes > MAX-FEED-SIZE
-        ?? $html
-        !! $html.subst(:g,
-            / '<!--' .*? '-->'
-            | '<script' [<-[>]>]* '>' .*? '</script>'
-            | '<style'  [<-[>]>]* '>' .*? '</style>' /,
-            :i);
+    my $clean = $html.subst(:g,
+        / '<!--' .*? '-->'
+        | '<script' [<-[>]>]* '>' .*? '</script>'
+        | '<style'  [<-[>]>]* '>' .*? '</style>' /,
+        :i);
 
     for $clean.comb($link-tag) -> $tag {
         my %attr = self!parse-attrs($tag);

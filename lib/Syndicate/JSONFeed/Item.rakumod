@@ -27,7 +27,6 @@ has @.authors of Hash;
 has @.tags of Str;
 has Str $!cached-str;
 has Hash $!cached-hash;
-has Hash $!cached-hash-cloned;
 has Lock $!cache-lock = Lock.new;
 has Lock $!hash-lock = Lock.new;
 
@@ -116,12 +115,10 @@ method to-hash {
             }
             %h
         }
-        $!cached-hash-cloned //= do {
-            my %h = %($!cached-hash);
-            %h<authors> = %h<authors>.map(*.clone).Array if %h<authors>:exists;
-            %h<tags> = %h<tags>.clone if %h<tags>:exists;
-            %h
-        }
+        my %h = %($!cached-hash);
+        %h<authors> = %h<authors>.map(*.clone).Array if %h<authors>:exists;
+        %h<tags> = %h<tags>.clone if %h<tags>:exists;
+        %h
     }
 }
 

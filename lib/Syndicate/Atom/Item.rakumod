@@ -166,7 +166,7 @@ method XML {
             my @nodes;
             if %attribs<type> eq "xhtml" {
                 my $xhtml = try { XML::Document.new($.content) };
-                @nodes = $xhtml ?? [$xhtml.root] !! [$.content];
+                @nodes = $xhtml ?? [$xhtml.root] !! [encode-entities($.content)];
             } else {
                 @nodes = [encode-entities($.content)];
             }

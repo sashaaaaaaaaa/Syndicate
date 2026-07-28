@@ -247,7 +247,7 @@ timestamps in Atom output.
 =item C<updated(DateTime $v?)> - get/set last updated time
 =item C<icon(Str $v?)> - get/set feed icon URL
 =item C<logo(Str $v?)> - get/set feed logo URL
-=item C<author(:$name, :$email, :$uri)> - get/set author details
+=item C<author(:$name, :$email, :$uri)> - get/set author details. In RSS output, C<:$email> maps to C<managingEditor>.
 =item C<category(Str $v?)> - add/get categories
 =item C<itunes-author(Str $v?)> - get/set iTunes author
 =item C<itunes-summary(Str $v?)> - get/set iTunes summary
