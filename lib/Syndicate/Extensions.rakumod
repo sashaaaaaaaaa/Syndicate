@@ -72,10 +72,9 @@ sub set-active(@exts, $elem) is export {
         %present{$check.substr(0, $i)} = True;
     }
     # Walk descendants to find which namespace prefixes are actually
-    # used in the element tree. Inlined instead of calling a gather/take
-    # sub to avoid Seq allocation overhead. Root element is passed
-    # through the stack (so children are discovered) but its prefix
-    # check is skipped (already handled above).
+    # used in the element tree, and check xmlns: declarations on all
+    # elements (not just root). Inlined instead of calling a gather/take
+    # sub to avoid Seq allocation overhead.
     {
         my @stack = $elem;
         my $max = 10_000;
@@ -90,13 +89,24 @@ sub set-active(@exts, $elem) is export {
                     my $prefix = $name.substr(0, $j);
                     %present{$prefix} = True if %present{$prefix}:exists;
                 }
+                # Check xmlns: attributes on descendant elements
+                for $e.attribs.kv -> $k, $v {
+                    with $k.index('xmlns:') {
+                        my $prefix = $k.substr(6);
+                        next unless %present{$prefix}:exists;
+                        my $uri-ok = so @exts.first({
+                            .<namespace> eq $prefix && (!.<namespace-uri> || .<namespace-uri> eq $v)
+                        });
+                        %present{$prefix} = True if $uri-ok;
+                    }
+                }
                 last if so %present.values.all;
             }
             @stack.push: $e.nodes.Slip;
         }
     }
-    # Second pass: check xmlns: attributes on the element itself.
-    # These are checked after the descendant name loop because they
+    # Third pass: check xmlns: attributes on root element.
+    # These are checked after the descendant walk because they
     # are the authoritative declaration — but they can only set a
     # prefix to True (never back to False).
     for $elem.attribs.kv -> $k, $v {
