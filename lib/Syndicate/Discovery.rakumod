@@ -221,6 +221,7 @@ method base-url(Str $html --> Str) {
 sub normalize-path(Str $path --> Str) {
     my @parts;
     for $path.split('/') {
+        when ''  { next }  # skip empty strings from leading/trailing/double slashes
         when '.' { next }
         when '..' { @parts.pop if @parts }
         default  { @parts.push($_) }
