@@ -219,6 +219,8 @@ method base-url(Str $html --> Str) {
 }
 
 sub normalize-path(Str $path --> Str) {
+    my $leading = $path.starts-with('/');
+    my $trailing = $path.ends-with('/');
     my @parts;
     for $path.split('/') {
         when ''  { next }  # skip empty strings from leading/trailing/double slashes
@@ -226,7 +228,9 @@ sub normalize-path(Str $path --> Str) {
         when '..' { @parts.pop if @parts }
         default  { @parts.push($_) }
     }
-    @parts.join('/')
+    my $result = @parts.join('/');
+    $leading = $leading && ?@parts;
+    ($leading ?? '/' ~ $result !! $result) ~ ($trailing ?? '/' !! '')
 }
 
 method resolve-url(Str $url, Str $base --> Str) {

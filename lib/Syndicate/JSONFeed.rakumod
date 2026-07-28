@@ -5,7 +5,7 @@ use Syndicate::JSONFeed::Item;
 use Syndicate::Utils;
 use Syndicate::Stats;
 
-our constant JSONFEED-VERSION       is export = 'https://jsonfeed.org/version/1.1';
+my constant JSONFEED-VERSION       is export = 'https://jsonfeed.org/version/1.1';
 our constant JSONFEED-VERSION-PREFIX is export = 'https://jsonfeed.org/version/';
 
 unit class Syndicate::JSONFeed:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;

@@ -9,11 +9,11 @@ unit module Syndicate::Extensions:ver<0.0.1>:auth<zef:sasha>;
 # with concurrent run-parsers/run-generators calls.
 my @ext-snapshot;
 my $ext-lock = Lock.new;
-my $extension-errors = 0;
+my atomicint $extension-errors = 0;
 
 sub extension-count(--> Int) is export { @ext-snapshot.elems }
 
-sub extension-errors(--> Int) is export { $extension-errors }
+sub extension-errors(--> Int) is export { ⚛$extension-errors }
 
 sub remove-last-ext(--> Nil) is export {
     $ext-lock.protect: {
@@ -41,7 +41,7 @@ sub run-parsers($elem, %attrs, :$active?) is export {
         CATCH {
             when X::Control { .rethrow }
             default {
-                $extension-errors++;
+                $extension-errors⚛++;
                 Syndicate::Stats.record-error;
                 note "Extension parse callback failed: $_\n{.backtrace}";
             }
@@ -58,7 +58,7 @@ sub run-generators($xml, $item, :$active?) is export {
         CATCH {
             when X::Control { .rethrow }
             default {
-                $extension-errors++;
+                $extension-errors⚛++;
                 Syndicate::Stats.record-error;
                 note "Extension generate callback failed: $_\n{.backtrace}";
             }

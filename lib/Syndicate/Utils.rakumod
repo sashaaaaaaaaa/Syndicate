@@ -84,10 +84,10 @@ sub parse-categories($parent --> Array) is export {
 
 sub normalize-date-str(Str $str --> Str) {
     my $s = $str;
-    $s .= subst(/ (\d ** 1..2) ':' (\d ** 2) ':' (\d ** 2) \s* (<[PA]>M) /, -> $/ {
+    $s .= subst(/ (\d ** 1..2) ':' (\d ** 2) ':' (\d ** 2) \s* (:i <[PA]>M) /, -> $/ {
         my $h = +$0;
-        if ~$3 eq 'AM' { $h = 0 if $h == 12 }
-        else           { $h += 12 if $h < 12 }
+        if ~$3.lc eq 'am' { $h = 0 if $h == 12 }
+        else              { $h += 12 if $h < 12 }
         sprintf "%02d:%02d:%02d", $h, +$1, +$2;
     });
     $s .= subst(:g, /
