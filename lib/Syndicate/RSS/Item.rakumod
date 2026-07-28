@@ -64,6 +64,9 @@ method from-xml(XML::Element $item-elem, :$active?) {
 }
 
 method XML {
+    # TODO: XML generation is ~80% duplicated across RSS::Item,
+    # V0_91::Item, and V1_0::Item. Consider extracting a shared
+    # method or role into Item::Common.
     $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         my $xml = XML::Element.new(:name<item>);
