@@ -27,9 +27,11 @@ method to-hash {
     %h
 }
 
-method Str {
+method Str(:$encoding = 'UTF-8') {
     $!cache-lock.protect: {
-        $!cached-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ self.XML.Str
+        # Note: The first call determines the cached encoding.
+        # Subsequent calls return the same cached result.
+        $!cached-str //= '<?xml version="1.0" encoding="' ~ $encoding ~ '"?>' ~ "\n" ~ self.XML.Str
     }
 }
 
