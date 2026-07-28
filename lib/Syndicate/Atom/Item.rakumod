@@ -25,6 +25,7 @@ has %.source-feed;
 has @.contributors of Hash;
 has @.link-alternate of Hash;
 has XML::Element $!cached-xml;
+has Lock $!xml-lock = Lock.new;
 has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 
@@ -141,7 +142,7 @@ method from-xml(XML::Element $entry-elem) {
 }
 
 method XML {
-    $!cache-lock.protect: {
+    $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         my $xml = XML::Element.new(:name<entry>);
         $xml.attribs{'xml:lang'} = $.xml-lang if $.xml-lang.defined;
