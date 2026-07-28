@@ -8,6 +8,7 @@ use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
+use Syndicate::Extensions;
 
 my constant NS-RDF     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 my constant NS-RSS1    = 'http://purl.org/rss/1.0/';
@@ -69,12 +70,13 @@ multi method new(XML::Document $doc) {
         my $e = $elem.elements(:TAG($tag))[0];
         $e && $e.contents[0] && $e.contents[0].?text.trim.chars
     }
+    my $feed-active = set-active(active-extensions, $root);
     for $root.elements(:TAG<item>) -> $item-elem {
         unless has-nonempty-text($item-elem, "title") && has-nonempty-text($item-elem, "link") {
             note "Skipping RSS 1.0 item without title or link";
             next;
         }
-        my $item = Syndicate::RSS::V1_0::Item.from-xml($item-elem);
+        my $item = Syndicate::RSS::V1_0::Item.from-xml($item-elem, :active($feed-active));
         my ($dc, $media, $itunes, $content) = $item.namespace-flags;
         $needs-dc ||= $dc;
         $needs-media ||= $media;

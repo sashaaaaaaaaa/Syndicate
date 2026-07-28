@@ -10,6 +10,7 @@ use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
+use Syndicate::Extensions;
 
 my constant ONE-WEEK-MINUTES = 10080;
 
@@ -74,8 +75,9 @@ multi method new(XML::Document $doc) {
 
     my @items;
     my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
+    my $feed-active = set-active(active-extensions, $rss);
     for $channel.elements(:TAG<item>) -> $item-elem {
-        my $item = Syndicate::RSS::Item.from-xml($item-elem);
+        my $item = Syndicate::RSS::Item.from-xml($item-elem, :active($feed-active));
         my ($dc, $media, $itunes, $content) = $item.namespace-flags;
         $needs-dc ||= $dc;
         $needs-media ||= $media;
