@@ -31,12 +31,7 @@ sub parse(Str $input --> Syndicate::Feed:D) is export {
 # imported from Syndicate::Parse (line 19)
 
 sub sanitize-input(Str $input --> Str) {
-    my $clean = $input.trim;
-    $clean .= subst(/^\xFEFF/, '');
-    die "empty input" unless $clean.chars;
-    my $bytes = $clean.encode.bytes;
-    die "input too large ($bytes bytes, max {MAX-FEED-SIZE})" if $bytes > MAX-FEED-SIZE;
-    $clean
+    Syndicate::Parse::sanitize-input($input)
 }
 
 sub parse-rss(Str $xml --> Syndicate::RSS) is export {

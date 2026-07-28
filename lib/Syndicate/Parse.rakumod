@@ -14,15 +14,20 @@ unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
 enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 
+sub sanitize-input(Str $input --> Str) is export {
+    my $clean = $input.trim;
+    $clean .= subst(/^\xFEFF/, '');
+    die "empty input" unless $clean.chars;
+    my $bytes = $clean.encode.bytes;
+    die "input too large ($bytes bytes, max {MAX-FEED-SIZE})"
+        if $bytes > MAX-FEED-SIZE;
+    $clean
+}
+
 # Note: feed-format() followed by parse-feed() parses XML twice.
 # Use parse-feed-with-format() when both format and feed are needed.
 multi sub feed-format(Str $input --> FeedFormat) is export {
-    my $clean = $input.trim;
-    $clean .= subst(/^\xFEFF/, '');
-    die "feed-format: empty input" unless $clean.chars;
-    my $bytes = $clean.encode.bytes;
-    die "feed-format: input too large ($bytes bytes, max {MAX-FEED-SIZE})"
-        if $bytes > MAX-FEED-SIZE;
+    my $clean = sanitize-input($input);
 
     with try-xml-parse($clean) -> $root {
         return feed-format($root<name>, $root<ver>);
@@ -50,12 +55,7 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
 }
 
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
-    my $clean = $input.trim;
-    $clean .= subst(/^\xFEFF/, '');  # strip BOM for both XML and JSON paths
-    die "parse-feed: empty input" unless $clean.chars;
-    my $bytes = $clean.encode.bytes;
-    die "parse-feed: input too large ($bytes bytes, max {MAX-FEED-SIZE})"
-        if $bytes > MAX-FEED-SIZE;
+    my $clean = sanitize-input($input);
 
     my $looks-like-xml = $clean.starts-with('<');
     if $looks-like-xml {
