@@ -62,11 +62,11 @@ method from-xml(XML::Element $item-elem, :$active?) {
 }
 
 method namespace-flags() {
-    (
-        $!has-dc-creator || $!updated.defined || ?(@!dc-subjects),
-        ?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined,
-        $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
-        ?($.content.defined && $.content.chars),
+    %(
+        :dc($!has-dc-creator || $!updated.defined || ?(@!dc-subjects)),
+        :media(?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined),
+        :itunes($!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined),
+        :content(?($.content.defined && $.content.chars)),
     )
 }
 

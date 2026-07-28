@@ -19,14 +19,17 @@ my constant %TZ-OFFSET = (
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
+use XML::Entity;
+my constant $XML-ENTITY = XML::Entity.new;
+
 sub decode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
-    XML::Entity.new.decode($text)
+    $XML-ENTITY.decode($text)
 }
 
 sub encode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
-    XML::Entity.new.encode($text)
+    $XML-ENTITY.encode($text)
 }
 
 sub add-element($parent, $name, $value --> Nil) is export {

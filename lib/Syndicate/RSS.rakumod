@@ -76,11 +76,11 @@ multi method new(XML::Document $doc) {
     my $feed-active = set-active(active-extensions, $rss);
     for $channel.elements(:TAG<item>) -> $item-elem {
         my $item = Syndicate::RSS::Item.from-xml($item-elem, :active($feed-active));
-        my ($dc, $media, $itunes, $content) = $item.namespace-flags;
-        $needs-dc ||= $dc;
-        $needs-media ||= $media;
-        $needs-itunes ||= $itunes;
-        $needs-content ||= $content;
+        my %nf = $item.namespace-flags;
+        $needs-dc ||= %nf<dc>;
+        $needs-media ||= %nf<media>;
+        $needs-itunes ||= %nf<itunes>;
+        $needs-content ||= %nf<content>;
         @items.push: $item;
     }
     $needs-itunes ||= $it-author.defined || $it-summary.defined;
@@ -98,6 +98,8 @@ multi method new(XML::Document $doc) {
         my $ttl = try { $ttl-str.Int };
         if $ttl.defined {
             %bless<ttl> = $ttl;
+        } else {
+            note "Warning: Invalid TTL value '$ttl-str' — must be an integer string";
         }
     }
     CATCH {

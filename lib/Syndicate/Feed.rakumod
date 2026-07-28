@@ -28,7 +28,7 @@ method to-hash {
 }
 
 method Str {
-    $!cache-lock.protect: {
+    $!cached-str // $!cache-lock.protect: {
         $!cached-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ self.XML.Str
     }
 }

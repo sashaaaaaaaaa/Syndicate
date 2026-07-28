@@ -99,9 +99,9 @@ method rss-feed {
 }
 
 method atom-feed {
-    my @items = @!entries.map(*.build-atom-item);
     die "Atom feed requires title"   unless $!title.defined;
     die "Atom feed requires link"    unless $!link.defined;
+    my @items = @!entries.map(*.build-atom-item);
     my %author-detail;
     %author-detail<name>  = $!author-name  if $!author-name.defined;
     %author-detail<email> = $!author-email if $!author-email.defined;
@@ -168,6 +168,7 @@ method json-feed {
 method rss1-feed {
     die "RSS 1.0 feed requires title" unless $!title.defined;
     die "RSS 1.0 feed requires link"  unless $!link.defined;
+    die "RSS 1.0 feed requires description" unless $!description.defined;
     my @items = @!entries.map(*.build-v1_0-item);
     my @cats = @!categories;
     my $about = $!id // $!link // Str;

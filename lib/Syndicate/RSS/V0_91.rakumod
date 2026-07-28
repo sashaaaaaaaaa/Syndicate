@@ -67,11 +67,11 @@ multi method new(XML::Document $doc) {
     my $feed-active = set-active(active-extensions, $rss);
     for $channel.elements(:TAG<item>) -> $item-elem {
         my $item = Syndicate::RSS::V0_91::Item.from-xml($item-elem, :active($feed-active));
-        my ($dc, $media, $itunes, $content) = $item.namespace-flags;
-        $needs-dc ||= $dc;
-        $needs-media ||= $media;
-        $needs-itunes ||= $itunes;
-        $needs-content ||= $content;
+        my %nf = $item.namespace-flags;
+        $needs-dc ||= %nf<dc>;
+        $needs-media ||= %nf<media>;
+        $needs-itunes ||= %nf<itunes>;
+        $needs-content ||= %nf<content>;
         @items.push: $item;
     }
     $needs-itunes ||= $it-author.defined || $it-summary.defined;
@@ -166,7 +166,12 @@ method parse-skip-hours($channel --> Array) {
             with $h.contents[0] -> $t {
                 my $val = $t.text;
                 if $val ~~ /^\d+$/ {
-                    @skipHours.push: $val.Int;
+                    my $h = $val.Int;
+                    if 0 <= $h <= 23 {
+                        @skipHours.push: $h;
+                    } else {
+                        note "Invalid hour value in skipHours: $val (must be 0-23)";
+                    }
                 } else {
                     note "Non-numeric hour value in skipHours: $val";
                 }

@@ -20,6 +20,7 @@ has Str $.logo;
 has @.contributors of Hash;
 has @.link-self of Hash;
 has @.link-alternate of Hash;
+has @.extra-links of Hash;
 has DateTime $!computed-updated;
 has XML::Element $!cached-xml;
     has Lock $!xml-lock = Lock.new;
@@ -71,6 +72,8 @@ multi method new(XML::Document $doc) {
         elsif $rel eq "alternate" {
             @link-alternate.push: %( href => $href, type => decode-entities(.attribs<type> // Str) );
             $primary-link ||= $href;
+        } else {
+            @!extra-links.push: %( rel => $rel, href => $href, type => decode-entities(.attribs<type> // Str) );
         }
     }
     $primary-link ||= @link-self[0]<href> if @link-self;

@@ -85,10 +85,11 @@ method !parse-enclosure(XML::Element $item-elem) {
 }
 
 method Str {
-    $!cache-lock.protect: { $!cached-str //= ~self.XML }
+    $!cached-str // $!cache-lock.protect: { $!cached-str //= ~self.XML }
 }
 
 method XML {
+    return $!cached-xml if $!cached-xml.defined;
     $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         my $xml = XML::Element.new(:name<item>);
@@ -127,11 +128,11 @@ method XML {
 }
 
 method namespace-flags() {
-    (
-        $!has-dc-creator,
-        ?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined,
-        $!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined,
-        ?($.content.defined && $.content.chars),
+    %(
+        :dc($!has-dc-creator),
+        :media(?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined),
+        :itunes($!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined),
+        :content(?($.content.defined && $.content.chars)),
     )
 }
 

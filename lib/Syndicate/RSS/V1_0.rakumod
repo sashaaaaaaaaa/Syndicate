@@ -80,11 +80,11 @@ multi method new(XML::Document $doc) {
             next;
         }
         my $item = Syndicate::RSS::V1_0::Item.from-xml($item-elem, :active($feed-active));
-        my ($dc, $media, $itunes, $content) = $item.namespace-flags;
-        $needs-dc ||= $dc;
-        $needs-media ||= $media;
-        $needs-itunes ||= $itunes;
-        $needs-content ||= $content;
+        my %nf = $item.namespace-flags;
+        $needs-dc ||= %nf<dc>;
+        $needs-media ||= %nf<media>;
+        $needs-itunes ||= %nf<itunes>;
+        $needs-content ||= %nf<content>;
         @items.push: $item;
     }
 

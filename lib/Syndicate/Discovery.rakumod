@@ -80,6 +80,7 @@ method !validate-url(Str $url) {
         my @octets = (~$0, ~$1, ~$2, ~$3);
         die "Blocked IPv4 address with octal notation" if @octets.first({ .chars > 1 && .starts-with('0') });
         my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
+        die "Blocked IPv4 address with invalid octet" unless $a <= 255 && $b <= 255 && $c <= 255 && $d <= 255;
         die "Blocked unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
         die "Blocked address on zero network" if $a == 0;
         die "Blocked loopback address"    if $a == 127;
@@ -99,7 +100,7 @@ method !validate-url(Str $url) {
             die "Blocked mapped private"      if $a == 10 || $a == 192 && $b == 168
                                                   || $a == 172 && 16 <= $b <= 31;
         } else {
-            my $hex-str = $suffix.split(':').map({ .chars == 4 ?? $_ !! sprintf('%04x', :16($_)) }).join;
+            my $hex-str = $suffix.split(':').map({ .chars == 4 ?? $_ !! (try sprintf('%04x', :16($_)) // die "Invalid hex segment in IPv4-mapped IPv6: $_") }).join;
             die "Blocked mapped unspecified address" unless $hex-str.chars == 8 && $hex-str ~~ /^<[0..9a..f]>+$/;
             my $ip = :16($hex-str);
             my $a = ($ip +> 24) +& 0xFF;
@@ -232,7 +233,8 @@ sub normalize-path(Str $path --> Str) {
     }
     my $result = @parts.join('/');
     $leading = $leading && ?@parts;
-    ($leading ?? '/' ~ $result !! $result) ~ ($trailing ?? '/' !! '')
+    $result = $leading ?? '/' ~ $result !! $result || '.';
+    $result ~ ($trailing ?? '/' !! '')
 }
 
 method resolve-url(Str $url, Str $base --> Str) {

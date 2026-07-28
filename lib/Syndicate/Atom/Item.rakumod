@@ -216,7 +216,7 @@ method XML {
 }
 
 method Str {
-    $!cache-lock.protect: { $!cached-str //= ~self.XML }
+    $!cached-str // $!cache-lock.protect: { $!cached-str //= ~self.XML }
 }
 
 =begin pod
