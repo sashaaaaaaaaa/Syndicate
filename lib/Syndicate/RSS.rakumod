@@ -12,8 +12,6 @@ use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 use Syndicate::Extensions;
 
-my constant ONE-WEEK-MINUTES = 10080;
-
 unit class Syndicate::RSS:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.copyright;
@@ -99,10 +97,7 @@ multi method new(XML::Document $doc) {
     if $ttl-str.defined && $ttl-str.chars {
         my $ttl = try { $ttl-str.Int };
         if $ttl.defined {
-            note "ttl of $ttl minutes exceeds recommended maximum of {ONE-WEEK-MINUTES} (1 week)" if $ttl > ONE-WEEK-MINUTES;
             %bless<ttl> = $ttl;
-        } else {
-            note "Invalid ttl value: $ttl-str";
         }
     }
     CATCH {
