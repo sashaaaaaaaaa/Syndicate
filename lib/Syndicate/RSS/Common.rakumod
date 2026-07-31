@@ -2,10 +2,45 @@ use v6.d;
 use XML;
 use Syndicate::Utils;
 use Syndicate::Extension::ITunes;
+use Syndicate::Stats;
 
 my constant NS-CONTENT is export = 'http://purl.org/rss/1.0/modules/content/';
 
 unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
+
+has XML::Element $!cached-xml;
+has Lock $!xml-lock = Lock.new;
+has Bool $!needs-dc is built;
+has Bool $!needs-media is built;
+has Bool $!needs-content is built;
+has Bool $!needs-itunes is built;
+
+method !type-name { "RSS" }
+
+multi method new(Str $xml) {
+    my $doc = try { XML::Document.new($xml) };
+    unless $doc {
+        Syndicate::Stats.record-error;
+        die "Invalid {self!type-name} XML: $!";
+    }
+    self.new($doc)
+}
+
+method XML {
+    return $!cached-xml if $!cached-xml.defined;
+    $!xml-lock.protect: {
+        return $!cached-xml if $!cached-xml.defined;
+        $!cached-xml = self!build-xml
+    }
+}
+
+method !apply-item-needs(@items, $itunes-author, $itunes-summary --> Nil) {
+    my %needs = compute-needs(@items);
+    $!needs-dc      ||= %needs<dc>;
+    $!needs-media   ||= %needs<media>;
+    $!needs-content ||= %needs<content>;
+    $!needs-itunes  ||= %needs<itunes> || $itunes-author.defined || $itunes-summary.defined;
+}
 
 method parse-channel-common($channel --> Hash) {
     my %h;
@@ -87,10 +122,18 @@ Syndicate::RSS::Common - Shared role for RSS 2.0, RSS 0.91, and RSS 1.0
 
 =head1 DESCRIPTION
 
-Provides shared parsing and XML generation methods for image elements
-and namespace-flag detection. Used by L<C<Syndicate::RSS>|rakudoc:Syndicate::RSS>,
+Provides shared parsing and XML generation methods for image elements,
+namespace-flag detection, and the cached XML construction machinery
+used by L<C<Syndicate::RSS>|rakudoc:Syndicate::RSS>,
 L<C<Syndicate::RSS::V0_91>|rakudoc:Syndicate::RSS::V0_91>,
 and L<C<Syndicate::RSS::V1_0>|rakudoc:Syndicate::RSS::V1_0>.
+
+The role declares the private C<$!cached-xml>, C<$!xml-lock>, and
+C<$!needs-dc/media/content/itunes> attributes, provides the string
+constructor C<new(Str $xml)> and the lock-guarded C<XML> method (which
+delegates per-format element construction to the consuming class's
+private C<!build-xml> method), and factors the item-driven namespace
+flag computation into C<!apply-item-needs>.
 
 =head1 METHODS
 
@@ -100,5 +143,7 @@ and L<C<Syndicate::RSS::V1_0>|rakudoc:Syndicate::RSS::V1_0>.
 =item C<build-xml-textinput($parent, %textInput)> - Generate textInput XML
 =item C<build-xml-skip-hours($parent, @skipHours)> - Generate skipHours XML
 =item C<build-xml-skip-days($parent, @skipDays)> - Generate skipDays XML
+=item C<new(Str $xml)> - Parse feed XML string (message uses C<!type-name>)
+=item C<XML> - Returns the cached L<C<XML::Element>|rakudoc:XML::Element>
 
 =end pod

@@ -25,12 +25,6 @@ has Str $.about;
 has %.image;
 has Str $.itunes-author;
 has Str $.itunes-summary;
-has XML::Element $!cached-xml;
-has Lock $!xml-lock = Lock.new;
-has Bool $!needs-dc is built;
-has Bool $!needs-media is built;
-has Bool $!needs-content is built;
-has Bool $!needs-itunes is built;
 # 'is built' is a standard Raku mechanism that allows setting a private
 # attribute via the constructor without exposing a public accessor.
 has @!categories of Str is built;
@@ -90,26 +84,14 @@ multi method new(XML::Document $doc) {
                :categories(@categories), :@items)
 }
 
+method !type-name { "RSS 1.0" }
+
 method TWEAK {
-    my %needs = compute-needs(@!items);
-    $!needs-dc      ||= %needs<dc> || ?@!categories;
-    $!needs-media   ||= %needs<media>;
-    $!needs-content ||= %needs<content>;
-    $!needs-itunes  ||= %needs<itunes> || $.itunes-author.defined || $.itunes-summary.defined;
+    self!apply-item-needs(@!items, $.itunes-author, $.itunes-summary);
+    $!needs-dc ||= ?@!categories;
 }
 
-multi method new(Str $xml) {
-    my $doc = try { XML::Document.new($xml) };
-    unless $doc {
-        Syndicate::Stats.record-error;
-        die "Invalid RSS 1.0 XML: $!";
-    }
-    self.new($doc)
-}
-
-method XML {
-    $!xml-lock.protect: {
-        $!cached-xml //= do {
+method !build-xml {
     my $root = XML::Element.new(:name<rdf:RDF>, :attribs({
         'xmlns:rdf' => NS-RDF,
         'xmlns'     => NS-RSS1
@@ -160,8 +142,6 @@ method XML {
     $root.append: $_.XML for @.items;
 
     $root
-        }
-    }
 }
 
 =begin pod

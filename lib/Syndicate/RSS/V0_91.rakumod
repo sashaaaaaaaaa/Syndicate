@@ -31,12 +31,6 @@ has @.skipHours of Int;
 has @.skipDays of Str;
 has Str $.itunes-author;
 has Str $.itunes-summary;
-has XML::Element $!cached-xml;
-has Lock $!xml-lock = Lock.new;
-has Bool $!needs-dc is built;
-has Bool $!needs-media is built;
-has Bool $!needs-itunes is built;
-has Bool $!needs-content is built;
 
 multi method new(XML::Document $doc) {
     my $rss = $doc.root;
@@ -96,26 +90,13 @@ multi method new(XML::Document $doc) {
     self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays))
 }
 
+method !type-name { "RSS 0.91" }
+
 method TWEAK {
-    my %needs = compute-needs(@!items);
-    $!needs-dc      ||= %needs<dc>;
-    $!needs-media   ||= %needs<media>;
-    $!needs-content ||= %needs<content>;
-    $!needs-itunes  ||= %needs<itunes> || $.itunes-author.defined || $.itunes-summary.defined;
+    self!apply-item-needs(@!items, $.itunes-author, $.itunes-summary)
 }
 
-multi method new(Str $xml) {
-    my $doc = try { XML::Document.new($xml) };
-    unless $doc {
-        Syndicate::Stats.record-error;
-        die "Invalid RSS 0.91 XML: $!";
-    }
-    self.new($doc)
-}
-
-method XML {
-    $!xml-lock.protect: {
-        $!cached-xml //= do {
+method !build-xml {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('0.91')}));
     my $channel = XML::Element.new(:name<channel>);
     $xml.append: $channel;
@@ -154,8 +135,6 @@ method XML {
     $channel.append: $_.XML for @.items;
 
     $xml
-        }
-    }
 }
 
 method parse-textinput($channel --> Hash) {

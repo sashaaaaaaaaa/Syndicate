@@ -1,0 +1,83 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate::RSS;
+use Syndicate::RSS::V0_91;
+use Syndicate::RSS::V1_0;
+
+plan 16;
+
+# Q7 regression: shared XML generation machinery in Syndicate::RSS::Common.
+# All three RSS feed classes must use the role's cached/lock-guarded XML
+# method, the role's new(Str) string constructor, and the role's
+# item-driven namespace flag computation.
+
+my constant DC      = 'http://purl.org/dc/elements/1.1/';
+my constant MEDIA   = 'http://search.yahoo.com/mrss/';
+my constant ITUNES  = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
+my constant CONTENT = 'http://purl.org/rss/1.0/modules/content/';
+
+# ===== RSS 2.0 =====
+
+my $rss-xml = qq:to/XML/.trim;
+<rss version="2.0"><channel>
+<title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>IL</link>
+<dc:creator xmlns:dc="{DC}">Joe</dc:creator>
+<media:content xmlns:media="{MEDIA}" url="http://example.com/m.mp3" type="audio/mpeg"/>
+<content:encoded xmlns:content="{CONTENT}">&lt;p&gt;hi&lt;/p&gt;</content:encoded>
+</item></channel></rss>
+XML
+
+my $rss = Syndicate::RSS.new($rss-xml);
+is $rss.items.elems, 1, 'RSS 2.0 parses item count';
+ok $rss.XML === $rss.XML, 'RSS 2.0 XML is cached (same object)';
+like ~$rss, / 'xmlns:dc' /,      'RSS 2.0 regenerates dc declaration from item needs';
+like ~$rss, / 'xmlns:media' /,   'RSS 2.0 regenerates media declaration from item needs';
+like ~$rss, / 'xmlns:content' /, 'RSS 2.0 regenerates content declaration from item needs';
+is (try { Syndicate::RSS.new('not xml') } // "Died: $!"),
+    'Died: Invalid RSS XML: could not parse XML',
+    'RSS 2.0 new(Str) error uses shared constructor message';
+
+# ===== RSS 0.91 =====
+
+my $rss091-xml = qq:to/XML/.trim;
+<rss version="0.91"><channel>
+<title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>IL</link><description>D</description>
+<itunes:author xmlns:itunes="{ITUNES}">Jane</itunes:author>
+</item></channel></rss>
+XML
+
+my $rss091 = Syndicate::RSS::V0_91.new($rss091-xml);
+is $rss091.items.elems, 1, 'RSS 0.91 parses item count';
+ok $rss091.XML === $rss091.XML, 'RSS 0.91 XML is cached (same object)';
+like ~$rss091, / 'xmlns:itunes' /, 'RSS 0.91 regenerates itunes declaration from item needs';
+is (try { Syndicate::RSS::V0_91.new('not xml') } // "Died: $!"),
+    'Died: Invalid RSS 0.91 XML: could not parse XML',
+    'RSS 0.91 new(Str) error uses shared constructor message';
+
+# ===== RSS 1.0 =====
+
+my $rss1-xml = qq:to/XML/.trim;
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/">
+<channel rdf:about="http://example.com/">
+<title>T</title><link>L</link><description>D</description>
+<dc:subject xmlns:dc="{DC}">News</dc:subject>
+<items><rdf:Seq><rdf:li rdf:resource="http://example.com/i"/></rdf:Seq></items>
+</channel>
+<item rdf:about="http://example.com/i"><title>I</title><link>IL</link></item>
+</rdf:RDF>
+XML
+
+my $rss1 = Syndicate::RSS::V1_0.new($rss1-xml);
+is $rss1.items.elems, 1, 'RSS 1.0 parses item count';
+ok $rss1.XML === $rss1.XML, 'RSS 1.0 XML is cached (same object)';
+like ~$rss1, / 'xmlns:dc' /, 'RSS 1.0 regenerates dc declaration from categories';
+is $rss1.XML.name, 'rdf:RDF', 'RSS 1.0 shared XML path builds rdf:RDF root';
+is $rss.XML.name,  'rss',     'RSS 2.0 shared XML path builds rss root';
+is (try { Syndicate::RSS::V1_0.new('not xml') } // "Died: $!"),
+    'Died: Invalid RSS 1.0 XML: could not parse XML',
+    'RSS 1.0 new(Str) error uses shared constructor message';
+
+done-testing;

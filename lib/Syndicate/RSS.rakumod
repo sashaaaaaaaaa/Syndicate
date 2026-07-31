@@ -25,12 +25,6 @@ has %.image;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.atom-self-link;
-has XML::Element $!cached-xml;
-has Lock $!xml-lock = Lock.new;
-has Bool $!needs-dc is built;
-has Bool $!needs-media is built;
-has Bool $!needs-content is built;
-has Bool $!needs-itunes is built;
 
 multi method new(XML::Document $doc) {
     my $rss = $doc.root;
@@ -103,25 +97,10 @@ multi method new(XML::Document $doc) {
 }
 
 method TWEAK {
-    my %needs = compute-needs(@!items);
-    $!needs-dc      ||= %needs<dc>;
-    $!needs-media   ||= %needs<media>;
-    $!needs-content ||= %needs<content>;
-    $!needs-itunes  ||= %needs<itunes> || $.itunes-author.defined || $.itunes-summary.defined;
+    self!apply-item-needs(@!items, $.itunes-author, $.itunes-summary)
 }
 
-multi method new(Str $xml) {
-    my $doc = try { XML::Document.new($xml) };
-    unless $doc {
-        Syndicate::Stats.record-error;
-        die "Invalid RSS XML: $!";
-    }
-    self.new($doc)
-}
-
-method XML {
-    $!xml-lock.protect: {
-        $!cached-xml //= do {
+method !build-xml {
     my $xml = XML::Element.new(:name<rss>, :attribs({:version('2.0')}));
     add-dc-declaration($xml)    if $!needs-dc;
     add-media-declaration($xml) if $!needs-media;
@@ -167,8 +146,6 @@ method XML {
     $channel.append: $_.XML for @.items;
 
     $xml
-        }
-    }
 }
 
 =begin pod
