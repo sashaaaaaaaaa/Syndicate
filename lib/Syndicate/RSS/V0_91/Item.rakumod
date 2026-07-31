@@ -60,8 +60,10 @@ Syndicate::RSS::V0_91::Item - RSS 0.91 item
 
 An RSS 0.91 item. Does L<C<Syndicate::RSS::Item::Common>|rakudoc:Syndicate::RSS::Item::Common>.
 Supports title, link, and description, plus guid, categories, comments,
-enclosure, and source. Dublin Core, Media RSS, and iTunes metadata are
-parsed and roundtripped when present, but C<content:encoded> is never
-emitted — RSS 0.91 has no content module element.
+enclosure, and source. Dublin Core metadata is parsed into C<author> and
+C<updated> but is not re-emitted — the RSS 0.91 DTD has no Dublin Core
+elements. Media RSS and iTunes metadata are parsed and roundtripped when
+present, but C<content:encoded> is never emitted — RSS 0.91 has no content
+module element.
 
 =end pod

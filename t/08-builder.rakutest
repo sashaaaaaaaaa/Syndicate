@@ -6,7 +6,7 @@ use Syndicate::Builder::Feed;
 use Syndicate::Builder::Entry;
 use JSON::Fast;
 
-plan 132;
+plan 137;
 
 # ===== Feed builder fields =====
 my $fb = Syndicate::Builder::Feed.new;
@@ -233,6 +233,14 @@ is $rss1-parsed.items[0].title, "Entry One", "RSS 1.0 roundtrip first item title
 is $rss1-parsed.items[0].link, "http://example.com/1", "RSS 1.0 roundtrip first item link";
 is $rss1-parsed.items[0].summary, "First entry summary", "RSS 1.0 roundtrip first item summary";
 is $rss1-parsed.items[0].author, "Jane", "RSS 1.0 roundtrip first item author (dc:creator)";
+
+# RSS 1.0 (RDF) has no <author>/<category> elements — author and categories
+# are carried as dc:creator / dc:subject instead
+unlike $rss1-str, /'<author>'/, "RSS 1.0 output omits non-standard <author>";
+unlike $rss1-str, /'<category>'/, "RSS 1.0 output omits non-standard <category>";
+like $rss1-str, /'<dc:creator>Jane</dc:creator>'/, "RSS 1.0 output carries author as dc:creator";
+like $rss1-str, /'<dc:subject>atom</dc:subject>'/, "RSS 1.0 output carries category as dc:subject";
+is $rss1-parsed.items[0].dc-subjects.join(","), "atom", "RSS 1.0 dc:subject roundtrip";
 
 # Empty RSS 1.0
 my $fb-rss1-empty = Syndicate::Builder::Feed.new;

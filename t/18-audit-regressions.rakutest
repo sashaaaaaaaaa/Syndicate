@@ -6,7 +6,7 @@ use Syndicate::Builder::Feed;
 use Syndicate::JSONFeed;
 use Syndicate::Atom::Item;
 
-plan 25;
+plan 30;
 
 # ===== Bug: CDATA content silently dropped via .contents =====
 
@@ -155,5 +155,23 @@ my $xhtml-wrapped = Syndicate::Atom::Item.new(
 like ~$xhtml-wrapped.XML,
     /'<div xmlns="http://www.w3.org/1999/xhtml"><p>hi</p></div>'/,
     "already-wrapped xhtml content not double-wrapped";
+
+# ===== Bug: Atom xhtml content loses all but first child =====
+
+my $xhtml-multi = q:to/XML/;
+<entry xmlns="http://www.w3.org/2005/Atom">
+<id>urn:1</id><title>T</title><updated>2024-01-01T00:00:00Z</updated>
+<content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">first</div><div xmlns="http://www.w3.org/1999/xhtml">second</div></content>
+</entry>
+XML
+my $multi = Syndicate::Atom::Item.new($xhtml-multi);
+ok $multi.content ~~ / 'first' /, "multi-div xhtml parse keeps first child";
+ok $multi.content ~~ / 'second' /, "multi-div xhtml parse keeps second child";
+my $multi-out = ~$multi;
+ok $multi-out ~~ / 'first' /, "multi-div xhtml output keeps first child";
+ok $multi-out ~~ / 'second' /, "multi-div xhtml output keeps second child";
+my $multi-re = Syndicate::Atom::Item.new($multi-out);
+ok $multi-re.content ~~ / 'first' / && $multi-re.content ~~ / 'second' /,
+    "multi-div xhtml roundtrips all children";
 
 done-testing;

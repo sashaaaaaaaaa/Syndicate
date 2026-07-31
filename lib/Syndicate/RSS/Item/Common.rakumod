@@ -107,8 +107,10 @@ method XML {
                     $xml.append: XML::Element.new(:name<pubDate>, :nodes([RFC2822-FORMAT.to-string($.updated)]));
                 }
             }
-            add-element($xml, "author",   $.author);
-            add-element($xml, "category", $_) for @.categories;
+            unless $!is-rdf {
+                add-element($xml, "author",   $.author);
+                add-element($xml, "category", $_) for @.categories;
+            }
             add-element($xml, "comments", $.comments);
             if %.enclosure<url>.defined && %.enclosure<url>.chars {
                 my $enc = XML::Element.new(:name<enclosure>);

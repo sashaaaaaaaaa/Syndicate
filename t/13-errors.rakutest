@@ -12,7 +12,7 @@ use Syndicate::JSONFeed;
 use Syndicate::Stats;
 Syndicate::Stats.reset;
 
-plan 14;
+plan 16;
 
 my $errors-before = Syndicate::Stats.errors;
 
@@ -22,6 +22,19 @@ dies-ok { feed-format('   ') }, 'whitespace-only input dies';
 dies-ok { feed-format('<html></html>') }, 'unknown root element dies';
 dies-ok { feed-format('garbage') }, 'garbage input dies';
 dies-ok { feed-format('{"foo":"bar"}') }, 'JSON without version key dies';
+
+# ===== Clarified JSON detection messages =====
+my $json-msg;
+try { parse-feed('{"version": 1}') }
+$json-msg = $!.message if $!;
+like $json-msg, /'valid JSON but not a JSON Feed'/,
+    'parse-feed clarifies that valid JSON is not a JSON Feed';
+
+my $garbage-msg;
+try { parse-feed('garbage') }
+$garbage-msg = $!.message if $!;
+like $garbage-msg, /'input is not valid XML or JSON'/,
+    'parse-feed keeps generic message for non-JSON input';
 
 # ===== RSS 2.0 constructor errors =====
 dies-ok { Syndicate::RSS.new('<not-rss/>') }, 'wrong root element dies';
@@ -43,7 +56,7 @@ dies-ok { Syndicate::RSS::V1_0.new('<not-rdf/>') }, 'wrong RDF root element dies
 
 # ===== Stats error count =====
 # 5 feed-format errors (2 pre-existing + empty/whitespace/unknown-root
-# now recording too) + 8 constructor errors = 13
-is Syndicate::Stats.errors - $errors-before, 13, 'all errors recorded by Stats';
+# now recording too) + 2 parse-feed detection errors + 8 constructor errors = 15
+is Syndicate::Stats.errors - $errors-before, 15, 'all errors recorded by Stats';
 
 done-testing;

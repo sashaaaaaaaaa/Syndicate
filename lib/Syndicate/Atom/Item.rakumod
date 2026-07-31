@@ -51,10 +51,13 @@ method from-xml(XML::Element $entry-elem) {
     with $entry-elem.elements(:TAG<content>)[0] -> $ce {
         $content-type = decode-entities($ce.attribs<type> // "text");
         if $content-type eq "xhtml" {
-            with $ce.elements[0] -> $xhtml-div {
-                $content = ~$xhtml-div;
+            my @xhtml-divs = $ce.elements;
+            if @xhtml-divs {
+                # Keep all child elements — a lenient feed with several sibling
+                # <div>s must not lose all but the first.
+                $content = @xhtml-divs.map(~*).join;
             }
-            # No <div> child (e.g. <content type="xhtml"/>) is a benign empty
+            # No element child (e.g. <content type="xhtml"/>) is a benign empty
             # content — leave $content as Str rather than counting an error.
         } else {
             my $text = decode-entities(element-text($ce));
@@ -151,16 +154,28 @@ method XML {
             my @nodes;
             if %attribs<type> eq "xhtml" {
                 my $xhtml = try { XML::Document.new($.content) };
-                my $root = $xhtml ?? $xhtml.root !! Nil;
                 my $div  = XML::Element.new(:name<div>, :attribs({:xmlns('http://www.w3.org/1999/xhtml')}));
-                if $root.defined && $root.name eq "div" && $root.attribs<xmlns> eq 'http://www.w3.org/1999/xhtml' {
-                    $div = $root;
-                } elsif $root.defined {
-                    $div.nodes = [$root];
+                if $xhtml {
+                    my $root = $xhtml.root;
+                    if $root.name eq "div" && $root.attribs<xmlns> eq 'http://www.w3.org/1999/xhtml' {
+                        $div = $root;
+                    } else {
+                        $div.nodes = [$root];
+                    }
+                    @nodes = [$div];
                 } else {
-                    $div.nodes = [encode-entities($.content)];
+                    # A lenient parse can leave several sibling elements (e.g.
+                    # two <div>s) that are not a well-formed single document —
+                    # keep them all as siblings rather than dropping any.
+                    my $frag = try { XML::Document.new("<wrap>{$.content}</wrap>") };
+                    my @children = $frag ?? @($frag.root.elements) !! [];
+                    if @children {
+                        @nodes = @children;
+                    } else {
+                        $div.nodes = [encode-entities($.content)];
+                        @nodes = [$div];
+                    }
                 }
-                @nodes = [$div];
             } else {
                 @nodes = [encode-entities($.content)];
             }

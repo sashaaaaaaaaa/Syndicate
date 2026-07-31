@@ -46,11 +46,14 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
         return feed-format($root<name>, $root<ver>);
     }
 
-    with try-parse-json($clean) {
+    my $parsed-json = try { from-json($clean) };
+    if is-json-feed($parsed-json) {
         return JSONFeedFmt;
     }
     Syndicate::Stats.record-error;
-    die "feed-format: unable to detect feed format — input is not valid XML or JSON";
+    die $parsed-json.defined
+        ?? "feed-format: valid JSON but not a JSON Feed (version must start with '{JSONFEED-VERSION-PREFIX}')"
+        !! "feed-format: unable to detect feed format — input is not valid XML or JSON";
 }
 
 multi sub feed-format(Str $name, Str $ver) {
@@ -71,7 +74,7 @@ our sub probe-feed(Str $input --> FeedFormat) is export {
     with try-xml-parse($clean) -> $root {
         return format-for($root<name>, $root<ver>);
     }
-    with try-parse-json($clean) {
+    if is-json-feed(try { from-json($clean) }) {
         return JSONFeedFmt;
     }
     Nil
@@ -105,13 +108,16 @@ multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
         die "parse-feed: XML parsing failed — input is not valid XML";
     }
 
-    with try-parse-json($clean) -> $parsed {
-        my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed);
+    my $parsed-json = try { from-json($clean) };
+    if is-json-feed($parsed-json) {
+        my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed-json);
         Syndicate::Stats.record-feed;
         return $feed;
     }
     Syndicate::Stats.record-error;
-    die "parse-feed: unable to detect feed format — input is not valid XML or JSON";
+    die $parsed-json.defined
+        ?? "parse-feed: valid JSON but not a JSON Feed (version must start with '{JSONFEED-VERSION-PREFIX}')"
+        !! "parse-feed: unable to detect feed format — input is not valid XML or JSON";
 }
 
 multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
@@ -148,13 +154,16 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
         return ($format, $feed);
     }
 
-    with try-parse-json($clean) -> $parsed {
-        my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed);
+    my $parsed-json = try { from-json($clean) };
+    if is-json-feed($parsed-json) {
+        my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed-json);
         Syndicate::Stats.record-feed;
         return (JSONFeedFmt, $feed);
     }
     Syndicate::Stats.record-error;
-    die "parse-feed-with-format: unable to detect feed format — input is not valid XML or JSON";
+    die $parsed-json.defined
+        ?? "parse-feed-with-format: valid JSON but not a JSON Feed (version must start with '{JSONFEED-VERSION-PREFIX}')"
+        !! "parse-feed-with-format: unable to detect feed format — input is not valid XML or JSON";
 }
 
 our proto sub parse-file(|) is export {*}
@@ -173,12 +182,11 @@ multi sub parse-file(IO::Path $path --> Syndicate::Feed:D) is export {
     parse-file($path.Str)
 }
 
-sub try-parse-json(Str $input) {
-    my $parsed = try { from-json($input) };
-    return Nil unless $parsed ~~ Hash
+# True when $parsed is a Hash whose version starts with the JSON Feed prefix.
+sub is-json-feed(Any $parsed --> Bool) {
+    $parsed ~~ Hash
         && $parsed<version>.defined
-        && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX);
-    $parsed
+        && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX)
 }
 
 sub try-xml-parse(Str $clean) {
