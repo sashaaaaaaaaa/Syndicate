@@ -85,6 +85,7 @@ multi method new(XML::Document $doc) {
             if $ttl.defined {
                 %bless<ttl> = $ttl;
             } else {
+                Syndicate::Stats.record-error;
                 note "Warning: Invalid TTL value '$ttl-str' — must be an integer string";
             }
         }

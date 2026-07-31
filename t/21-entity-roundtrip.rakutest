@@ -151,7 +151,7 @@ is decode-entities("&amp;#8217;"), "&#8217;",
     'encoded numeric reference stays literal (no double decode)';
 is encode-entities(decode-entities("A &#8217; B")), "A \x[2019] B",
     'numeric reference roundtrips single-encoded';
-is decode-entities("&nbsp;x"), "&nbsp;x",
+is decode-entities("&nosuch;x"), "&nosuch;x",
     'unknown named entity stays literal';
 is decode-entities("&#x110000;"), "&#x110000;",
     'out-of-range numeric reference stays literal';

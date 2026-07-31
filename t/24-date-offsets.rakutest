@@ -1,0 +1,127 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate::RSS;
+use Syndicate::Atom;
+use Syndicate::JSONFeed;
+use Syndicate::Stats;
+use Syndicate::Utils;
+
+plan 43;
+
+my constant ATOM = 'http://www.w3.org/2005/Atom';
+
+# ===== Bug A: non-UTC / non-zero-minute timezone offsets =====
+
+my $iso-colon = parse-date-optional('2024-01-15T08:30:00+05:30');
+ok $iso-colon.defined, 'ISO +05:30 parses';
+is $iso-colon.utc, DateTime.new('2024-01-15T03:00:00Z'), 'ISO +05:30 offset applied';
+is $iso-colon.timezone, 19800, 'ISO +05:30 stored as +05:30';
+
+my $iso-numeric = parse-date-optional('2024-01-15T08:30:00+0530');
+ok $iso-numeric.defined, 'ISO +0530 parses';
+is $iso-numeric.utc, DateTime.new('2024-01-15T03:00:00Z'), 'ISO +0530 offset applied';
+
+my $space-colon = parse-date-optional('2024-01-15 08:30:00 +05:30');
+ok $space-colon.defined, 'space-separated ISO +05:30 parses';
+is $space-colon.utc, DateTime.new('2024-01-15T03:00:00Z'), 'space-separated ISO +05:30 offset applied';
+
+my $rfc-plus = parse-date-optional('Mon, 15 Jan 2024 08:30:00 +0530');
+ok $rfc-plus.defined, 'RFC 2822 +0530 parses';
+is $rfc-plus.utc, DateTime.new('2024-01-15T03:00:00Z'), 'RFC 2822 +0530 not mangled (was +05:18)';
+is $rfc-plus.timezone, 19800, 'RFC 2822 +0530 stored as +05:30';
+
+my $rfc-minus = parse-date-optional('Mon, 15 Jan 2024 08:30:00 -0330');
+ok $rfc-minus.defined, 'RFC 2822 -0330 parses';
+is $rfc-minus.utc, DateTime.new('2024-01-15T12:00:00Z'), 'RFC 2822 -0330 not mangled (was -03:18)';
+is $rfc-minus.timezone, -12600, 'RFC 2822 -0330 stored as -03:30';
+
+my $ist = parse-date-optional('2024-01-15 08:30:00 IST');
+ok $ist.defined, 'IST abbreviation parses';
+is $ist.utc, DateTime.new('2024-01-15T03:00:00Z'), 'half-hour abbreviation IST offset applied';
+
+my $est = parse-date-optional('2024-01-15 08:30:00 EST');
+is $est.utc, DateTime.new('2024-01-15T13:30:00Z'), 'whole-hour EST still correct';
+
+my $minus5 = parse-date-optional('2024-01-15T08:30:00-0500');
+is $minus5.utc, DateTime.new('2024-01-15T13:30:00Z'), 'whole-hour -0500 still correct';
+
+my $z = parse-date-optional('2024-01-15T08:30:00Z');
+is $z.utc, DateTime.new('2024-01-15T08:30:00Z'), 'explicit Z unaffected';
+
+# ===== Bug A end-to-end: Atom, RSS, JSON Feed =====
+
+my $atom = Syndicate::Atom.new(qq:to/XML/);
+<feed xmlns="{ATOM}"><title>T</title><id>urn:1</id><updated>2024-01-15T08:30:00+05:30</updated>
+<entry><title>E</title><id>urn:1:1</id><updated>2024-01-15T08:30:00+0530</updated>
+</entry></feed>
+XML
+is $atom.updated.utc, DateTime.new('2024-01-15T03:00:00Z'), 'Atom feed updated +05:30 applied';
+is $atom.items[0].updated.utc, DateTime.new('2024-01-15T03:00:00Z'), 'Atom entry updated +0530 applied';
+
+my $rss = Syndicate::RSS.new(q:to/XML/);
+<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>IL</link><pubDate>Mon, 15 Jan 2024 08:30:00 +0530</pubDate>
+</item></channel></rss>
+XML
+is $rss.items[0].updated.utc, DateTime.new('2024-01-15T03:00:00Z'), 'RSS pubDate RFC +0530 applied';
+
+my %jf-item = (
+    id             => '1',
+    title          => 'E',
+    date_published => '2024-01-15T08:30:00+0530',
+    date_modified  => '2024-01-16T08:30:00-0330',
+);
+my @jf-items;
+@jf-items.push(%jf-item);
+my %jf = (version => 'https://jsonfeed.org/version/1.1', title => 'J', items => @jf-items);
+my $json = Syndicate::JSONFeed.new-from-hash(%jf);
+is $json.items[0].date_published.utc, DateTime.new('2024-01-15T03:00:00Z'), 'JSON Feed date_published +0530 applied';
+is $json.items[0].date_modified.utc, DateTime.new('2024-01-16T12:00:00Z'), 'JSON Feed date_modified -0330 applied';
+
+# ===== Bug B: datetimes without a timezone are treated as UTC =====
+
+my $b-t = parse-date-optional('2024-01-15T08:30:00');
+ok $b-t.defined, 'tz-less T-form parses';
+is $b-t.utc, DateTime.new('2024-01-15T08:30:00Z'), 'tz-less T-form treated as UTC';
+
+my $b-space = parse-date-optional('2024-01-15 08:30:00');
+ok $b-space.defined, 'tz-less space-separated form parses';
+is $b-space.utc, DateTime.new('2024-01-15T08:30:00Z'), 'tz-less space-separated form treated as UTC';
+
+my $b-date-only = parse-date-optional('2024-01-15');
+ok $b-date-only.defined, 'date-only still parses';
+is $b-date-only.utc, DateTime.new('2024-01-15T00:00:00Z'), 'date-only is midnight UTC';
+
+# ===== Bug C: invalid TTL records a Stats error =====
+
+my $errors-before-ttl = Syndicate::Stats.errors;
+my $bad-ttl = Syndicate::RSS.new(q:to/XML/);
+<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description><ttl>soon</ttl>
+<item><title>I</title><link>IL</link></item></channel></rss>
+XML
+nok $bad-ttl.ttl.defined, 'invalid ttl not set on feed';
+is Syndicate::Stats.errors - $errors-before-ttl, 1, 'invalid ttl records exactly one Stats error';
+
+my $good-ttl = Syndicate::RSS.new(q:to/XML/);
+<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description><ttl>60</ttl>
+<item><title>I</title><link>IL</link></item></channel></rss>
+XML
+is $good-ttl.ttl, 60, 'valid ttl parses';
+
+# ===== HTML named entities =====
+
+is decode-entities('&nbsp;'), "\x[00A0]", '&nbsp; decodes to non-breaking space';
+is decode-entities('&mdash;'), "\x[2014]", '&mdash; decodes to em dash';
+is decode-entities('&rsquo;'), "\x[2019]", '&rsquo; decodes to right single quote';
+is decode-entities('&ldquo;'), "\x[201C]", '&ldquo; decodes to left double quote';
+is decode-entities('&Aacute;'), "\x[00C1]", '&Aacute; decodes case-sensitively (Á)';
+is decode-entities('&aacute;'), "\x[00E1]", '&aacute; decodes case-sensitively (á)';
+is decode-entities('&AMP;'), '&', 'uppercase &AMP; still decodes';
+is decode-entities('&LT;'), '<', 'uppercase &LT; still decodes';
+is decode-entities('&amp;nbsp;'), '&nbsp;', 'no double decode of named entities';
+is decode-entities('&nosuch;'), '&nosuch;', 'unknown named entity stays literal';
+is encode-entities(decode-entities('A &nbsp; B')), "A \x[00A0] B",
+    'named entity roundtrips single-encoded';
+
+done-testing;

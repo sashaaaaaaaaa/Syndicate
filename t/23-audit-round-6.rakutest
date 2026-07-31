@@ -13,7 +13,7 @@ use Syndicate::Builder::Feed;
 my constant CONTENT = 'http://purl.org/rss/1.0/modules/content/';
 my constant DC      = 'http://purl.org/dc/elements/1.1/';
 
-plan 38;
+plan 39;
 
 # ===== B2: content:encoded with a non-content prefix =====
 
@@ -58,7 +58,9 @@ is $numeric.utc, DateTime.new('2024-01-15T13:30:00Z'), 'numeric offset applied';
 my $colon = parse-date-optional('2024-01-15 08:30:00 +05:30');
 ok $colon.defined, 'space-separated ISO + colon offset parses';
 
-ok parse-date-optional('2024-01-15 08:30:00').not, 'space-separated ISO without TZ stays Nil';
+my $no-tz = parse-date-optional('2024-01-15 08:30:00');
+ok $no-tz.defined, 'space-separated ISO without TZ parses as UTC';
+is $no-tz.utc, DateTime.new('2024-01-15T08:30:00Z'), 'tz-less datetime treated as UTC';
 
 my $rfc = parse-date-optional('Sat, 15 Jan 2024 08:30:00 EST');
 ok $rfc.defined, 'RFC 2822 dates still parse';
