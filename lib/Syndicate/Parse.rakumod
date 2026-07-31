@@ -54,14 +54,35 @@ multi sub feed-format(Str $input --> FeedFormat) is export {
 }
 
 multi sub feed-format(Str $name, Str $ver) {
+    with format-for($name, $ver) -> $fmt {
+        return $fmt;
+    }
+    Syndicate::Stats.record-error;
+    die "Unknown feed format: <{$name}>"
+}
+
+# Non-recording format probe for code paths (e.g. Discovery) that must not
+# count a failure as an error: returns Nil instead of recording or dying.
+our sub probe-feed(Str $input --> FeedFormat) is export {
+    my $clean = $input.trim;
+    $clean .= subst(/^\xFEFF/, '');
+    return Nil unless $clean.chars;
+    return Nil if $clean.chars > MAX-FEED-SIZE;
+    with try-xml-parse($clean) -> $root {
+        return format-for($root<name>, $root<ver>);
+    }
+    with try-parse-json($clean) {
+        return JSONFeedFmt;
+    }
+    Nil
+}
+
+sub format-for(Str $name, Str $ver --> FeedFormat) {
     given $name {
         when 'feed'   { return Atom }
         when 'rss'    { return $ver eq RSS_VER_091 ?? RSS091 !! RSS2 }
         when 'rdf:RDF' | 'RDF' { return RSS1 }
-        default {
-            Syndicate::Stats.record-error;
-            die "Unknown feed format: <$_>"
-        }
+        default       { return Nil }
     }
 }
 

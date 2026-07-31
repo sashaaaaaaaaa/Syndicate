@@ -44,19 +44,19 @@ method !apply-item-needs(@items, $itunes-author, $itunes-summary --> Nil) {
 
 method parse-channel-common($channel --> Hash) {
     my %h;
-    %h<title>   = get-text($channel, "title");
-    %h<link>    = get-text($channel, "link");
-    %h<desc>    = get-text($channel, "description");
-    %h<lang>    = get-text-optional($channel, "language");
-    %h<cpy>     = get-text-optional($channel, "copyright");
-    %h<me>      = get-text-optional($channel, "managingEditor");
-    %h<wm>      = get-text-optional($channel, "webMaster");
-    %h<pd>      = parse-date-optional(get-text-optional($channel, "pubDate"));
-    %h<lbd>     = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
-    %h<gen>     = get-text-optional($channel, "generator");
-    %h<docs>    = get-text-optional($channel, "docs");
-    %h<it-author>  = get-itunes-text($channel, "author");
-    %h<it-summary> = get-itunes-text($channel, "summary");
+    %h<title>             = get-text($channel, "title");
+    %h<link>              = get-text($channel, "link");
+    %h<description>       = get-text($channel, "description");
+    %h<language>          = get-text-optional($channel, "language");
+    %h<copyright>         = get-text-optional($channel, "copyright");
+    %h<managing-editor>   = get-text-optional($channel, "managingEditor");
+    %h<web-master>        = get-text-optional($channel, "webMaster");
+    %h<pub-date>          = parse-date-optional(get-text-optional($channel, "pubDate"));
+    %h<last-build-date>   = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
+    %h<generator>         = get-text-optional($channel, "generator");
+    %h<docs>              = get-text-optional($channel, "docs");
+    %h<itunes-author>     = get-itunes-text($channel, "author");
+    %h<itunes-summary>    = get-itunes-text($channel, "summary");
     %h
 }
 

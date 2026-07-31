@@ -54,10 +54,8 @@ method from-xml(XML::Element $entry-elem) {
             with $ce.elements[0] -> $xhtml-div {
                 $content = ~$xhtml-div;
             }
-            unless $content.defined {
-                Syndicate::Stats.record-error;
-                $content = Str;
-            }
+            # No <div> child (e.g. <content type="xhtml"/>) is a benign empty
+            # content — leave $content as Str rather than counting an error.
         } else {
             my $text = decode-entities(element-text($ce));
             $content = $text.defined && $text.chars ?? $text !! Str;

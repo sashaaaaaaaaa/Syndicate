@@ -171,7 +171,7 @@ method build-v1_0-item {
     Syndicate::RSS::V1_0::Item.new(|%bless, :categories(@!categories), :@dc-subjects, :is-rdf)
 }
 
-method build-atom-item {
+method build-atom-item(:$now = DateTime.now) {
     my %author-detail;
     %author-detail<name>  = $!author-name  if $!author-name.defined;
     %author-detail<email> = $!author-email if $!author-email.defined;
@@ -189,7 +189,7 @@ method build-atom-item {
     # Atom requires updated per spec; fall back to published, then to now
     %bless<updated> = $!updated if $!updated.defined;
     %bless<updated> //= $!published if $!published.defined;
-    %bless<updated> //= DateTime.now;
+    %bless<updated> //= $now;
     %bless<published> = $!published if $!published.defined;
     my @cats = @!categories;
     Syndicate::Atom::Item.new(|%bless, :categories(@cats))

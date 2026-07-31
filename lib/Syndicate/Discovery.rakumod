@@ -268,10 +268,9 @@ method discover(Str $url --> Syndicate::Feed:D) {
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $body = self!decode-response($resp);
 
-    my $feed = try { parse-feed($body) };
-    my $parse-err = $!;
-    return $feed if $feed.defined;
-    note "Feed parse failed at {$url}, falling back to HTML discovery: $parse-err" if $parse-err;
+    # Probe non-recordingly first: HTML pages are a normal case for
+    # discover(), so a failed probe is not an error condition.
+    return parse-feed($body) if probe-feed($body).defined;
 
     my $feed-url = self!find-first-feed($body, $url);
     die "No feeds found at $url" unless $feed-url;

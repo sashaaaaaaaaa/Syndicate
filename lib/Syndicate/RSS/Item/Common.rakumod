@@ -24,7 +24,7 @@ has Str $.media-description;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 has Str $.itunes-duration;
-has Set $.active-ext;
+has Set $.active-ext = Set.new;
 has Bool $!is-rdf is built = False;
 has Bool $!is-v091 is built = False;
 has Str $!cached-str;

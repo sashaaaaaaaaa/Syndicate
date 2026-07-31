@@ -101,7 +101,10 @@ method rss-feed {
 method atom-feed {
     die "Atom feed requires title"   unless $!title.defined;
     die "Atom feed requires link"    unless $!link.defined;
-    my @items = @!entries.map(*.build-atom-item);
+    # One timestamp for the whole build so entries without updated/published
+    # don't each get a slightly different DateTime.now.
+    my $now = DateTime.now;
+    my @items = @!entries.map({ $_.build-atom-item(:$now) });
     my %author-detail;
     %author-detail<name>  = $!author-name  if $!author-name.defined;
     %author-detail<email> = $!author-email if $!author-email.defined;

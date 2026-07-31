@@ -36,18 +36,18 @@ multi method new(XML::Document $doc) {
         my %common = self.parse-channel-common($channel);
         my $title   = %common<title>;
         my $link    = %common<link>;
-        my $desc    = %common<desc>;
-        my $gen     = %common<gen>;
+        my $desc    = %common<description>;
+        my $gen     = %common<generator>;
         my %image   = self.parse-image($root, :rdf-about);
-        my $lang    = %common<lang>;
+        my $lang    = %common<language>;
         my $lang-fallback = False;
         unless $lang.defined {
             $lang = get-dc-text($channel, "language");
             $lang-fallback = True if $lang.defined;
         }
 
-        my $it-author  = %common<it-author>;
-        my $it-summary = %common<it-summary>;
+        my $it-author  = %common<itunes-author>;
+        my $it-summary = %common<itunes-summary>;
 
         my @categories;
         for $channel.elements(:TAG<dc:subject>) -> $s {

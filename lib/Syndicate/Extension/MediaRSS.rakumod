@@ -9,15 +9,25 @@ unit module Syndicate::Extension::MediaRSS:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(:namespace<media>, :namespace-uri(NS-MEDIA),
     parse => sub ($elem, %attrs) {
-        return unless $elem.elements.first({ .name.starts-with('media:') });
-        my @mc = get-media-contents($elem);
+        # Single pass over direct children so contents/thumbnails/groups are
+        # not scanned separately (and group contents are never double-counted).
+        my (@mc, @mt, @mg);
+        my $has-media = False;
+        for $elem.elements -> $e {
+            given $e.name {
+                when 'media:content'   { @mc.push: media-content-of($e);   $has-media = True }
+                when 'media:thumbnail' { @mt.push: media-thumbnail-of($e); $has-media = True }
+                when 'media:group'     { with media-group-of($e) { @mg.push: $_; $has-media = True } }
+            }
+        }
+        my $mt = get-media-text($elem, "title");
+        my $md = get-media-text($elem, "description");
+        return unless $has-media || $mt.defined || $md.defined;
         %attrs<media-contents> = @mc if @mc;
-        my @mt = get-media-thumbnails($elem);
         %attrs<media-thumbnails> = @mt if @mt;
-        my @mg = get-media-groups($elem);
         %attrs<media-groups> = @mg if @mg;
-        with get-media-text($elem, "title")       { %attrs<media-title>       = $_ }
-        with get-media-text($elem, "description") { %attrs<media-description> = $_ }
+        %attrs<media-title>       = $mt if $mt.defined;
+        %attrs<media-description> = $md if $md.defined;
     },
     generate => sub ($xml, $item) {
         add-media-content-element($xml, $_) for @($item.?media-contents // []);
@@ -40,22 +50,51 @@ sub get-media-text($parent, Str $tag --> Str) is export {
     Str
 }
 
+sub media-numeric(Str $val) {
+    my $decoded = decode-entities($val);
+    try { +$decoded } // $decoded
+}
+
+sub media-content-of(XML::Element $e --> Hash) {
+    my %c;
+    %c<url>      = decode-entities($e.attribs<url>      // Str);
+    %c<type>     = decode-entities($e.attribs<type>     // Str);
+    %c<medium>   = decode-entities($e.attribs<medium>   // Str);
+    %c<duration> = media-numeric($e.attribs<duration> // Str) if $e.attribs<duration>.defined;
+    %c<fileSize> = media-numeric($e.attribs<fileSize> // Str) if $e.attribs<fileSize>.defined;
+    %c<width>    = media-numeric($e.attribs<width>    // Str) if $e.attribs<width>.defined;
+    %c<height>   = media-numeric($e.attribs<height>   // Str) if $e.attribs<height>.defined;
+    %c
+}
+
+sub media-thumbnail-of(XML::Element $e --> Hash) {
+    my %t;
+    %t<url>    = decode-entities($e.attribs<url>    // Str);
+    %t<width>  = media-numeric($e.attribs<width> // Str) if $e.attribs<width>.defined;
+    %t<height> = media-numeric($e.attribs<height> // Str) if $e.attribs<height>.defined;
+    %t<time>   = decode-entities($e.attribs<time>    // Str);
+    %t
+}
+
+sub media-group-of(XML::Element $g) {
+    my (@gc, @gt);
+    for $g.elements -> $e {
+        given $e.name {
+            when 'media:content'   { @gc.push: media-content-of($e) }
+            when 'media:thumbnail' { @gt.push: media-thumbnail-of($e) }
+        }
+    }
+    return unless @gc || @gt;
+    my %group;
+    %group<media-contents>   = @gc if @gc;
+    %group<media-thumbnails> = @gt if @gt;
+    %group
+}
+
 sub get-media-contents($parent --> Array) is export {
     my @contents;
     for $parent.elements(:TAG<media:content>) -> $e {
-        my %c;
-        my $dur   = $e.attribs<duration>;
-        my $fs    = $e.attribs<fileSize>;
-        my $w     = $e.attribs<width>;
-        my $h     = $e.attribs<height>;
-        %c<url>      = decode-entities($e.attribs<url>      // Str);
-        %c<type>     = decode-entities($e.attribs<type>     // Str);
-        %c<medium>   = decode-entities($e.attribs<medium>   // Str);
-        %c<duration> = try +decode-entities($dur) // decode-entities($dur) if $dur.defined;
-        %c<fileSize> = try +decode-entities($fs)  // decode-entities($fs)  if $fs.defined;
-        %c<width>    = try +decode-entities($w)   // decode-entities($w)   if $w.defined;
-        %c<height>   = try +decode-entities($h)   // decode-entities($h)   if $h.defined;
-        @contents.push: %c;
+        @contents.push: media-content-of($e);
     }
     @contents
 }
@@ -63,16 +102,17 @@ sub get-media-contents($parent --> Array) is export {
 sub get-media-thumbnails($parent --> Array) is export {
     my @thumbs;
     for $parent.elements(:TAG<media:thumbnail>) -> $e {
-        my %t;
-        my $w = $e.attribs<width>;
-        my $h = $e.attribs<height>;
-        %t<url>    = decode-entities($e.attribs<url>    // Str);
-        %t<width>  = try +decode-entities($w) // decode-entities($w) if $w.defined;
-        %t<height> = try +decode-entities($h) // decode-entities($h) if $h.defined;
-        %t<time>   = decode-entities($e.attribs<time>    // Str);
-        @thumbs.push: %t;
+        @thumbs.push: media-thumbnail-of($e);
     }
     @thumbs
+}
+
+sub get-media-groups($parent --> Array) is export {
+    my @groups;
+    for $parent.elements(:TAG<media:group>) -> $g {
+        with media-group-of($g) { @groups.push: $_ }
+    }
+    @groups
 }
 
 sub add-media-declaration(XML::Element $root --> Nil) is export {
@@ -90,20 +130,6 @@ sub add-media-content-element(XML::Element $parent, %content --> Nil) is export 
     $e.attribs<width>    = encode-entities(~%content<width>)    if %content<width>.defined;
     $e.attribs<height>   = encode-entities(~%content<height>)   if %content<height>.defined;
     $parent.append: $e;
-}
-
-sub get-media-groups($parent --> Array) is export {
-    my @groups;
-    for $parent.elements(:TAG<media:group>) -> $g {
-        my @gc = get-media-contents($g);
-        my @gt = get-media-thumbnails($g);
-        next unless @gc || @gt;
-        my %group;
-        %group<media-contents>   = @gc if @gc;
-        %group<media-thumbnails> = @gt if @gt;
-        @groups.push: %group;
-    }
-    @groups
 }
 
 sub add-media-group-element(XML::Element $parent, %group --> Nil) is export {

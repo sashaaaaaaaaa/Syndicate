@@ -52,8 +52,11 @@ our sub run-parsers($elem, %attrs, :$active?) is export {
 our sub run-generators($xml, $item, :$active?) is export {
     my @exts = @ext-snapshot;
     return unless @exts;
+    # An empty/absent set means "no restriction": items built from scratch
+    # (Builder) default to Set.new/undef and must run every registered
+    # generator, gated only by the item's own data.
     for @exts.kv -> $i, %ext {
-        next if $active.defined && !$active{$i};
+        next if $active.defined && $active.elems && !$active{$i};
         %ext<generate>($xml, $item);
         CATCH {
             when X::Control { .rethrow }
