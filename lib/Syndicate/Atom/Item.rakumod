@@ -62,7 +62,7 @@ method from-xml(XML::Element $entry-elem) {
     my $content  = Str;
     my $content-type = Str;
     with $entry-elem.elements(:TAG<content>)[0] -> $ce {
-        $content-type = $ce.attribs<type> // "text";
+        $content-type = decode-entities($ce.attribs<type> // "text");
         if $content-type eq "xhtml" {
             with $ce.elements[0] -> $xhtml-div {
                 $content = ~$xhtml-div;
@@ -101,7 +101,7 @@ method from-xml(XML::Element $entry-elem) {
 
     my @categories;
     for $entry-elem.elements(:TAG<category>) {
-        my $term = .attribs<term> // "";
+        my $term = decode-entities(.attribs<term> // "");
         @categories.push: $term if $term.chars;
     }
 
@@ -119,7 +119,7 @@ method from-xml(XML::Element $entry-elem) {
         %source-feed<title> = get-text-optional($_, "title");
         %source-feed<id>    = get-text-optional($_, "id");
         with .elements(:TAG<link>)[0] {
-            %source-feed<link> = .attribs<href> // "";
+            %source-feed<link> = decode-entities(.attribs<href> // "");
         }
         %source-feed<updated> = parse-date-optional(get-text-optional($_, "updated"));
     }
@@ -150,7 +150,7 @@ method XML {
         if @!link-alternate {
             for @!link-alternate -> %link {
                 my %attr = :href(encode-entities(%link<href>)), :rel<alternate>;
-                %attr<type> = %link<type> if %link<type>.defined;
+                %attr<type> = encode-entities(%link<type>) if %link<type>.defined;
                 $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
             }
         } elsif $.link.defined && $.link.chars {
@@ -162,7 +162,7 @@ method XML {
         add-element($xml, "summary", $.summary);
 
         if $.content.defined {
-            my %attribs = :type($.content-type // "text");
+            my %attribs = :type(encode-entities($.content-type // "text"));
             my @nodes;
             if %attribs<type> eq "xhtml" {
                 my $xhtml = try { XML::Document.new($.content) };
@@ -197,7 +197,7 @@ method XML {
 
         for @.categories -> $cat {
             next unless $cat.defined && $cat.chars;
-            $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
+            $xml.append: XML::Element.new(:name<category>, :attribs({:term(encode-entities($cat))}));
         }
 
         for @.contributors -> %c {

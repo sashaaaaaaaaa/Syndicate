@@ -37,7 +37,7 @@ multi method new(XML::Document $doc) {
     my $channel = $root.elements(:TAG<channel>)[0];
     die "No channel element" unless $channel;
 
-    my $about = $channel.attribs{'rdf:about'} // $channel.attribs<about> // Str;
+    my $about = decode-entities($channel.attribs{'rdf:about'} // $channel.attribs<about> // Str);
     my %common = self.parse-channel-common($channel);
     my $title   = %common<title>;
     my $link    = %common<link>;
@@ -89,6 +89,9 @@ method !type-name { "RSS 1.0" }
 method TWEAK {
     self!apply-item-needs(@!items, $.itunes-author, $.itunes-summary);
     $!needs-dc ||= ?@!categories;
+    # A language that came from <dc:language> is emitted as <dc:language>
+    # on regeneration, which requires the xmlns:dc declaration.
+    $!needs-dc ||= $!lang-from-dc;
 }
 
 method !build-xml {

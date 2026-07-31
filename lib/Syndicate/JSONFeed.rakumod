@@ -119,9 +119,7 @@ method to-hash {
         # returns a new hash (with new nested containers) each time, which
         # is cheaper than deep-copying cached item hashes and guarantees
         # callers cannot mutate cache state.
-        if @.items {
-            %h<items> = @.items.map(*.to-hash).Array;
-        }
+        %h<items> = @.items.map(*.to-hash).Array;
         %h
     }
 }

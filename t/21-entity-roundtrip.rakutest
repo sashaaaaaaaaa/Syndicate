@@ -1,0 +1,142 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate::RSS;
+use Syndicate::RSS::V0_91;
+use Syndicate::RSS::V1_0;
+use Syndicate::Atom;
+use Syndicate::Atom::Item;
+use Syndicate::JSONFeed;
+
+plan 30;
+
+my constant DC      = 'http://purl.org/dc/elements/1.1/';
+my constant MEDIA   = 'http://search.yahoo.com/mrss/';
+my constant CONTENT = 'http://purl.org/rss/1.0/modules/content/';
+my constant RDF     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+my constant RSS1    = 'http://purl.org/rss/1.0/';
+my constant ATOM    = 'http://www.w3.org/2005/Atom';
+
+# ===== 1. RSS 1.0 <dc:language> must carry xmlns:dc on regenerate =====
+
+my $dc-lang-xml = qq:to/XML/.trim;
+<rdf:RDF xmlns:rdf="{RDF}" xmlns="{RSS1}" xmlns:dc="{DC}">
+<channel rdf:about="http://e.com/">
+<title>T</title><link>L</link><description>D</description>
+<dc:language>en</dc:language>
+<items><rdf:Seq/></items>
+</channel></rdf:RDF>
+XML
+
+my $dc-lang = Syndicate::RSS::V1_0.new($dc-lang-xml);
+is $dc-lang.language, 'en', 'dc:language parses into language';
+like ~$dc-lang, / 'xmlns:dc' /,      'dc:language-only feed regenerates dc declaration';
+like ~$dc-lang, / '<dc:language>en</dc:language>' /, 'dc:language element regenerated';
+
+# ===== 2. Attribute entity roundtrips (decode on parse, single-encode on generate) =====
+
+# 2a. MediaRSS media:content url
+my $mrss-xml = qq:to/XML/.trim;
+<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>IL</link>
+<media:content xmlns:media="{MEDIA}" url="http://e.com/?a=1&amp;b=2" type="audio/mpeg&amp;x"/>
+</item></channel></rss>
+XML
+
+my $mrss = Syndicate::RSS.new($mrss-xml);
+is $mrss.items[0].media-contents[0]<url>,  'http://e.com/?a=1&b=2',  'MediaRSS url decoded on parse';
+is $mrss.items[0].media-contents[0]<type>, 'audio/mpeg&x',           'MediaRSS type decoded on parse';
+my $mrss-str = ~$mrss;
+ok $mrss-str ~~ / 'url="http://e.com/?a=1&amp;b=2"' /,  'MediaRSS url single-encoded on generate';
+ok $mrss-str ~~ / 'type="audio/mpeg&amp;x"' /,           'MediaRSS type single-encoded on generate';
+nok $mrss-str ~~ / '&amp;amp;' /,                        'MediaRSS not double-encoded';
+
+# 2b. RSS 2.0 atom:link rel=self href
+my $self-xml = qq:to/XML/.trim;
+<rss version="2.0" xmlns:atom="{ATOM}"><channel><title>T</title><link>L</link><description>D</description>
+<atom:link rel="self" href="http://e.com/feed?x=1&amp;y=2"/></channel></rss>
+XML
+
+my $self = Syndicate::RSS.new($self-xml);
+is $self.atom-self-link, 'http://e.com/feed?x=1&y=2', 'atom:self href decoded on parse';
+ok ~$self ~~ / 'href="http://e.com/feed?x=1&amp;y=2"' /, 'atom:self href single-encoded on generate';
+
+# 2c. RSS 1.0 rdf:about on channel, item, and image
+my $rdf-xml = qq:to/XML/.trim;
+<rdf:RDF xmlns:rdf="{RDF}" xmlns="{RSS1}">
+<channel rdf:about="http://e.com/?x=1&amp;y=2">
+<title>T</title><link>L</link><description>D</description>
+<items><rdf:Seq><rdf:li rdf:resource="http://e.com/i?a=1&amp;b=2"/></rdf:Seq></items>
+</channel>
+<item rdf:about="http://e.com/i?a=1&amp;b=2"><title>I</title><link>IL</link></item>
+<image rdf:about="http://e.com/img?a=1&amp;b=2"><url>http://e.com/i.png</url><title>Img</title><link>L</link></image>
+</rdf:RDF>
+XML
+
+my $rdf = Syndicate::RSS::V1_0.new($rdf-xml);
+is $rdf.about,            'http://e.com/?x=1&y=2',    'channel rdf:about decoded on parse';
+is $rdf.items[0].about,   'http://e.com/i?a=1&b=2',   'item rdf:about decoded on parse';
+is $rdf.image<about>,     'http://e.com/img?a=1&b=2', 'image rdf:about decoded on parse';
+my $chan = $rdf.XML.elements(:TAG<channel>)[0];
+is $chan.attribs<rdf:about>, 'http://e.com/?x=1&amp;y=2',  'channel rdf:about single-encoded on generate';
+is $rdf.XML.elements(:TAG<item>)[0].attribs<rdf:about>, 'http://e.com/i?a=1&amp;b=2', 'item rdf:about single-encoded on generate';
+is $rdf.XML.elements(:TAG<image>)[0].attribs<rdf:about>, 'http://e.com/img?a=1&amp;b=2', 'image rdf:about single-encoded on generate';
+
+# 2d. Atom entry source <link href>
+my $src-xml = qq:to/XML/.trim;
+<entry xmlns="{ATOM}"><title>T</title><id>u</id><updated>2025-01-01T00:00:00Z</updated>
+<source><title>S</title><id>su</id><link href="http://e.com/source?a=1&amp;b=2" rel="alternate"/></source>
+</entry>
+XML
+
+my $src-item = Syndicate::Atom::Item.new($src-xml);
+is $src-item.source-feed<link>, 'http://e.com/source?a=1&b=2', 'source link href decoded on parse';
+my $src-elem = $src-item.XML.elements(:TAG<source>)[0].elements(:TAG<link>)[0];
+is $src-elem.attribs<href>, 'http://e.com/source?a=1&amp;b=2', 'source link href single-encoded on generate';
+
+# 2e. Atom category term
+my $cat-xml = qq:to/XML/.trim;
+<feed xmlns="{ATOM}"><title>T</title><id>u</id><updated>2025-01-01T00:00:00Z</updated>
+<category term="Tech &amp; More"/>
+<entry><title>E</title><id>e</id><updated>2025-01-01T00:00:00Z</updated>
+<category term="A &amp; B"/>
+</entry></feed>
+XML
+
+my $cat-feed = Syndicate::Atom.new($cat-xml);
+is $cat-feed.categories[0], 'Tech & More',   'feed category term decoded on parse';
+is $cat-feed.items[0].categories[0], 'A & B', 'entry category term decoded on parse';
+ok ~$cat-feed ~~ / 'term="Tech &amp; More"' /, 'feed category term single-encoded on generate';
+ok ~$cat-feed ~~ / 'term="A &amp; B"' /,       'entry category term single-encoded on generate';
+
+my $cat-built = Syndicate::Atom.new(
+    :title<T>, :id<u>, :updated(DateTime.new('2025-01-01T00:00:00Z')),
+    :categories(['Tech & More']),
+);
+ok ~$cat-built ~~ / 'term="Tech &amp; More"' /, 'user-constructed category term encoded on generate';
+
+# 2f. Atom link type and content type
+my $type-xml = qq:to/XML/.trim;
+<entry xmlns="{ATOM}"><title>T</title><id>u</id><updated>2025-01-01T00:00:00Z</updated>
+<link rel="alternate" href="http://e.com/a" type="text/html&amp;x"/>
+<content type="text/plain&amp;y">hello</content>
+</entry>
+XML
+
+my $type-item = Syndicate::Atom::Item.new($type-xml);
+is $type-item.link-alternate[0]<type>, 'text/html&x', 'link type decoded on parse';
+is $type-item.content-type,            'text/plain&y', 'content type decoded on parse';
+my $link-elem = $type-item.XML.elements(:TAG<link>)[0];
+is $link-elem.attribs<type>, 'text/html&amp;x', 'link type single-encoded on generate';
+my $content-elem = $type-item.XML.elements(:TAG<content>)[0];
+is $content-elem.attribs<type>, 'text/plain&amp;y', 'content type single-encoded on generate';
+
+# ===== 3. JSON Feed always emits the required items key =====
+
+my $empty = Syndicate::JSONFeed.new(:title<t>, :items([]));
+my %h = $empty.to-hash;
+ok %h<items>:exists, 'empty JSON Feed to-hash includes items key';
+is %h<items>.elems, 0, 'empty JSON Feed items is an empty array';
+like $empty.to-json, / '"items":' \s* '[' \s* ']' /, 'empty JSON Feed to-json includes items: []';
+
+done-testing;

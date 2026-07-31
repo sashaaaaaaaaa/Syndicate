@@ -11,7 +11,7 @@ unit class Syndicate::RSS::V1_0::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate:
 method !item-type-name { "RSS 1.0 item" }
 
 method from-xml(XML::Element $item-elem, :$active?) {
-    my $about   = $item-elem.attribs{'rdf:about'} // $item-elem.attribs<about> // Str;
+    my $about   = decode-entities($item-elem.attribs{'rdf:about'} // $item-elem.attribs<about> // Str);
     my $title   = get-text-optional($item-elem, "title");
     my $link    = get-text-optional($item-elem, "link");
     my $desc    = get-text-optional($item-elem, "description");

@@ -58,7 +58,7 @@ multi method new(XML::Document $doc) {
         my $ln = $l.name;
         next unless $ln.ends-with(':link');
         if ($l.attribs<rel> // "") eq "self" {
-            $atom-self-link = $l.attribs<href> // Str;
+            $atom-self-link = decode-entities($l.attribs<href> // Str);
             last;
         }
     }

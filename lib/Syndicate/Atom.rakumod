@@ -48,7 +48,7 @@ multi method new(XML::Document $doc) {
 
     my @categories;
     for $feed.elements(:TAG<category>) {
-        my $term = .attribs<term> // "";
+        my $term = decode-entities(.attribs<term> // "");
         @categories.push: $term if $term.chars;
     }
 
@@ -138,7 +138,7 @@ method XML {
         if @!link-alternate {
             for @!link-alternate -> %link {
                 my %link-attr = :href(encode-entities(%link<href>)), :rel<alternate>;
-                %link-attr<type> = %link<type> if %link<type>.defined;
+                %link-attr<type> = encode-entities(%link<type>) if %link<type>.defined;
                 $xml.append: XML::Element.new(:name<link>, :attribs(%link-attr));
             }
         } elsif $.link.defined && $.link.chars {
@@ -147,15 +147,15 @@ method XML {
         if @!link-self {
             for @!link-self -> %link {
                 my %attr = :href(encode-entities(%link<href>)), :rel<self>;
-                %attr<type> = %link<type> if %link<type>.defined;
+                %attr<type> = encode-entities(%link<type>) if %link<type>.defined;
                 $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
             }
         }
         if @!extra-links {
             for @!extra-links -> %link {
                 my %attr = :href(encode-entities(%link<href>));
-                %attr<rel>  = %link<rel>  if %link<rel>.defined;
-                %attr<type> = %link<type> if %link<type>.defined;
+                %attr<rel>  = encode-entities(%link<rel>)  if %link<rel>.defined;
+                %attr<type> = encode-entities(%link<type>) if %link<type>.defined;
                 $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
             }
         }
@@ -179,7 +179,7 @@ method XML {
 
         for @.categories -> $cat {
             next unless $cat.defined && $cat.chars;
-            $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
+            $xml.append: XML::Element.new(:name<category>, :attribs({:term(encode-entities($cat))}));
         }
 
         for @.contributors -> %c {

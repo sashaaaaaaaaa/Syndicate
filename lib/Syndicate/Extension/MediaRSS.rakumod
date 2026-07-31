@@ -44,13 +44,17 @@ sub get-media-contents($parent --> Array) is export {
     my @contents;
     for $parent.elements(:TAG<media:content>) -> $e {
         my %c;
-        %c<url>      = $e.attribs<url>      // Str;
-        %c<type>     = $e.attribs<type>     // Str;
-        %c<medium>   = $e.attribs<medium>   // Str;
-        %c<duration> = try +$e.attribs<duration> // $e.attribs<duration> if $e.attribs<duration>.defined;
-        %c<fileSize> = try +$e.attribs<fileSize> // $e.attribs<fileSize> if $e.attribs<fileSize>.defined;
-        %c<width>    = try +$e.attribs<width>    // $e.attribs<width>    if $e.attribs<width>.defined;
-        %c<height>   = try +$e.attribs<height>   // $e.attribs<height>   if $e.attribs<height>.defined;
+        my $dur   = $e.attribs<duration>;
+        my $fs    = $e.attribs<fileSize>;
+        my $w     = $e.attribs<width>;
+        my $h     = $e.attribs<height>;
+        %c<url>      = decode-entities($e.attribs<url>      // Str);
+        %c<type>     = decode-entities($e.attribs<type>     // Str);
+        %c<medium>   = decode-entities($e.attribs<medium>   // Str);
+        %c<duration> = try +decode-entities($dur) // decode-entities($dur) if $dur.defined;
+        %c<fileSize> = try +decode-entities($fs)  // decode-entities($fs)  if $fs.defined;
+        %c<width>    = try +decode-entities($w)   // decode-entities($w)   if $w.defined;
+        %c<height>   = try +decode-entities($h)   // decode-entities($h)   if $h.defined;
         @contents.push: %c;
     }
     @contents
@@ -60,10 +64,12 @@ sub get-media-thumbnails($parent --> Array) is export {
     my @thumbs;
     for $parent.elements(:TAG<media:thumbnail>) -> $e {
         my %t;
-        %t<url>    = $e.attribs<url>    // Str;
-        %t<width>  = try +$e.attribs<width>  // $e.attribs<width>  if $e.attribs<width>.defined;
-        %t<height> = try +$e.attribs<height> // $e.attribs<height> if $e.attribs<height>.defined;
-        %t<time>   = $e.attribs<time>    // Str;
+        my $w = $e.attribs<width>;
+        my $h = $e.attribs<height>;
+        %t<url>    = decode-entities($e.attribs<url>    // Str);
+        %t<width>  = try +decode-entities($w) // decode-entities($w) if $w.defined;
+        %t<height> = try +decode-entities($h) // decode-entities($h) if $h.defined;
+        %t<time>   = decode-entities($e.attribs<time>    // Str);
         @thumbs.push: %t;
     }
     @thumbs
