@@ -3,8 +3,6 @@ use XML;
 use Syndicate::Feed;
 use Syndicate::RSS::Common;
 use Syndicate::RSS::Item;
-use DateTime::Format::RFC2822;
-my constant $RFC2822 = DateTime::Format::RFC2822.new;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
@@ -146,10 +144,10 @@ method XML {
     add-itunes-element($channel, "summary", $.itunes-summary) if $.itunes-summary.defined;
 
     if $.pubDate.defined {
-        $channel.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.pubDate)]));
+        $channel.append: XML::Element.new(:name<pubDate>, :nodes([RFC2822-FORMAT.to-string($.pubDate)]));
     }
     if $.lastBuildDate.defined {
-        $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$RFC2822.to-string($.lastBuildDate)]));
+        $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([RFC2822-FORMAT.to-string($.lastBuildDate)]));
     }
 
     add-element($channel, "category",  $_) for @!categories;

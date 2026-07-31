@@ -4,7 +4,7 @@ use lib 'lib';
 use XML;
 use Syndicate::Utils;
 
-plan 19;
+plan 27;
 
 # ===== encode-entities =====
 is encode-entities('&'), '&amp;', 'encode &';
@@ -59,6 +59,23 @@ ok !decode-entities(Str).defined, 'decode Str returns Str';
         'parse-date-optional invalid returns Nil';
     ok !parse-date-optional('').defined,
         'parse-date-optional empty returns Nil';
+}
+
+# ===== AM/PM normalization (with and without seconds) =====
+{
+    my $dt = parse-date-optional('Fri, 10 Apr 2026 10:30 AM EST');
+    isa-ok $dt, DateTime, 'AM/PM without seconds parses';
+    is $dt.hour, 10, 'AM hour preserved';
+    is $dt.second, 0, 'missing seconds default to 0';
+
+    my $dt2 = parse-date-optional('Fri, 10 Apr 2026 10:30:15 PM EST');
+    isa-ok $dt2, DateTime, 'AM/PM with seconds parses';
+    is $dt2.hour, 22, 'PM hour converted to 24h';
+    is $dt2.second, 15, 'seconds preserved';
+
+    my $dt3 = parse-date-optional('Fri, 10 Apr 2026 12:15 AM EST');
+    isa-ok $dt3, DateTime, '12 AM parses';
+    is $dt3.hour, 0, '12 AM maps to midnight';
 }
 
 done-testing;

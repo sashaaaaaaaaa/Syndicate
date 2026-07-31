@@ -4,7 +4,7 @@ use lib 'lib';
 use Syndicate::Discovery;
 use HTTP::Tiny;
 
-plan 46;
+plan 57;
 
 my $d = Syndicate::Discovery.new;
 
@@ -221,5 +221,73 @@ ok fetch-result("http://example.com/feed", "text/xml"),
     "text/xml accepted";
 ok !fetch-result("http://example.com/feed", "text/html"),
     "text/html rejected";
+
+# ===== Bare attributes in <link> tags =====
+my $html-bare-href = q:to/END/;
+<html><head>
+  <link rel="alternate" href type="application/rss+xml" />
+  <link rel="alternate" type="application/rss+xml" href="/ok.xml" />
+</head><body></body></html>
+END
+my @bare-href-feeds = $d.find-feeds($html-bare-href, "http://example.com/");
+is @bare-href-feeds.elems, 1, "bare href attribute skipped without crash";
+is @bare-href-feeds[0], "http://example.com/ok.xml", "valid link found alongside bare href";
+
+my $html-bare-rel = q:to/END/;
+<html><head><link rel href="/f.xml" type="application/rss+xml" /></head><body></body></html>
+END
+my @bare-rel-feeds = $d.find-feeds($html-bare-rel, "http://example.com/");
+is @bare-rel-feeds.elems, 0, "bare rel attribute does not match alternate";
+
+# ===== IPv4-compatible/embedded IPv6 =====
+for <
+    http://[::127.0.0.1]/feed
+    http://[0:0:0:0:0:0:127.0.0.1]/feed
+> -> $u {
+    ok !fetch-result($u), "SSRF blocked: $u";
+}
+
+for <
+    http://[::123.0.0.1]/feed
+    http://[2001:db8::1.2.3.4]/feed
+> -> $u {
+    ok fetch-result($u), "SSRF allowed: $u";
+}
+
+# ===== Response size caps =====
+class FakeUABody is HTTP::Tiny {
+    has $.resp;
+    method get($url) { $!resp }
+}
+
+my $small-rss = $OK-RSS.encode;
+my $disc-cl = Syndicate::Discovery.new(:ua(FakeUABody.new(resp => %(
+    :status(200), :success(True), :reason("OK"), :content($small-rss),
+    :headers(%(:content-type("application/rss+xml"), :content-length("999999999")))))));
+my $cl-ok = False;
+try { $disc-cl.fetch("http://example.com/feed"); $cl-ok = True; }
+ok !$cl-ok, "Content-Length over MAX-FEED-SIZE rejected";
+
+my $big-body = ("x" x 11_000_000).encode;
+my $disc-body = Syndicate::Discovery.new(:ua(FakeUABody.new(resp => %(
+    :status(200), :success(True), :reason("OK"), :content($big-body),
+    :headers(%(:content-type("application/rss+xml")))))));
+my $body-ok = False;
+try { $disc-body.fetch("http://example.com/feed"); $body-ok = True; }
+ok !$body-ok, "body over MAX-FEED-SIZE rejected";
+
+# ===== Custom duck-typed user agent =====
+class DuckUA {
+    has $.resp;
+    method get($url) { $!resp }
+}
+my $disc-duck = Syndicate::Discovery.new(:ua(DuckUA.new(resp => %(
+    :status(200), :success(True), :reason("OK"), :content($small-rss),
+    :headers(%(:content-type("application/rss+xml")))))));
+my $duck-ok = False;
+my $duck-title = "";
+try { $duck-title = $disc-duck.fetch("http://example.com/feed").title; $duck-ok = True; }
+ok $duck-ok, "custom duck-typed ua works";
+is $duck-title, "t", "duck-typed ua fetch returns feed";
 
 done-testing;

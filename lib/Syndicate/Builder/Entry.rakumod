@@ -22,11 +22,11 @@ has Str $!content;
 has Str $!content-type;
 has Str $!media-title;
 has Str $!media-description;
-    has @!media-contents;
-    has @!media-thumbnails;
-    has Str $!comments;
-    has Str $!source;
-    has %.enclosure;
+has @!media-contents;
+has @!media-thumbnails;
+has Str $!comments;
+has Str $!source;
+has %.enclosure;
 
 method title(Str $v?)      { $!title = $v if $v.defined; $!title }
 method link(Str $v?)       { $!link = $v if $v.defined; $!link }

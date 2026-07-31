@@ -72,10 +72,8 @@ method from-xml(XML::Element $entry-elem) {
                 $content = Str;
             }
         } else {
-            with $ce.contents[0] -> $t {
-                my $text = $t.?text // Str;
-                $content = $text.defined && $text.chars ?? decode-entities($text) !! Str;
-            }
+            my $text = decode-entities(element-text($ce));
+            $content = $text.defined && $text.chars ?? $text !! Str;
         }
     }
     my $updated  = parse-date(get-text($entry-elem, "updated"));
@@ -166,7 +164,16 @@ method XML {
             my @nodes;
             if %attribs<type> eq "xhtml" {
                 my $xhtml = try { XML::Document.new($.content) };
-                @nodes = $xhtml ?? [$xhtml.root] !! [encode-entities($.content)];
+                my $root = $xhtml ?? $xhtml.root !! Nil;
+                my $div  = XML::Element.new(:name<div>, :attribs({:xmlns('http://www.w3.org/1999/xhtml')}));
+                if $root.defined && $root.name eq "div" && $root.attribs<xmlns> eq 'http://www.w3.org/1999/xhtml' {
+                    $div = $root;
+                } elsif $root.defined {
+                    $div.nodes = [$root];
+                } else {
+                    $div.nodes = [encode-entities($.content)];
+                }
+                @nodes = [$div];
             } else {
                 @nodes = [encode-entities($.content)];
             }

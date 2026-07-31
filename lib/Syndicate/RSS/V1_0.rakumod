@@ -16,7 +16,7 @@ my constant NS-RSS1    = 'http://purl.org/rss/1.0/';
 my sub has-nonempty-text($elem, $tag --> Bool) {
     my $e = $elem.elements(:TAG($tag))[0]
         or return False;
-    so $e.contents.first({ .?text.defined && .?text.trim.chars })
+    so element-text($e).trim.chars
 }
 
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
@@ -62,10 +62,8 @@ multi method new(XML::Document $doc) {
 
     my @categories;
     for $channel.elements(:TAG<dc:subject>) -> $s {
-        with $s.contents[0] -> $t {
-            my $text = $t.?text // "";
-            @categories.push: decode-entities($text) if $text.chars;
-        }
+        my $text = decode-entities(element-text($s)).trim;
+        @categories.push: $text if $text.chars;
     }
 
     my @items;

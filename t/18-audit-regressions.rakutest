@@ -1,0 +1,159 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Builder::Feed;
+use Syndicate::JSONFeed;
+use Syndicate::Atom::Item;
+
+plan 25;
+
+# ===== Bug: CDATA content silently dropped via .contents =====
+
+# RSS 1.0 items with CDATA title/link were dropped entirely
+my $v10-cdata = q:to/END/;
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns="http://purl.org/rss/1.0/"
+         xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel rdf:about="http://e.com/"><title>t</title><link>http://e.com/</link><description>d</description>
+<dc:subject><![CDATA[News & Updates]]></dc:subject></channel>
+<item rdf:about="http://e.com/1"><title><![CDATA[CDATA title]]></title>
+<link><![CDATA[http://e.com/1]]></link></item>
+</rdf:RDF>
+END
+my $v10 = Syndicate::RSS::V1_0.new($v10-cdata);
+is $v10.items.elems, 1, "RSS 1.0 CDATA item kept";
+is $v10.items[0].title, "CDATA title", "RSS 1.0 CDATA item title";
+is $v10.categories.join(","), "News & Updates", "RSS 1.0 dc:subject CDATA captured";
+
+# RSS 1.0 item with raw & and < inside CDATA roundtrips
+my $v10-raw = q:to/END/;
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns="http://purl.org/rss/1.0/">
+<channel rdf:about="http://e.com/"><title>t</title><link>http://e.com/</link><description>d</description></channel>
+<item rdf:about="http://e.com/2"><title><![CDATA[A <b>x</b> & y]]></title><link>http://e.com/2</link></item>
+</rdf:RDF>
+END
+my $v10b = Syndicate::RSS::V1_0.new($v10-raw);
+is $v10b.items.elems, 1, "RSS 1.0 item with raw & < in CDATA kept";
+is $v10b.items[0].title, "A <b>x</b> & y", "RSS 1.0 CDATA with raw & and < preserved";
+
+# RSS 2.0 CDATA guid
+my $rss2-cdata = q:to/END/;
+<rss version="2.0"><channel><title>t</title><link>l</link><description>d</description>
+<item><title>i</title><link>li</link><guid><![CDATA[urn:cdataguid]]></guid></item></channel></rss>
+END
+is Syndicate::RSS.new($rss2-cdata).items[0].guid, "urn:cdataguid", "RSS 2.0 CDATA guid captured";
+
+# RSS 0.91 CDATA skipHours/skipDays
+my $v091-cdata = q:to/END/;
+<rss version="0.91"><channel><title>t</title><link>l</link><description>d</description>
+<skipHours><hour><![CDATA[5]]></hour></skipHours>
+<skipDays><day><![CDATA[Monday]]></day></skipDays></channel></rss>
+END
+my $v091 = Syndicate::RSS::V0_91.new($v091-cdata);
+is $v091.skipHours.join(","), "5", "RSS 0.91 CDATA skipHours captured";
+is $v091.skipDays.join(","), "Monday", "RSS 0.91 CDATA skipDays captured";
+
+# Media RSS CDATA title/description
+my $media-cdata = q:to/END/;
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+<channel><title>t</title><link>l</link><description>d</description>
+<item><title>i</title><link>li</link>
+<media:title><![CDATA[Media & Title]]></media:title>
+<media:description><![CDATA[Media <em>description</em>]]></media:description></item></channel></rss>
+END
+my $media = Syndicate::RSS.new($media-cdata);
+is $media.items[0].media-title, "Media & Title", "media:title CDATA captured";
+is $media.items[0].media-description, "Media <em>description</em>", "media:description CDATA captured";
+
+# iTunes CDATA summary
+my $itunes-cdata = q:to/END/;
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+<channel><title>t</title><link>l</link><description>d</description>
+<item><title>i</title><link>li</link>
+<itunes:summary><![CDATA[Show <b>summary</b> & more]]></itunes:summary></item></channel></rss>
+END
+is Syndicate::RSS.new($itunes-cdata).items[0].itunes-summary,
+    "Show <b>summary</b> & more", "itunes:summary CDATA captured";
+
+# Atom content CDATA (non-xhtml)
+my $atom-cdata = q:to/END/;
+<feed xmlns="http://www.w3.org/2005/Atom"><id>urn:x</id><title>t</title>
+<updated>2026-01-01T00:00:00Z</updated>
+<entry><id>urn:1</id><title>i</title><updated>2026-01-01T00:00:00Z</updated>
+<content type="html"><![CDATA[<p>hi &amp; bye</p>]]></content></entry></feed>
+END
+is Syndicate::Atom.new($atom-cdata).items[0].content, "<p>hi & bye</p>",
+    "Atom CDATA content captured";
+
+# ===== Bug: Atom feed XML drops $.link / $.author =====
+
+my $atom-direct = Syndicate::Atom.new(
+    :title("t"), :id("urn:x"), :link("http://e.com/"), :author("Alice"),
+    :updated(DateTime.new("2026-01-01T00:00:00Z")));
+my $atom-direct-xml = ~$atom-direct;
+like $atom-direct-xml, /'<link' .*? 'rel="alternate"' .*? '/>'/,
+    "direct Atom construction emits link rel=alternate";
+like $atom-direct-xml, /'<link' .*? 'href="http://e.com/"' .*? '/>'/,
+    "direct Atom construction emits link href";
+like $atom-direct-xml, /'<author><name>Alice</name></author>'/,
+    "direct Atom construction emits author";
+
+my $fb = Syndicate::Builder::Feed.new;
+$fb.title("BT"); $fb.link("http://e.com/"); $fb.description("d");
+$fb.updated(DateTime.new("2026-01-01T00:00:00Z")); $fb.author(:name("Bob"));
+my $builder-atom = ~$fb.atom-feed.Str;
+like $builder-atom, /'<link' .*? 'rel="alternate"' .*? '/>'/,
+    "builder atom output emits link rel=alternate";
+like $builder-atom, /'<link' .*? 'href="http://e.com/"' .*? '/>'/,
+    "builder atom output emits link href";
+like $builder-atom, /'<author><name>Bob</name></author>'/,
+    "builder atom output emits author";
+
+# ===== Bug: JSON Feed numeric date TypeError =====
+
+my $json-numeric = q:to/END/;
+{"version":"https://jsonfeed.org/version/1.1","title":"t",
+ "items":[{"id":"1","date_published":1234567890,"date_modified":1700000000}]}
+END
+my $json-feed = Syndicate::JSONFeed.new($json-numeric);
+is $json-feed.items.elems, 1, "JSON Feed numeric dates do not throw";
+ok !$json-feed.items[0].date_published.defined, "numeric date_published ignored, not fatal";
+ok !$json-feed.items[0].date_modified.defined, "numeric date_modified ignored, not fatal";
+
+# ===== Bug: JSONFeed to-hash shallow clone corrupts cache =====
+
+my $json-clone = q:to/END/;
+{"version":"https://jsonfeed.org/version/1.1","title":"t",
+ "items":[{"id":"1","title":"a","authors":[{"name":"Bob"}],"tags":["x","y"]}]}
+END
+my $fc = Syndicate::JSONFeed.new($json-clone);
+my %h1 = $fc.to-hash;
+%h1<items>[0]<tags>[0] = "HACKED";
+%h1<items>[0]<authors>[0]<name> = "HACKED";
+my %h2 = $fc.to-hash;
+is %h2<items>[0]<tags>.join(","), "x,y", "to-hash deep copy: tags cache intact";
+is %h2<items>[0]<authors>[0]<name>, "Bob", "to-hash deep copy: authors cache intact";
+
+# ===== Bug: XHTML Atom content not div-wrapped (RFC 4287) =====
+
+my $xhtml-bare = Syndicate::Atom::Item.new(
+    :id("urn:1"), :title("i"), :content("<p>hi</p>"), :content-type("xhtml"),
+    :updated(DateTime.new("2026-01-01T00:00:00Z")));
+like ~$xhtml-bare.XML,
+    /'<content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p>hi</p></div></content>'/,
+    "bare xhtml content wrapped in div";
+
+my $xhtml-wrapped = Syndicate::Atom::Item.new(
+    :id("urn:1"), :title("i"),
+    :content('<div xmlns="http://www.w3.org/1999/xhtml"><p>hi</p></div>'),
+    :content-type("xhtml"),
+    :updated(DateTime.new("2026-01-01T00:00:00Z")));
+like ~$xhtml-wrapped.XML,
+    /'<div xmlns="http://www.w3.org/1999/xhtml"><p>hi</p></div>'/,
+    "already-wrapped xhtml content not double-wrapped";
+
+done-testing;

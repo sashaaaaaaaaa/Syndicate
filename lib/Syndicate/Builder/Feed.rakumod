@@ -25,10 +25,10 @@ has Str $!author-email;
 has Str $!author-uri;
 has @!categories;
 has @!entries;
-    has Str $!itunes-author;
-    has Str $!itunes-summary;
-    has Str $!atom-self-link;
-    has %.image;
+has Str $!itunes-author;
+has Str $!itunes-summary;
+has Str $!atom-self-link;
+has %.image;
 
 method title(Str $v?)       { $!title = $v if $v.defined; $!title }
 method link(Str $v?)        { $!link = $v if $v.defined; $!link }
@@ -58,8 +58,8 @@ method image(Str :$url, Str :$title, Str :$link, Int :$width, Int :$height) {
     %!image<url>    = $url    if $url.defined;
     %!image<title>   = $title  if $title.defined;
     %!image<link>    = $link   if $link.defined;
-    %!image<width>   = ~$width  if $width.defined;
-    %!image<height>  = ~$height if $height.defined;
+    %!image<width>   = $width  if $width.defined;
+    %!image<height>  = $height if $height.defined;
     %!image
 }
 

@@ -4,8 +4,6 @@ use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Extensions;
 use Syndicate::Stats;
-use DateTime::Format::RFC2822;
-my constant $RFC2822 = DateTime::Format::RFC2822.new;
 
 unit role Syndicate::RSS::Item::Common:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -69,7 +67,8 @@ multi method new(XML::Element $xml-elem) {
 method !parse-guid(XML::Element $item-elem) {
     my $guid-elem = $item-elem.elements(:TAG<guid>)[0];
     return (Str, True) unless $guid-elem;
-    my $guid = decode-entities($guid-elem.contents[0].?text // Str);
+    my $guid = decode-entities(element-text($guid-elem));
+    $guid = Str unless $guid.chars;
     my $raw = ($guid-elem.attribs<isPermaLink> // "true").lc;
     my $is-permalink = $raw eq "true" || $raw eq "1";
     ($guid, $is-permalink)
@@ -115,7 +114,7 @@ method XML {
                     $xml.append: XML::Element.new(:name<dc:date>, :nodes([$.updated.Str]));
                 }
             } else {
-                $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
+                $xml.append: XML::Element.new(:name<pubDate>, :nodes([RFC2822-FORMAT.to-string($.updated)]));
             }
         }
         add-element($xml, "author",   $.author);

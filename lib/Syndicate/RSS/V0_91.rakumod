@@ -3,8 +3,6 @@ use XML;
 use Syndicate::Feed;
 use Syndicate::RSS::Common;
 use Syndicate::RSS::V0_91::Item;
-use DateTime::Format::RFC2822;
-my constant $RFC2822 = DateTime::Format::RFC2822.new;
 use Syndicate::Utils;
 use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
@@ -125,10 +123,10 @@ method XML {
     add-element($channel, "generator",     $.generator);
 
     if $.pubDate.defined {
-        $channel.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.pubDate)]));
+        $channel.append: XML::Element.new(:name<pubDate>, :nodes([RFC2822-FORMAT.to-string($.pubDate)]));
     }
     if $.lastBuildDate.defined {
-        $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([$RFC2822.to-string($.lastBuildDate)]));
+        $channel.append: XML::Element.new(:name<lastBuildDate>, :nodes([RFC2822-FORMAT.to-string($.lastBuildDate)]));
     }
 
     self.build-xml-image($channel, %.image) if %.image<url>.defined || %.image<title>.defined;
@@ -163,18 +161,16 @@ method parse-skip-hours($channel --> Array) {
     my @skipHours;
     with $channel.elements(:TAG<skipHours>)[0] {
         for .elements(:TAG<hour>) -> $h {
-            with $h.contents[0] -> $t {
-                my $val = $t.text;
-                if $val ~~ /^\d+$/ {
-                    my $h = $val.Int;
-                    if 0 <= $h <= 23 {
-                        @skipHours.push: $h;
-                    } else {
-                        note "Invalid hour value in skipHours: $val (must be 0-23)";
-                    }
+            my $val = element-text($h).trim;
+            if $val ~~ /^\d+$/ {
+                my $h = $val.Int;
+                if 0 <= $h <= 23 {
+                    @skipHours.push: $h;
                 } else {
-                    note "Non-numeric hour value in skipHours: $val";
+                    note "Invalid hour value in skipHours: $val (must be 0-23)";
                 }
+            } else {
+                note "Non-numeric hour value in skipHours: $val";
             }
         }
     }
@@ -185,9 +181,7 @@ method parse-skip-days($channel --> Array) {
     my @skipDays;
     with $channel.elements(:TAG<skipDays>)[0] {
         for .elements(:TAG<day>) -> $d {
-            with $d.contents[0] {
-                @skipDays.push: decode-entities(.text).tclc;
-            }
+            @skipDays.push: decode-entities(element-text($d)).tclc;
         }
     }
     @skipDays

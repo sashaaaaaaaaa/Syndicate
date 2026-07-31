@@ -8,6 +8,18 @@ use Syndicate::Stats;
 my constant JSONFEED-VERSION       is export = 'https://jsonfeed.org/version/1.1';
 our constant JSONFEED-VERSION-PREFIX is export = 'https://jsonfeed.org/version/';
 
+sub deep-copy($v) {
+    if $v ~~ Hash {
+        my %copy;
+        %copy{$_} = deep-copy($v{$_}) for $v.keys;
+        %copy
+    } elsif $v ~~ Array {
+        $v.map(&deep-copy).Array
+    } else {
+        $v.clone
+    }
+}
+
 unit class Syndicate::JSONFeed:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 
 has Str $.version = JSONFEED-VERSION;
@@ -117,7 +129,7 @@ method to-hash {
         }
         my %h = %($!cached-hash);
         if %h<items>:exists {
-            %h<items> = @(%h<items>.map(*.clone))
+            %h<items> = %h<items>.map(&deep-copy).Array
         }
         %h
     }

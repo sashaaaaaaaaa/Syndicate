@@ -12,7 +12,7 @@ my constant $base-tag = rx:i/ '<base' <-[>]>* ['/>' | '>'] /;
 
 unit class Syndicate::Discovery:ver<0.0.1>:auth<zef:sasha>;
 
-has HTTP::Tiny $.ua is built(False);
+has $.ua is built(False);
 has Int $!max-redirect = 5;
 
 =begin comment
@@ -42,8 +42,21 @@ method !fetch-url(Str $url is copy) {
             $url = self!resolve-redirect-url($url, $loc);
             next;
         }
+        self!check-size($resp);
         return $resp;
     }
+}
+
+method !check-size($resp) {
+    my $cl = header-value($resp<headers><content-length>);
+    if $cl.defined && $cl.chars {
+        my $len = try +$cl;
+        die "Response too large ({$len} bytes, max {MAX-FEED-SIZE})"
+            if $len.defined && $len > MAX-FEED-SIZE;
+    }
+    my $content = $resp<content> // "";
+    die "Response too large ({$content.bytes} bytes, max {MAX-FEED-SIZE})"
+        if $content.bytes > MAX-FEED-SIZE;
 }
 
 sub header-value($h) {
@@ -157,11 +170,14 @@ method !validate-url(Str $url) {
                                                   || $a == 172 && 16 <= $b <= 31;
         }
     }
-    # Check IPv4-compatible IPv6 (::127.0.0.1, 0:0:0:0:0:0:127.0.0.1)
-    if $host ~~ /^ (<[0..9a..f:]>+) (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
-        my @octets = (~$1, ~$2, ~$3, ~$4);
+    # Check IPv4-compatible/embedded IPv6 (::127.0.0.1, 0:0:0:0:0:0:127.0.0.1).
+    # The dotted-quad is anchored to the end of the address so the full quad
+    # is captured; a greedy hex prefix would otherwise swallow leading octets
+    # and let ::127.0.0.1 slip through as 7.0.0.1.
+    if $host.contains(':') && $host ~~ / (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $ / {
+        my @octets = (~$0, ~$1, ~$2, ~$3);
         die "Blocked IPv6 with octal notation" if @octets.first({ .chars > 1 && .starts-with('0') });
-        my ($a, $b, $c, $d) = (+$1, +$2, +$3, +$4);
+        my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
         die "Blocked mapped unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
         die "Blocked mapped loopback"      if $a == 127;
         die "Blocked mapped link-local"   if $a == 169 && $b == 254;
@@ -221,12 +237,12 @@ method find-feeds(Str $html, Str $base-url --> Array) {
 
     for $clean.comb($link-tag) -> $tag {
         my %attr = self!parse-attrs($tag);
-        next unless %attr<rel> && %attr<rel>.lc eq 'alternate';
+        next unless (%attr<rel> // '').lc eq 'alternate';
         my $tv = (%attr<type> // "").lc;
         next unless $tv eq 'application/rss+xml'
                   || $tv eq 'application/atom+xml'
                   || $tv eq 'application/feed+json';
-        next unless %attr<href>.defined;
+        next unless %attr<href> ~~ Str && %attr<href>.chars;
         @feeds.push: self.resolve-url(%attr<href>, $base);
     }
     @feeds
@@ -334,8 +350,18 @@ Fetches a URL and parses the feed. Dies on HTTP errors.
 B<Security note:> SSL/TLS certificates are B<not> verified by the default
 C<HTTP::Tiny> user agent. Neither HTTP::Tiny nor the underlying
 IO::Socket::SSL module support certificate verification. For connections
-requiring TLS verification, pass a custom C<:$ua> using L<Cro::HTTP|rakudoc:Cro::HTTP>
-or L<HTTP::UserAgent|rakudoc:HTTP::UserAgent> instead.
+requiring TLS verification, pass a custom C<:$ua>. The custom user agent must
+duck-type C<HTTP::Tiny>: respond to C<.get(Str $url)> with a C<Hash> whose
+C<success>, C<status>, C<reason>, C<content>, and C<headers> keys behave like
+C<HTTP::Tiny>'s response (C<content-type>, C<content-length>, C<location>
+headers). Note that C<Cro::HTTP::Client> and C<HTTP::UserAgent> do B<not>
+satisfy this contract as-is.
+
+Responses are limited to C<MAX-FEED-SIZE> bytes (10 MiB). The C<Content-Length>
+header is checked before the body is accepted, and the buffered body is
+re-checked afterwards; a server that streams a body without a
+C<Content-Length> header is therefore still fully buffered before the limit
+is enforced.
 
 =head2 C<discover(Str $url)>
 

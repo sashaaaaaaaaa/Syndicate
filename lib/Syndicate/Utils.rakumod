@@ -2,6 +2,7 @@ use v6.d;
 use XML;
 use XML::Entity;
 use DateTime::Grammar;
+use DateTime::Format::RFC2822;
 
 my constant NS-ATOM is export = 'http://www.w3.org/2005/Atom';
 my constant %TZ-OFFSET = (
@@ -20,6 +21,7 @@ my constant %TZ-OFFSET = (
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
 my constant $XML-ENTITY = XML::Entity.new;
+my constant RFC2822-FORMAT is export = DateTime::Format::RFC2822.new;
 
 sub decode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
@@ -57,23 +59,21 @@ sub get-text($parent, $tag --> Str) is export {
     return decode-entities($text);
 }
 
+sub text-of-optional($e --> Str) {
+    my $text = element-text($e).trim;
+    $text.chars ?? decode-entities($text) !! Str
+}
+
 sub get-text-optional($parent, $tag --> Str) is export {
     # Note: Returns Str (type object) for both "element missing" and
     # "element empty". Use .defined to distinguish from a found value.
-    with $parent.elements(:TAG($tag))[0] -> $e {
-        my $text = element-text($e).trim;
-        return $text.chars ?? decode-entities($text) !! Str;
-    }
-    Str
+    my $e = $parent.elements(:TAG($tag))[0];
+    $e.defined ?? text-of-optional($e) !! Str
 }
 
 sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
     my $e = $parent.elements(:TAG($local-name), :namespace($ns-uri))[0];
-    with $e {
-        my $text = element-text($_).trim;
-        return $text.chars ?? decode-entities($text) !! Str;
-    }
-    Str
+    $e.defined ?? text-of-optional($e) !! Str
 }
 
 sub parse-categories($parent --> Array) is export {
@@ -93,6 +93,12 @@ sub normalize-date-str(Str $str --> Str) {
         else              { $h += 12 if $h < 12 }
         sprintf "%02d:%02d:%02d", $h, +$1, +$2;
     });
+    $s .= subst(/ (\d ** 1..2) ':' (\d ** 2) \s* (:i <[PA]>M) /, -> $/ {
+        my $h = +$0;
+        if ~$2.lc eq 'am' { $h = 0 if $h == 12 }
+        else              { $h += 12 if $h < 12 }
+        sprintf "%02d:%02d:%02d", $h, +$1, 0;
+    });
     $s .= subst(:g, /
         << EST >> | << EDT >> | << CST >> | << CDT >> |
         << MST >> | << MDT >> | << PST >> | << PDT >> |
@@ -111,9 +117,9 @@ sub parse-date(Str $str --> DateTime) is export {
     datetime-interpret($normalized) // die "parse-date: cannot parse '$str'"
 }
 
-sub parse-date-optional(Str $str) is export {
-    return Nil unless $str.defined && $str.trim.chars > 0;
-    my $normalized = normalize-date-str($str.trim);
+sub parse-date-optional(Any $str) is export {
+    return Nil unless $str.defined && $str.Str.trim.chars > 0;
+    my $normalized = normalize-date-str($str.Str.trim);
     datetime-interpret($normalized) // Nil
 }
 

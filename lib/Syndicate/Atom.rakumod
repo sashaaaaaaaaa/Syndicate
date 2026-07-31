@@ -23,7 +23,7 @@ has @.link-alternate of Hash;
 has @.extra-links of Hash;
 has DateTime $!computed-updated;
 has XML::Element $!cached-xml;
-    has Lock $!xml-lock = Lock.new;
+has Lock $!xml-lock = Lock.new;
 
 multi method new(XML::Document $doc) {
     my $feed = $doc.root;
@@ -139,6 +139,8 @@ method XML {
                 %link-attr<type> = %link<type> if %link<type>.defined;
                 $xml.append: XML::Element.new(:name<link>, :attribs(%link-attr));
             }
+        } elsif $.link.defined && $.link.chars {
+            $xml.append: XML::Element.new(:name<link>, :attribs({:href(encode-entities($.link)), :rel<alternate>}));
         }
         if @!link-self {
             for @!link-self -> %link {
@@ -161,6 +163,10 @@ method XML {
             add-element($author, "name",  %!author-detail<name>);
             add-element($author, "email", %!author-detail<email>);
             add-element($author, "uri",   %!author-detail<uri>);
+            $xml.append: $author;
+        } elsif $.author.defined && $.author.chars {
+            my $author = XML::Element.new(:name<author>);
+            add-element($author, "name", $.author);
             $xml.append: $author;
         }
 
