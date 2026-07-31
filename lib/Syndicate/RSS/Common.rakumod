@@ -53,7 +53,7 @@ method !build-xml-elements($parent, %data, *@keys) {
 method build-xml-image($parent, %image, Bool :$rdf-about = False) {
     return unless %image;
     my $img = XML::Element.new(:name<image>);
-    $img.attribs{'rdf:about'} = %image<about> if $rdf-about && %image<about>.defined;
+    add-attrib($img, 'rdf:about', %image<about>) if $rdf-about && %image<about>.defined;
     self!build-xml-elements($img, %image, <url title link width height description>);
     $parent.append: $img;
 }
@@ -94,7 +94,11 @@ and L<C<Syndicate::RSS::V1_0>|rakudoc:Syndicate::RSS::V1_0>.
 
 =head1 METHODS
 
-=item C<parse-image($channel)> - Parse image element into Hash
+=item C<parse-channel-common($channel)> - Parse shared channel fields into Hash
+=item C<parse-image($parent, Bool :$rdf-about)> - Parse image element into Hash
 =item C<build-xml-image($parent, %image, Bool :$rdf-about)> - Generate image XML
+=item C<build-xml-textinput($parent, %textInput)> - Generate textInput XML
+=item C<build-xml-skip-hours($parent, @skipHours)> - Generate skipHours XML
+=item C<build-xml-skip-days($parent, @skipDays)> - Generate skipDays XML
 
 =end pod

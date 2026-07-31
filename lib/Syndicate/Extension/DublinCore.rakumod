@@ -38,9 +38,8 @@ register-ext(:namespace<dc>, :namespace-uri(NS-DC),
 
 sub get-dc-text($parent, Str $tag --> Str) is export {
     with $parent.elements(:TAG("dc:$tag"))[0] -> $e {
-        with $e.contents[0] -> $t {
-            return decode-entities($t.?text // Str);
-        }
+        my $text = element-text($e).trim;
+        return $text.chars ?? decode-entities($text) !! Str;
     }
     Str
 }
@@ -48,9 +47,8 @@ sub get-dc-text($parent, Str $tag --> Str) is export {
 sub get-dc-texts($parent, Str $tag --> Array) is export {
     my @values;
     for $parent.elements(:TAG("dc:$tag")) -> $e {
-        with $e.contents[0] -> $t {
-            @values.push: decode-entities($t.text // "");
-        }
+        my $text = element-text($e).trim;
+        @values.push: decode-entities($text) if $text.chars;
     }
     @values
 }

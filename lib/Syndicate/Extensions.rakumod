@@ -82,10 +82,8 @@ sub set-active(@exts, $elem) is export {
     # sub to avoid Seq allocation overhead.
     {
         my @stack = $elem;
-        my $max = 10_000;
         my $i = 0;
         while $i < @stack.elems {
-            die "all-descendant-elements: exceeded $max element limit" if $i >= $max;
             my $e = @stack[$i++];
             next unless $e ~~ XML::Element;
             if $i > 1 {

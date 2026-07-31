@@ -28,10 +28,11 @@ has Str $.itunes-summary;
 has Str $.itunes-duration;
 has Set $.active-ext;
 has Bool $!is-rdf is built = False;
-    has Str $!cached-str;
-    has Lock $!cache-lock = Lock.new;
-    has XML::Element $!cached-xml;
-    has Lock $!xml-lock = Lock.new;
+has Bool $!is-v091 is built = False;
+has Str $!cached-str;
+has Lock $!cache-lock = Lock.new;
+has XML::Element $!cached-xml;
+has Lock $!xml-lock = Lock.new;
 
 method !item-type-name { "RSS item" }
 
@@ -93,7 +94,7 @@ method XML {
     $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         my $xml = XML::Element.new(:name<item>);
-        $xml.attribs{'rdf:about'} = $.about if $!is-rdf && $.about.defined;
+        add-attrib($xml, 'rdf:about', $.about) if $!is-rdf && $.about.defined;
         add-element($xml, "title", $.title);
         add-element($xml, "link",  $.link);
         if $.guid.defined && $.guid.chars {
@@ -102,11 +103,20 @@ method XML {
             $xml.append: $guid-elem;
         }
         add-element($xml, "description", $.summary);
-        if $.content.defined && $.content.chars {
+        if !$!is-v091 && $.content.defined && $.content.chars {
             $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
         }
         if $.updated.defined {
-            $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
+            if $!is-rdf {
+                # The DublinCore extension emits <dc:date> when
+                # has-dc-creator is set, so only emit it here when the
+                # extension will not (avoids duplicate <dc:date>).
+                unless $!has-dc-creator {
+                    $xml.append: XML::Element.new(:name<dc:date>, :nodes([$.updated.Str]));
+                }
+            } else {
+                $xml.append: XML::Element.new(:name<pubDate>, :nodes([$RFC2822.to-string($.updated)]));
+            }
         }
         add-element($xml, "author",   $.author);
         add-element($xml, "category", $_) for @.categories;
@@ -132,7 +142,7 @@ method namespace-flags() {
         :dc($!has-dc-creator),
         :media(?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined),
         :itunes($!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined),
-        :content(?($.content.defined && $.content.chars)),
+        :content(!$!is-v091 && ?($.content.defined && $.content.chars)),
     )
 }
 

@@ -72,18 +72,11 @@ multi method new(XML::Document $doc) {
     }
 
     my @items;
-    my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
     my $feed-active = set-active(active-extensions, $rss);
     for $channel.elements(:TAG<item>) -> $item-elem {
         my $item = Syndicate::RSS::Item.from-xml($item-elem, :active($feed-active));
-        my %nf = $item.namespace-flags;
-        $needs-dc ||= %nf<dc>;
-        $needs-media ||= %nf<media>;
-        $needs-itunes ||= %nf<itunes>;
-        $needs-content ||= %nf<content>;
         @items.push: $item;
     }
-    $needs-itunes ||= $it-author.defined || $it-summary.defined;
 
     my %bless = :$title, :$link, :description($desc),
         :language($lang), :copyright($cpy),
@@ -108,8 +101,15 @@ multi method new(XML::Document $doc) {
     }
     # CATCH covers the entire method scope (Raku phaser semantics),
     # not just the single self.bless call below.
-    self.bless(|%bless, :@categories, :@items,
-               :$needs-dc, :$needs-media, :$needs-itunes, :$needs-content)
+    self.bless(|%bless, :@categories, :@items)
+}
+
+method TWEAK {
+    my %needs = compute-needs(@!items);
+    $!needs-dc      ||= %needs<dc>;
+    $!needs-media   ||= %needs<media>;
+    $!needs-content ||= %needs<content>;
+    $!needs-itunes  ||= %needs<itunes> || $.itunes-author.defined || $.itunes-summary.defined;
 }
 
 multi method new(Str $xml) {

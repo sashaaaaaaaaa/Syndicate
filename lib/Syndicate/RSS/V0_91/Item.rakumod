@@ -45,7 +45,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
         :itunes-author(%extra<itunes-author> // Str),
         :itunes-summary(%extra<itunes-summary> // Str),
         :itunes-duration(%extra<itunes-duration> // Str),
-        :active-ext($act));
+        :active-ext($act), :is-v091);
     Syndicate::Stats.record-item;
     $item
 }
@@ -59,6 +59,9 @@ Syndicate::RSS::V0_91::Item - RSS 0.91 item
 =head1 DESCRIPTION
 
 An RSS 0.91 item. Does L<C<Syndicate::RSS::Item::Common>|rakudoc:Syndicate::RSS::Item::Common>.
-Only supports title, link, and description — no metadata fields.
+Supports title, link, and description, plus guid, categories, comments,
+enclosure, and source. Dublin Core, Media RSS, and iTunes metadata are
+parsed and roundtripped when present, but C<content:encoded> is never
+emitted — RSS 0.91 has no content module element.
 
 =end pod

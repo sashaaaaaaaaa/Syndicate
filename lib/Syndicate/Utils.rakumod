@@ -19,7 +19,6 @@ my constant %TZ-OFFSET = (
 
 unit module Syndicate::Utils:ver<0.0.1>:auth<zef:sasha>;
 
-use XML::Entity;
 my constant $XML-ENTITY = XML::Entity.new;
 
 sub decode-entities(Str $text --> Str) is export {
@@ -37,25 +36,33 @@ sub add-element($parent, $name, $value --> Nil) is export {
     $parent.append: XML::Element.new(:name($name), :nodes([encode-entities($value)]));
 }
 
+sub add-attrib($elem, $name, $value --> Nil) is export {
+    return unless $value.defined;
+    $elem.attribs{$name} = encode-entities($value);
+}
+
+proto sub node-text($node --> Str) is export {*}
+multi sub node-text(XML::Text $n)    { $n.text }
+multi sub node-text(XML::CDATA $n)   { $n.data }
+multi sub node-text(XML::Element $n) { $n.nodes.map(&node-text).join }
+multi sub node-text($n)              { "" }
+
+sub element-text($e --> Str) is export { $e.nodes.map(&node-text).join }
+
 sub get-text($parent, $tag --> Str) is export {
     my $e = $parent.elements(:TAG($tag))[0];
     die "Missing required element <$tag> in <{$parent.name}>" without $e;
-    with $e.contents[0] -> $t {
-        my $text = ($t.?text // "").trim;
-        die "Empty required element <$tag> in <{$parent.name}>" unless $text.chars;
-        return decode-entities($text);
-    }
-    die "Element <$tag> in <{$parent.name}> has no child nodes"
+    my $text = element-text($e).trim;
+    die "Empty required element <$tag> in <{$parent.name}>" unless $text.chars;
+    return decode-entities($text);
 }
 
 sub get-text-optional($parent, $tag --> Str) is export {
     # Note: Returns Str (type object) for both "element missing" and
     # "element empty". Use .defined to distinguish from a found value.
     with $parent.elements(:TAG($tag))[0] -> $e {
-        with $e.contents[0] -> $t {
-            my $text = ($t.?text // "").trim;
-            return $text.defined && $text.chars ?? decode-entities($text) !! Str;
-        }
+        my $text = element-text($e).trim;
+        return $text.chars ?? decode-entities($text) !! Str;
     }
     Str
 }
@@ -63,10 +70,8 @@ sub get-text-optional($parent, $tag --> Str) is export {
 sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
     my $e = $parent.elements(:TAG($local-name), :namespace($ns-uri))[0];
     with $e {
-        with $e.contents[0] -> $t {
-            my $text = ($t.?text // "").trim;
-            return $text.defined && $text.chars ?? decode-entities($text) !! Str;
-        }
+        my $text = element-text($_).trim;
+        return $text.chars ?? decode-entities($text) !! Str;
     }
     Str
 }
@@ -74,10 +79,8 @@ sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
 sub parse-categories($parent --> Array) is export {
     my @categories;
     for $parent.elements(:TAG<category>) -> $c {
-        with $c.contents[0] -> $t {
-            my $text = $t.?text // "";
-            @categories.push: decode-entities($text) if $text.chars;
-        }
+        my $text = element-text($c).trim;
+        @categories.push: decode-entities($text) if $text.chars;
     }
     @categories
 }
@@ -112,6 +115,18 @@ sub parse-date-optional(Str $str) is export {
     return Nil unless $str.defined && $str.trim.chars > 0;
     my $normalized = normalize-date-str($str.trim);
     datetime-interpret($normalized) // Nil
+}
+
+sub compute-needs(@items --> Hash) is export {
+    my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
+    for @items -> $item {
+        my %nf = $item.?namespace-flags // %();
+        $needs-dc      ||= ?%nf<dc>;
+        $needs-media   ||= ?%nf<media>;
+        $needs-itunes  ||= ?%nf<itunes>;
+        $needs-content ||= ?%nf<content>;
+    }
+    %(:dc($needs-dc), :media($needs-media), :itunes($needs-itunes), :content($needs-content))
 }
 
 =begin pod

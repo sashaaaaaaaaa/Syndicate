@@ -2,8 +2,9 @@ use v6.d;
 use Test;
 use lib 'lib';
 use Syndicate::Discovery;
+use HTTP::Tiny;
 
-plan 25;
+plan 46;
 
 my $d = Syndicate::Discovery.new;
 
@@ -159,5 +160,66 @@ END
 my @alt-q-feeds = $d.find-feeds($html-alt-quotes, "http://example.com/");
 is @alt-q-feeds.elems, 1, "single-quoted attributes work";
 is @alt-q-feeds[0], "http://example.com/rss.xml", "single-quoted href";
+
+# ===== SSRF protection: IPv4 short forms, mapped IPv6, private ranges =====
+my constant $OK-RSS = q:to/END/;
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>t</title><link>http://e.com</link><description>d</description></channel></rss>
+END
+
+class FakeUA is HTTP::Tiny {
+    has Str $.ct = "application/rss+xml";
+    method get($url) {
+        %( :status(200), :success(True), :reason("OK"),
+           :headers(%(:content-type($!ct))),
+           :content($OK-RSS.encode) )
+    }
+}
+
+sub fetch-result(Str $url, Str $ct = "application/rss+xml") {
+    my $d = Syndicate::Discovery.new(:ua(FakeUA.new(:ct($ct))));
+    my $ok = False;
+    try {
+        my $feed = $d.fetch($url);
+        $ok = $feed.defined;
+    }
+    $ok
+}
+
+for <
+    http://127.0.0.1/feed
+    http://127.1/feed
+    http://0x7f.1/feed
+    http://0177.0.0.1/feed
+    http://0.0.0.0/feed
+    http://10.0.0.1/feed
+    http://192.168.1.1/feed
+    http://172.16.0.1/feed
+    http://169.254.0.1/feed
+    http://2130706433/feed
+    http://[::1]/feed
+    http://[::ffff:127.0.0.1]/feed
+    http://[::ffff:2130706433]/feed
+    http://[::ffff:7f00:1]/feed
+    http://[::ffff:10.0.0.1]/feed
+> -> $u {
+    ok !fetch-result($u), "SSRF blocked: $u";
+}
+
+for <
+    http://8.8.8.8/feed
+    http://[::ffff:8.8.8.8]/feed
+    http://example.com/feed
+> -> $u {
+    ok fetch-result($u), "SSRF allowed: $u";
+}
+
+# ===== Content-Type matching =====
+ok fetch-result("http://example.com/feed", "application/rss+xml; charset=utf-8"),
+    "Content-Type with charset param accepted";
+ok fetch-result("http://example.com/feed", "text/xml"),
+    "text/xml accepted";
+ok !fetch-result("http://example.com/feed", "text/html"),
+    "text/html rejected";
 
 done-testing;

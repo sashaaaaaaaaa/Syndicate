@@ -63,18 +63,11 @@ multi method new(XML::Document $doc) {
     my @skipDays  = self.parse-skip-days($channel);
 
     my @items;
-    my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
     my $feed-active = set-active(active-extensions, $rss);
     for $channel.elements(:TAG<item>) -> $item-elem {
         my $item = Syndicate::RSS::V0_91::Item.from-xml($item-elem, :active($feed-active));
-        my %nf = $item.namespace-flags;
-        $needs-dc ||= %nf<dc>;
-        $needs-media ||= %nf<media>;
-        $needs-itunes ||= %nf<itunes>;
-        $needs-content ||= %nf<content>;
         @items.push: $item;
     }
-    $needs-itunes ||= $it-author.defined || $it-summary.defined;
 
     my %bless = :$title, :$link, :description($desc),
         :language($lang), :generator($gen), :copyright($cpy),
@@ -88,8 +81,15 @@ multi method new(XML::Document $doc) {
         when X::Control { .rethrow }
         default { Syndicate::Stats.record-error; .rethrow }
     }
-    self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays),
-               :$needs-dc, :$needs-media, :$needs-itunes, :$needs-content)
+    self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays))
+}
+
+method TWEAK {
+    my %needs = compute-needs(@!items);
+    $!needs-dc      ||= %needs<dc>;
+    $!needs-media   ||= %needs<media>;
+    $!needs-content ||= %needs<content>;
+    $!needs-itunes  ||= %needs<itunes> || $.itunes-author.defined || $.itunes-summary.defined;
 }
 
 multi method new(Str $xml) {

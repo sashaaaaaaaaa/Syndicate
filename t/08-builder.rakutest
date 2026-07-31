@@ -6,7 +6,7 @@ use Syndicate::Builder::Feed;
 use Syndicate::Builder::Entry;
 use JSON::Fast;
 
-plan 123;
+plan 132;
 
 # ===== Feed builder fields =====
 my $fb = Syndicate::Builder::Feed.new;
@@ -258,5 +258,60 @@ isa-ok $jf, Syndicate::JSONFeed, "JSON roundtrip parsed";
 is $jf.title, "Test Builder Feed", "JSON roundtrip title";
 is $jf.items.elems, 2, "JSON roundtrip item count";
 is $jf.items[0].title, "Entry One", "JSON roundtrip first item title";
+
+# ===== Bug 3: namespace flags computed on builder path =====
+# dc:creator (from entry author) must trigger xmlns:dc on the RSS 1.0 root
+my $fb-needs = Syndicate::Builder::Feed.new;
+$fb-needs.title("Needs Test");
+$fb-needs.link("http://example.com/needs");
+$fb-needs.description("Needs test");
+my $en = $fb-needs.add-entry;
+$en.title("Item");
+$en.link("http://example.com/needs/1");
+$en.author(:name("Jane"));
+my $needs-rss1 = $fb-needs.rss1-str;
+like $needs-rss1, /'xmlns:dc="http://purl.org/dc/elements/1.1/"'/, "RSS 1.0 builder output declares xmlns:dc";
+like $needs-rss1, /'<dc:creator>Jane</dc:creator>'/, "RSS 1.0 builder output has dc:creator";
+
+# content must trigger xmlns:content on the RSS 2.0 root
+my $fb-needs2 = Syndicate::Builder::Feed.new;
+$fb-needs2.title("Content Needs");
+$fb-needs2.link("http://example.com/cn");
+$fb-needs2.description("Content needs");
+my $en2 = $fb-needs2.add-entry;
+$en2.title("Item");
+$en2.link("http://example.com/cn/1");
+$en2.content("<p>hi</p>");
+my $needs-rss2 = $fb-needs2.rss-str;
+like $needs-rss2, /'xmlns:content="http://purl.org/rss/1.0/modules/content/"'/, "RSS builder output declares xmlns:content";
+like $needs-rss2, /'<content:encoded>&lt;p&gt;hi&lt;/p&gt;</content:encoded>'/, "RSS builder output has content:encoded";
+
+# ===== Bug 8: RSS 1.0 items emit dc:date, not pubDate =====
+my $fb-rdf = Syndicate::Builder::Feed.new;
+$fb-rdf.title("RDF Dates");
+$fb-rdf.link("http://example.com/rdf");
+$fb-rdf.description("RDF date test");
+my $en3 = $fb-rdf.add-entry;
+$en3.title("Item");
+$en3.link("http://example.com/rdf/1");
+$en3.updated(DateTime.new("2026-03-01T12:00:00Z"));
+my $rdf-str = $fb-rdf.rss1-str;
+unlike $rdf-str, /'<pubDate>'/, "RSS 1.0 builder output has no pubDate";
+like $rdf-str, /'<dc:date>2026-03-01T12:00:00Z</dc:date>'/, "RSS 1.0 builder output has dc:date";
+my $rdf-rt = Syndicate::RSS::V1_0.new($rdf-str);
+is $rdf-rt.items[0].updated.year, 2026, "RSS 1.0 dc:date roundtrip year";
+
+# ===== Bug 9: RSS 0.91 must not emit content:encoded =====
+my $fb091 = Syndicate::Builder::Feed.new;
+$fb091.title("091 No Content");
+$fb091.link("http://example.com/091");
+$fb091.description("091 content test");
+my $en4 = $fb091.add-entry;
+$en4.title("Item");
+$en4.link("http://example.com/091/1");
+$en4.content("<p>should not appear</p>");
+my $rss091c-str = $fb091.rss091-str;
+unlike $rss091c-str, /'content:encoded'/, "RSS 0.91 builder output has no content:encoded";
+unlike $rss091c-str, /'xmlns:content'/, "RSS 0.91 builder output has no xmlns:content";
 
 done-testing;

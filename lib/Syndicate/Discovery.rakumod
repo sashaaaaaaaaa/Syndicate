@@ -61,6 +61,47 @@ method !decode-response($resp --> Str) {
     $resp<content>.decode($charset)
 }
 
+# Expand an IPv4 literal into its four octets. Accepts the standard
+# dotted-quad form plus the abbreviated dotted forms (127.1, 127.0.1),
+# hex forms (0x7f.1), and the 32-bit integer form (2130706433) that
+# browsers and inet_aton resolve. Returns an empty list when $host is
+# not an IPv4 literal. Dies on octal notation, which is ambiguous and
+# rejected outright.
+method !ipv4-octets(Str $host --> List) {
+    my @parts = $host.split('.');
+    return () unless 1 <= @parts.elems <= 4;
+    die "Blocked IPv4 address with octal notation"
+        if @parts.first({ .chars > 1 && .starts-with('0') && !.starts-with('0x') && !.starts-with('0X') });
+    my @vals;
+    for @parts {
+        my $v;
+        if $_ ~~ /^ '0x' <[0..9a..fA..F]>+ $/ {
+            $v = :16($_.substr(2));
+        } elsif $_ ~~ /^ \d+ $/ {
+            $v = +$_;
+        } else {
+            return ();
+        }
+        return () unless $v.defined;
+        @vals.push: $v;
+    }
+    # inet_aton-style expansion: the first n-1 values are single octets;
+    # the last value spans the remaining 5-n octets, big-endian.
+    my @octets = 0 xx 4;
+    my $last = @vals.pop;
+    my $rest = @vals.elems;
+    for @vals.kv -> $i, $v {
+        return () unless $v <= 0xFF;
+        @octets[$i] = $v;
+    }
+    my $span = 4 - $rest;
+    return () unless $last <= (1 +< (8 * $span)) - 1;
+    for ^$span -> $k {
+        @octets[$rest + $k] = ($last +> (8 * ($span - 1 - $k))) +& 0xFF;
+    }
+    @octets
+}
+
 method !validate-url(Str $url) {
     my $uri = try { URI.new($url) };
     die "Invalid URL" without $uri;
@@ -70,17 +111,18 @@ method !validate-url(Str $url) {
     my $host = $uri.host.lc;
     die "Blocked empty host" unless $host.defined && $host.chars;
     # Strip brackets so all subsequent checks work with bare addresses
-    $host .= subst(/ ^ '[' | ']' $ /, '');
+    $host .= subst(/ ^ '[' /, '');
+    $host .= subst(/ ']' $ /, '');
     # Strip trailing dot (DNS absolute form) so bare-hostname check catches internal.
     $host .= subst(/ '.' $ /, '');
     # Reject bare hostnames (no dots) — SSRF via internal DNS short names
     die "Blocked host without domain" unless $host.contains('.') || $host.contains(':');
-    # Reject private, loopback, and link-local IPv4 addresses
-    if $host ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
-        my @octets = (~$0, ~$1, ~$2, ~$3);
-        die "Blocked IPv4 address with octal notation" if @octets.first({ .chars > 1 && .starts-with('0') });
-        my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
-        die "Blocked IPv4 address with invalid octet" unless $a <= 255 && $b <= 255 && $c <= 255 && $d <= 255;
+    # Reject private, loopback, and link-local IPv4 addresses,
+    # including short forms (127.1, 127.0.1, 0x7f.1) and the
+    # 32-bit integer form (2130706433).
+    my @ipv4 = self!ipv4-octets($host);
+    if @ipv4 {
+        my ($a, $b, $c, $d) = @ipv4;
         die "Blocked unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
         die "Blocked address on zero network" if $a == 0;
         die "Blocked loopback address"    if $a == 127;
@@ -89,11 +131,12 @@ method !validate-url(Str $url) {
         die "Blocked private address"     if $a == 192 && $b == 168;
         die "Blocked private address"     if $a == 172 && 16 <= $b <= 31;
     }
-    # Check IPv4-mapped IPv6 (::ffff:x.x.x.x or ::ffff:hex:hex)
+    # Check IPv4-mapped IPv6 (::ffff:x.x.x.x, ::ffff:127.1, or ::ffff:hex:hex)
     if $host ~~ /^ '::ffff:' (.+) $/ {
         my $suffix = ~$0;
-        if $suffix ~~ /^ (\d+) '.' (\d+) '.' (\d+) '.' (\d+) $/ {
-            my ($a, $b, $c, $d) = (+$0, +$1, +$2, +$3);
+        my @octets = self!ipv4-octets($suffix);
+        if @octets {
+            my ($a, $b, $c, $d) = @octets;
             die "Blocked mapped unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
             die "Blocked mapped loopback"      if $a == 127;
             die "Blocked mapped link-local"   if $a == 169 && $b == 254;
@@ -142,7 +185,7 @@ method fetch(Str $url --> Syndicate::Feed:D) {
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $ct = header-value($resp<headers><content-type>);
     die "Unexpected Content-Type: '$ct' — expected application/atom+xml, application/rss+xml, application/feed+json, or text/xml"
-        unless $ct.lc ~~ /^ :i 'application/' [ atom+xml | rss+xml | feed+json | xml ] | 'text/xml' $/;
+        unless $ct.lc ~~ /^ :i [ 'application/' [ atom\+xml | rss\+xml | feed\+json | xml ] | 'text/xml' ] [';' <-[;]>*]? $/;
     my $body = self!decode-response($resp);
     parse-feed($body)
 }
@@ -233,7 +276,8 @@ sub normalize-path(Str $path --> Str) {
     }
     my $result = @parts.join('/');
     $leading = $leading && ?@parts;
-    $result = $leading ?? '/' ~ $result !! $result || '.';
+    $result = $leading ?? '/' ~ $result !! $result;
+    return '/' if $trailing && !$leading && !@parts;
     $result ~ ($trailing ?? '/' !! '')
 }
 

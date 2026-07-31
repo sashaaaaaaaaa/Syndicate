@@ -145,7 +145,7 @@ method XML {
     $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         my $xml = XML::Element.new(:name<entry>);
-        $xml.attribs{'xml:lang'} = $.xml-lang if $.xml-lang.defined;
+        add-attrib($xml, 'xml:lang', $.xml-lang) if $.xml-lang.defined;
         add-element($xml, "title",   $.title);
         if @!link-alternate {
             for @!link-alternate -> %link {

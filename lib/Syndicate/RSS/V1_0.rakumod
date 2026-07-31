@@ -69,9 +69,6 @@ multi method new(XML::Document $doc) {
     }
 
     my @items;
-    my Bool ($needs-dc, $needs-media, $needs-itunes, $needs-content) = False xx 4;
-    $needs-dc ||= ?@categories;
-    $needs-itunes ||= $it-author.defined || $it-summary.defined;
     my $feed-active = set-active(active-extensions, $root);
     for $root.elements(:TAG<item>) -> $item-elem {
         unless has-nonempty-text($item-elem, "title") && has-nonempty-text($item-elem, "link") {
@@ -80,11 +77,6 @@ multi method new(XML::Document $doc) {
             next;
         }
         my $item = Syndicate::RSS::V1_0::Item.from-xml($item-elem, :active($feed-active));
-        my %nf = $item.namespace-flags;
-        $needs-dc ||= %nf<dc>;
-        $needs-media ||= %nf<media>;
-        $needs-itunes ||= %nf<itunes>;
-        $needs-content ||= %nf<content>;
         @items.push: $item;
     }
 
@@ -96,9 +88,16 @@ multi method new(XML::Document $doc) {
                :generator($gen), :language($lang),
                :image(%image),
                :itunes-author($it-author), :itunes-summary($it-summary),
-                :lang-from-dc($lang-fallback),
-               :$needs-dc, :$needs-media, :$needs-itunes, :$needs-content,
+               :lang-from-dc($lang-fallback),
                :categories(@categories), :@items)
+}
+
+method TWEAK {
+    my %needs = compute-needs(@!items);
+    $!needs-dc      ||= %needs<dc> || ?@!categories;
+    $!needs-media   ||= %needs<media>;
+    $!needs-content ||= %needs<content>;
+    $!needs-itunes  ||= %needs<itunes> || $.itunes-author.defined || $.itunes-summary.defined;
 }
 
 multi method new(Str $xml) {
@@ -123,7 +122,7 @@ method XML {
     $root.attribs{'xmlns:content'} = NS-CONTENT if $!needs-content;
 
     my $channel = XML::Element.new(:name<channel>);
-    $channel.attribs{'rdf:about'} = $.about if $.about.defined;
+    add-attrib($channel, 'rdf:about', $.about) if $.about.defined;
     $root.append: $channel;
 
     add-element($channel, "title",       $.title);
@@ -143,7 +142,7 @@ method XML {
 
     if %.image<about>.defined {
         my $img-ref = XML::Element.new(:name<image>);
-        $img-ref.attribs{'rdf:resource'} = %.image<about>;
+        add-attrib($img-ref, 'rdf:resource', %.image<about>);
         $channel.append: $img-ref;
     }
 
@@ -154,7 +153,7 @@ method XML {
     for @.items -> $item {
         my $li = XML::Element.new(:name<rdf:li>);
         my $resource = $item.about // $item.link // Str;
-        $li.attribs{'rdf:resource'} = $resource if $resource.defined && $resource.chars;
+        add-attrib($li, 'rdf:resource', $resource) if $resource.defined && $resource.chars;
         $seq.append: $li;
     }
 

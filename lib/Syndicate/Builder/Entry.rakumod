@@ -115,8 +115,7 @@ method build-v0_91-item {
     my $item-id = $!id // $!link // Str;
     my %bless = :title($!title // Str), :link($!link // Str),
         :summary($!summary // Str),
-        :id($item-id),
-        :content($!content // Str);
+        :id($item-id);
     %bless<author>   = $!author-name if $!author-name.defined;
     %bless<comments>  = $!comments if $!comments.defined;
     %bless<source>    = $!source if $!source.defined;
@@ -124,9 +123,9 @@ method build-v0_91-item {
     # has-dc-creator is intentionally not set — V0_91 does not use dc:
     # namespace. The xmlns:dc declaration should only appear in formats
     # that support Dublin Core (RSS 2.0, RSS 1.0).
-    # id and content are passed for role-interface consistency
-    # but V0_91::Item ignores them (format has no guid/content element)
-    Syndicate::RSS::V0_91::Item.new(|%bless)
+    # Content is intentionally not passed — RSS 0.91 has no content
+    # element, so emitting <content:encoded> would be invalid.
+    Syndicate::RSS::V0_91::Item.new(|%bless, :is-v091)
 }
 
 method build-json-item {

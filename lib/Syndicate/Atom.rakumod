@@ -62,6 +62,7 @@ multi method new(XML::Document $doc) {
 
     my @link-self;
     my @link-alternate;
+    my @extra-links;
     my $primary-link = Str;
     for $feed.elements(:TAG<link>) {
         my $rel = .attribs<rel> // "alternate";
@@ -73,7 +74,7 @@ multi method new(XML::Document $doc) {
             @link-alternate.push: %( href => $href, type => decode-entities(.attribs<type> // Str) );
             $primary-link ||= $href;
         } else {
-            @!extra-links.push: %( rel => $rel, href => $href, type => decode-entities(.attribs<type> // Str) );
+            @extra-links.push: %( rel => $rel, href => $href, type => decode-entities(.attribs<type> // Str) );
         }
     }
     $primary-link ||= @link-self[0]<href> if @link-self;
@@ -98,7 +99,7 @@ multi method new(XML::Document $doc) {
         default { Syndicate::Stats.record-error; .rethrow }
     }
     self.bless(|%bless, :@items, :@contributors, :categories(@categories),
-               :@link-self, :@link-alternate)
+               :@link-self, :@link-alternate, :@extra-links)
 }
 
 multi method new(Str $xml) {
@@ -127,7 +128,7 @@ method XML {
         return $!cached-xml if $!cached-xml.defined;
         self!cache-updated;
         my $xml = XML::Element.new(:name<feed>, :attribs({:xmlns(NS-ATOM)}));
-        $xml.attribs{'xml:lang'} = $.language if $.language.defined;
+        add-attrib($xml, 'xml:lang', $.language) if $.language.defined;
         add-element($xml, "id",        $.id);
         add-element($xml, "title",     $.title);
         add-element($xml, "subtitle",  $.subtitle);
@@ -142,6 +143,14 @@ method XML {
         if @!link-self {
             for @!link-self -> %link {
                 my %attr = :href(encode-entities(%link<href>)), :rel<self>;
+                %attr<type> = %link<type> if %link<type>.defined;
+                $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
+            }
+        }
+        if @!extra-links {
+            for @!extra-links -> %link {
+                my %attr = :href(encode-entities(%link<href>));
+                %attr<rel>  = %link<rel>  if %link<rel>.defined;
                 %attr<type> = %link<type> if %link<type>.defined;
                 $xml.append: XML::Element.new(:name<link>, :attribs(%attr));
             }
