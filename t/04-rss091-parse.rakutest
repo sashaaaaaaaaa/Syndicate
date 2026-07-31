@@ -5,7 +5,7 @@ use Syndicate;
 use Syndicate::RSS::V0_91;
 use Syndicate::RSS::V0_91::Item;
 
-plan 57;
+plan 59;
 
 # ===== Parse RSS 0.91 =====
 my $xml = slurp "t/data/rss091-full.xml";
@@ -68,10 +68,38 @@ is $feed.items[0].summary, "First item description", "first item description";
 
 is $feed.items[1].title, "Second Item", "second item title";
 is $feed.items[1].link, "http://example.com/second", "second item link";
-nok $feed.items[1].summary.defined, "second item has no description";
+is $feed.items[1].summary, "Second item description", "second item description";
 
 is $feed.items[2].title, "Third Item", "third item title";
 is $feed.items[2].summary, "Third item has a description too", "third item description";
+
+# ===== Items missing required fields are skipped =====
+my $skip-xml = q:to/END/;
+<rss version="0.91"><channel>
+  <title>S</title>
+  <link>http://example.com</link>
+  <description>D</description>
+  <language>en</language>
+  <item>
+    <title>Good</title>
+    <link>http://example.com/g</link>
+    <description>Has everything</description>
+  </item>
+  <item>
+    <title>No Desc</title>
+    <link>http://example.com/nd</link>
+  </item>
+  <item>
+    <link>http://example.com/nt</link>
+    <description>No title</description>
+  </item>
+</channel></rss>
+END
+temp $*ERR = open($*SPEC.devnull, :w);
+my $skip-feed = Syndicate::RSS::V0_91.new($skip-xml);
+$*ERR.close;
+is $skip-feed.items.elems, 1, "items missing title/link/description are skipped";
+is $skip-feed.items[0].title, "Good", "valid item still parsed";
 
 # ===== Roundtrip =====
 my $roundtrip = Syndicate::RSS::V0_91.new(

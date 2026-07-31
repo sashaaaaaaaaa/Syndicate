@@ -14,7 +14,7 @@ unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
 enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 
-sub sanitize-input(Str $input --> Str) is export {
+our sub sanitize-input(Str $input --> Str) is export {
     my $clean = $input.trim;
     $clean .= subst(/^\xFEFF/, '');
     die "empty input" unless $clean.chars;
@@ -29,6 +29,8 @@ sub sanitize-input(Str $input --> Str) is export {
 
 # Note: feed-format() followed by parse-feed() parses XML twice.
 # Use parse-feed-with-format() when both format and feed are needed.
+our proto sub feed-format(|) is export {*}
+
 multi sub feed-format(Str $input --> FeedFormat) is export {
     my $clean = sanitize-input($input);
 
@@ -56,6 +58,8 @@ multi sub feed-format(XML::Document $doc --> FeedFormat) is export {
     my $root = $doc.root;
     feed-format($root.name, $root.attribs<version> // "")
 }
+
+our proto sub parse-feed(|) is export {*}
 
 multi sub parse-feed(Str $input --> Syndicate::Feed:D) is export {
     my $clean = sanitize-input($input);
@@ -101,6 +105,8 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
     $feed
 }
 
+our proto sub parse-feed-with-format(|) is export {*}
+
 multi sub parse-feed-with-format(Str $input --> List) is export {
     my $clean = sanitize-input($input);
 
@@ -118,6 +124,8 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
     Syndicate::Stats.record-error;
     die "parse-feed-with-format: unable to detect feed format — input is not valid XML or JSON";
 }
+
+our proto sub parse-file(|) is export {*}
 
 multi sub parse-file(Str $path --> Syndicate::Feed:D) is export {
     my $size = $path.IO.s;

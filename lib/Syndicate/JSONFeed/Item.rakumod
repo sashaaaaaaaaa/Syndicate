@@ -56,7 +56,13 @@ multi method new-from-hash(%h) {
     }
 
     my @tags;
-    @tags = @(%h<tags>) if %h<tags>:exists;
+    with %h<tags> -> $t {
+        die "JSON Feed Item 'tags' must be an array, got {$t.^name}" unless $t ~~ Positional;
+        for @$t -> $tag {
+            die "JSON Feed Item 'tags' elements must be strings, got {$tag.^name}" unless $tag ~~ Str;
+            @tags.push: $tag;
+        }
+    }
 
     my $content = %h<content_html>.defined && %h<content_html>.chars
         ?? %h<content_html>

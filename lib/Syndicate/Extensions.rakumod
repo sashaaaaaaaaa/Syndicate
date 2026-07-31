@@ -11,11 +11,11 @@ my @ext-snapshot;
 my $ext-lock = Lock.new;
 my atomicint $extension-errors = 0;
 
-sub extension-count(--> Int) is export { @ext-snapshot.elems }
+our sub extension-count(--> Int) is export { @ext-snapshot.elems }
 
-sub extension-errors(--> Int) is export { ⚛$extension-errors }
+our sub extension-errors(--> Int) is export { ⚛$extension-errors }
 
-sub remove-last-ext(--> Nil) is export {
+our sub remove-last-ext(--> Nil) is export {
     $ext-lock.protect: {
         my @new = @ext-snapshot.List;
         @new.pop if @new;
@@ -23,7 +23,7 @@ sub remove-last-ext(--> Nil) is export {
     }
 }
 
-sub register-ext(:&parse, :&generate, Str :$namespace?, Str :$namespace-uri?) is export {
+our sub register-ext(:&parse, :&generate, Str :$namespace?, Str :$namespace-uri?) is export {
     $ext-lock.protect: {
         my @new = @ext-snapshot.List;
         @new.push: %(:&parse, :&generate, :$namespace, :$namespace-uri);
@@ -31,7 +31,7 @@ sub register-ext(:&parse, :&generate, Str :$namespace?, Str :$namespace-uri?) is
     }
 }
 
-sub run-parsers($elem, %attrs, :$active?) is export {
+our sub run-parsers($elem, %attrs, :$active?) is export {
     my @exts = @ext-snapshot;
     return unless @exts;
     my $act = $active // set-active(@exts, $elem);
@@ -49,7 +49,7 @@ sub run-parsers($elem, %attrs, :$active?) is export {
     }
 }
 
-sub run-generators($xml, $item, :$active?) is export {
+our sub run-generators($xml, $item, :$active?) is export {
     my @exts = @ext-snapshot;
     return unless @exts;
     for @exts.kv -> $i, %ext {
@@ -66,61 +66,62 @@ sub run-generators($xml, $item, :$active?) is export {
     }
 }
 
-sub active-extensions(--> List) is export { @ext-snapshot }
+our sub active-extensions(--> List) is export { @ext-snapshot }
 
-sub set-active(@exts, $elem) is export {
+our sub set-active(@exts, $elem) is export {
     my @prefixes = @exts.map({ .<namespace> }).grep(*.defined);
     return @exts.keys.Set unless @prefixes;
     my %present = @prefixes.map({ $_ => False });
-    my $check = $elem.name;
-    with $check.index(':') -> $i {
-        %present{$check.substr(0, $i)} = True;
-    }
-    # Walk descendants to find which namespace prefixes are actually
-    # used in the element tree, and check xmlns: declarations on all
-    # elements (not just root). Inlined instead of calling a gather/take
-    # sub to avoid Seq allocation overhead.
-    {
-        my @stack = $elem;
-        my $i = 0;
-        while $i < @stack.elems {
-            my $e = @stack[$i++];
-            next unless $e ~~ XML::Element;
-            if $i > 1 {
-                my $name = $e.name;
-                with $name.index(':') -> $j {
-                    my $prefix = $name.substr(0, $j);
-                    %present{$prefix} = True if %present{$prefix}:exists;
-                }
-                # Check xmlns: attributes on descendant elements
-                for $e.attribs.kv -> $k, $v {
-                    with $k.index('xmlns:') {
-                        my $prefix = $k.substr(6);
-                        next unless %present{$prefix}:exists;
-                        my $uri-ok = so @exts.first({
-                            .<namespace> eq $prefix && (!.<namespace-uri> || .<namespace-uri> eq $v)
-                        });
-                        %present{$prefix} = True if $uri-ok;
-                    }
-                }
-                last if so %present.values.all;
+    my %ext-by-prefix = @exts.grep({ .<namespace>.defined }).map({ .<namespace> => $_ });
+
+    # Thread in-scope xmlns URI bindings through the tree walk. A fresh
+    # hash is built only when an element actually declares xmlns:
+    # attributes; otherwise the parent's hash is shared.
+    my sub with-bindings(%parent, $e) {
+        my %b = %parent;
+        my $declared = False;
+        for $e.attribs.kv -> $k, $v {
+            if $k.starts-with('xmlns:') {
+                %b{$k.substr(6)} = ~$v;
+                $declared = True;
             }
-            @stack.append: $e.nodes;
+        }
+        $declared ?? %b !! %parent
+    }
+
+    # An element using a registered prefix only counts when the prefix
+    # is bound to the extension's namespace-uri (or the extension does
+    # not require one).
+    my sub activate($name, %bindings) {
+        return unless $name.defined;
+        with $name.index(':') -> $j {
+            my $prefix = $name.substr(0, $j);
+            my $ext = %ext-by-prefix{$prefix} or return;
+            return unless %present{$prefix}:exists;
+            my $uri = %bindings{$prefix};
+            %present{$prefix} = True
+                if !$ext.<namespace-uri>
+                || ($uri.defined && $uri eq $ext.<namespace-uri>);
         }
     }
-    # Third pass: check xmlns: attributes on root element.
-    # These are checked after the descendant walk because they
-    # are the authoritative declaration — but they can only set a
-    # prefix to True (never back to False).
-    for $elem.attribs.kv -> $k, $v {
-        with $k.index('xmlns:') {
-            my $prefix = $k.substr(6);
-            next unless %present{$prefix}:exists;
-            my $uri-ok = so @exts.first({
-                .<namespace> eq $prefix && (!.<namespace-uri> || .<namespace-uri> eq $v)
-            });
-            %present{$prefix} = True if $uri-ok;
+
+    my %b = with-bindings({}, $elem);
+    activate($elem.name, %b);
+    my @stack = ($elem, %b);
+    my $i = 0;
+    while $i < @stack.elems {
+        my $e = @stack[$i++];
+        next unless $e ~~ XML::Element;
+        my %bindings = @stack[$i++];
+        for $e.nodes -> $node {
+            next unless $node ~~ XML::Element;
+            my %nb = with-bindings(%bindings, $node);
+            activate($node.name, %nb);
+            last if so %present.values.all;
+            @stack.push: $node;
+            @stack.push: %nb;
         }
+        last if so %present.values.all;
     }
     @exts.kv.map(-> $i, %ext { $i if !%ext<namespace> || %present{%ext<namespace>} }).grep(*.defined).Set
 }

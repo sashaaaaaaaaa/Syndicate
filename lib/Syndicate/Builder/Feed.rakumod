@@ -227,7 +227,7 @@ Accumulates feed and entry data through a uniform API, then generates
 output in any supported format. Eliminates the need to learn each
 format's constructor signatures.
 
-B<Note:> The C<updated> timestamp is mapped to C<pubDate> in RSS (2.0,
+B<Note:> The C<updated> timestamp is mapped to C<lastBuildDate> in RSS (2.0,
 0.91) and to C<updated> in Atom. These have different semantics
 (publication vs last modification) — the builder intentionally uses a
 single source of truth for simplicity. Use L<C<Syndicate::Builder::Entry>|rakudoc:Syndicate::Builder::Entry>'s

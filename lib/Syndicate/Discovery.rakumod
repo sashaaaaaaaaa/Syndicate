@@ -193,7 +193,60 @@ method !validate-url(Str $url) {
         die "Blocked IPv6 unspecified address"   if $addr eq '::';
         die "Blocked IPv6 link-local address"   if $addr ~~ /^ fe <[89a..b]> /;
         die "Blocked IPv6 unique-local address" if $addr.starts-with('fc') || $addr.starts-with('fd');
+        # Reject IPv6 translation prefixes that embed a private IPv4:
+        # 6to4 (2002::/16), Teredo (2001:0000::/32, server field), NAT64
+        # (64:ff9b::/96), and IPv4-compatible/translated (::x.x.x.x in hex).
+        my @embedded = self!ipv4-from-translation-prefix($addr);
+        if @embedded {
+            my ($a, $b, $c, $d) = @embedded;
+            die "Blocked embedded unspecified address" if $a == 0 && $b == 0 && $c == 0 && $d == 0;
+            die "Blocked embedded loopback address"    if $a == 127;
+            die "Blocked embedded link-local address"  if $a == 169 && $b == 254;
+            die "Blocked embedded private address"     if $a == 10 || $a == 192 && $b == 168
+                                                            || $a == 172 && 16 <= $b <= 31;
+        }
     }
+}
+
+# Extract the IPv4 address embedded in an IPv6 translation prefix.
+# Returns the four octets, or an empty list when $addr is not a pure-hex
+# IPv6 address in one of the handled prefixes.
+method !ipv4-from-translation-prefix(Str $addr --> List) {
+    my @both = $addr.split('::');
+    return () if @both.elems > 2;
+    my @h = @both[0].chars ?? @both[0].split(':') !! [];
+    my @tail = @both[1].defined && @both[1].chars ?? @both[1].split(':') !! [];
+    if @both.elems == 1 {
+        return () unless @h.elems == 8;
+    } else {
+        return () if @h.elems + @tail.elems > 7;
+        @h.append: ('0' xx (8 - @h.elems - @tail.elems));
+        @h.append: @tail;
+    }
+    my @val;
+    for @h -> $hextet {
+        return () unless $hextet ~~ /^<[0..9a..fA..F]>+$/;
+        @val.push: :16($hextet);
+    }
+    return () unless @val.elems == 8;
+    my sub pair-octets($n) { [($n +> 8) +& 0xFF, $n +& 0xFF] }
+    my @octets;
+    if @val[0] == 0x2002 {
+        # 6to4: IPv4 occupies bits 16-47 (hextets 2-3)
+        @octets = (|pair-octets(@val[1]), |pair-octets(@val[2]));
+    } elsif @val[0] == 0x2001 && @val[1] == 0 {
+        # Teredo 2001:0000::/32: server IPv4 occupies bits 32-63 (hextets 3-4)
+        @octets = (|pair-octets(@val[2]), |pair-octets(@val[3]));
+    } elsif @val[0] == 0x64 && @val[1] == 0xff9b
+        && @val[2] == 0 && @val[3] == 0 && @val[4] == 0 && @val[5] == 0 {
+        # NAT64 well-known 64:ff9b::/96: IPv4 occupies the last 32 bits
+        @octets = (|pair-octets(@val[6]), |pair-octets(@val[7]));
+    } elsif @val[0] == 0 && @val[1] == 0 && @val[2] == 0 && @val[3] == 0
+        && @val[4] == 0 && @val[5] == 0 {
+        # IPv4-compatible/translated: hex form of ::x.x.x.x (last 32 bits)
+        @octets = (|pair-octets(@val[6]), |pair-octets(@val[7]));
+    }
+    @octets
 }
 
 method fetch(Str $url --> Syndicate::Feed:D) {
@@ -237,7 +290,8 @@ method find-feeds(Str $html, Str $base-url --> Array) {
 
     for $clean.comb($link-tag) -> $tag {
         my %attr = self!parse-attrs($tag);
-        next unless (%attr<rel> // '').lc eq 'alternate';
+        my $rel = (%attr<rel> // '').lc;
+        next unless $rel.split(/\s+/, :skip-empty).any eq 'alternate';
         my $tv = (%attr<type> // "").lc;
         next unless $tv eq 'application/rss+xml'
                   || $tv eq 'application/atom+xml'
@@ -307,7 +361,10 @@ method resolve-url(Str $url, Str $base --> Str) {
     my $rp = ~$u.path;
     unless $rp.starts-with('/') {
         my $bp = ~$b.path;
-        $bp ~~ s/ <-[/]>* $ // unless $bp.ends-with('/');
+        # Per RFC 3986 §5.4, only merge with the base directory when the
+        # reference has a path; a query/fragment-only reference keeps the
+        # base path intact (including its last segment).
+        $bp ~~ s/ <-[/]>* $ // unless $bp.ends-with('/') || !$rp.chars;
         $rp = ($bp.chars ?? $bp !! '/') ~ $rp;
     }
     $rp = normalize-path($rp);

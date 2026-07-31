@@ -28,6 +28,7 @@
     <item>
       <title>Second Item</title>
       <link>http://example.com/second</link>
+      <description>Second item description</description>
     </item>
     <item>
       <title>Third Item</title>

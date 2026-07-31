@@ -12,6 +12,12 @@ use Syndicate::Extensions;
 
 unit class Syndicate::RSS::V0_91:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
+my sub has-nonempty-text($elem, $tag --> Bool) {
+    my $e = $elem.elements(:TAG($tag))[0]
+        or return False;
+    so element-text($e).trim.chars
+}
+
 has Str $.copyright;
 has Str $.managingEditor;
 has Str $.webMaster;
@@ -63,6 +69,14 @@ multi method new(XML::Document $doc) {
     my @items;
     my $feed-active = set-active(active-extensions, $rss);
     for $channel.elements(:TAG<item>) -> $item-elem {
+        # Per the RSS 0.91 DTD every item requires title, link, and description.
+        unless has-nonempty-text($item-elem, "title")
+            && has-nonempty-text($item-elem, "link")
+            && has-nonempty-text($item-elem, "description") {
+            note "Skipping RSS 0.91 item without title, link, or description";
+            Syndicate::Stats.record-error;
+            next;
+        }
         my $item = Syndicate::RSS::V0_91::Item.from-xml($item-elem, :active($feed-active));
         @items.push: $item;
     }

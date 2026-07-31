@@ -48,7 +48,8 @@ multi method new(XML::Document $doc) {
 
     my @categories;
     for $feed.elements(:TAG<category>) {
-        @categories.push: .attribs<term> // "";
+        my $term = .attribs<term> // "";
+        @categories.push: $term if $term.chars;
     }
 
     my @contributors;
@@ -124,6 +125,7 @@ method !cache-updated {
 }
 
 method XML {
+    return $!cached-xml if $!cached-xml.defined;
     $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         self!cache-updated;
@@ -176,6 +178,7 @@ method XML {
         add-element($xml, "logo",      $.logo);
 
         for @.categories -> $cat {
+            next unless $cat.defined && $cat.chars;
             $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
         }
 

@@ -8,18 +8,6 @@ use Syndicate::Stats;
 my constant JSONFEED-VERSION       is export = 'https://jsonfeed.org/version/1.1';
 our constant JSONFEED-VERSION-PREFIX is export = 'https://jsonfeed.org/version/';
 
-sub deep-copy($v) {
-    if $v ~~ Hash {
-        my %copy;
-        %copy{$_} = deep-copy($v{$_}) for $v.keys;
-        %copy
-    } elsif $v ~~ Array {
-        $v.map(&deep-copy).Array
-    } else {
-        $v.clone
-    }
-}
-
 unit class Syndicate::JSONFeed:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 
 has Str $.version = JSONFEED-VERSION;
@@ -93,11 +81,9 @@ multi method new-from-hash(%h) {
 
 method to-hash {
     $!hash-lock.protect: {
-        # Both caches are computed lazily on first call. The cloned version
-        # (returned to callers) deep-clones items to prevent mutation of
-        # the cached state. Note: the first .to-hash call determines the
-        # cached encoding — subsequent calls return the same cached result
-        # regardless of any parameters.
+        # Feed-level metadata is cached; the result returned to callers is a
+        # shallow copy with the author hash rebuilt. Items are regenerated per
+        # call (see below), so callers cannot mutate cache state.
         $!cached-hash //= do {
             my %h;
             %h<version>       = $.version;
@@ -121,15 +107,20 @@ method to-hash {
                 %h<author> = %a;
             }
 
-            if @.items {
-                %h<items> = @.items.map(*.to-hash).Array;
-            }
-
             %h
         }
         my %h = %($!cached-hash);
-        if %h<items>:exists {
-            %h<items> = %h<items>.map(&deep-copy).Array
+        if %h<author>:exists {
+            my %a;
+            %a{$_} = %h<author>{$_} for %h<author>.keys;
+            %h<author> = %a;
+        }
+        # Items are rebuilt fresh on every call: JSONFeed::Item.to-hash
+        # returns a new hash (with new nested containers) each time, which
+        # is cheaper than deep-copying cached item hashes and guarantees
+        # callers cannot mutate cache state.
+        if @.items {
+            %h<items> = @.items.map(*.to-hash).Array;
         }
         %h
     }

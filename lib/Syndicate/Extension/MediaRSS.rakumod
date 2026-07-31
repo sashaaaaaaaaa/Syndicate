@@ -48,9 +48,9 @@ sub get-media-contents($parent --> Array) is export {
         %c<type>     = $e.attribs<type>     // Str;
         %c<medium>   = $e.attribs<medium>   // Str;
         %c<duration> = try +$e.attribs<duration> // $e.attribs<duration> if $e.attribs<duration>.defined;
-        %c<fileSize> = +$e.attribs<fileSize> if $e.attribs<fileSize>.defined;
-        %c<width>    = +$e.attribs<width>    if $e.attribs<width>.defined;
-        %c<height>   = +$e.attribs<height>   if $e.attribs<height>.defined;
+        %c<fileSize> = try +$e.attribs<fileSize> // $e.attribs<fileSize> if $e.attribs<fileSize>.defined;
+        %c<width>    = try +$e.attribs<width>    // $e.attribs<width>    if $e.attribs<width>.defined;
+        %c<height>   = try +$e.attribs<height>   // $e.attribs<height>   if $e.attribs<height>.defined;
         @contents.push: %c;
     }
     @contents
@@ -61,8 +61,8 @@ sub get-media-thumbnails($parent --> Array) is export {
     for $parent.elements(:TAG<media:thumbnail>) -> $e {
         my %t;
         %t<url>    = $e.attribs<url>    // Str;
-        %t<width>  = +$e.attribs<width>  if $e.attribs<width>.defined;
-        %t<height> = +$e.attribs<height> if $e.attribs<height>.defined;
+        %t<width>  = try +$e.attribs<width>  // $e.attribs<width>  if $e.attribs<width>.defined;
+        %t<height> = try +$e.attribs<height> // $e.attribs<height> if $e.attribs<height>.defined;
         %t<time>   = $e.attribs<time>    // Str;
         @thumbs.push: %t;
     }

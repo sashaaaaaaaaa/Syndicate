@@ -101,7 +101,8 @@ method from-xml(XML::Element $entry-elem) {
 
     my @categories;
     for $entry-elem.elements(:TAG<category>) {
-        @categories.push: .attribs<term> // "";
+        my $term = .attribs<term> // "";
+        @categories.push: $term if $term.chars;
     }
 
     my @contributors;
@@ -140,6 +141,7 @@ method from-xml(XML::Element $entry-elem) {
 }
 
 method XML {
+    return $!cached-xml if $!cached-xml.defined;
     $!xml-lock.protect: {
         return $!cached-xml if $!cached-xml.defined;
         my $xml = XML::Element.new(:name<entry>);
@@ -194,6 +196,7 @@ method XML {
         }
 
         for @.categories -> $cat {
+            next unless $cat.defined && $cat.chars;
             $xml.append: XML::Element.new(:name<category>, :attribs({:term($cat)}));
         }
 

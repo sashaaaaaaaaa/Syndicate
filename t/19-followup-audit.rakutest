@@ -1,0 +1,199 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use XML;
+use Syndicate;
+use Syndicate::Parse;
+use Syndicate::Discovery;
+use Syndicate::Extensions;
+use Syndicate::JSONFeed;
+use Syndicate::JSONFeed::Item;
+use Syndicate::Atom;
+
+plan 43;
+
+my constant $RSS2-XML = q:to/XML/;
+<rss version="2.0"><channel>
+  <title>T</title>
+  <link>http://x.com</link>
+  <description>D</description>
+  <item><title>I</title><link>http://x.com/i</link><description>ID</description></item>
+</channel></rss>
+XML
+
+# ===== Bug 1: qualified Syndicate::Parse::* entry points =====
+my $q-feed;
+lives-ok { $q-feed = Syndicate::Parse::parse-feed($RSS2-XML) },
+    "qualified Syndicate::Parse::parse-feed works";
+isa-ok $q-feed, Syndicate::RSS, "qualified parse-feed returns RSS";
+
+is Syndicate::Parse::feed-format($RSS2-XML), Syndicate::Parse::RSS2,
+    "qualified Syndicate::Parse::feed-format works";
+
+ok Syndicate::Parse::sanitize-input(" $RSS2-XML ").starts-with('<'),
+    "qualified Syndicate::Parse::sanitize-input works";
+
+lives-ok { Syndicate::Parse::parse-feed-with-format($RSS2-XML) },
+    "qualified Syndicate::Parse::parse-feed-with-format works";
+
+my $q-file;
+lives-ok { $q-file = Syndicate::Parse::parse-file("t/data/rss2-full.xml") },
+    "qualified Syndicate::Parse::parse-file works";
+isa-ok $q-file, Syndicate::RSS, "qualified parse-file returns RSS";
+
+# ===== Bug 1: format-specific entry points =====
+lives-ok { parse-rss($RSS2-XML) },    "parse-rss works";
+lives-ok { parse-atom(~Syndicate::Atom.new(:title("A"), :id("urn:a"), :updated(DateTime.new("2025-01-01T00:00:00Z")))) },
+    "parse-atom works";
+lives-ok { parse-json('{"version":"https://jsonfeed.org/version/1.1","title":"J","items":[]}') },
+    "parse-json works";
+lives-ok { parse-rss1(slurp "t/data/rss1-full.xml") }, "parse-rss1 works";
+lives-ok { parse-rss091(slurp "t/data/rss091-full.xml") }, "parse-rss091 works";
+
+# ===== Bug 2: resolve-url keeps base path for query/fragment/empty refs =====
+my $d = Syndicate::Discovery.new;
+is $d.resolve-url("?q=1", "http://example.com/blog/post"),
+    "http://example.com/blog/post?q=1", "query-only ref keeps base path";
+is $d.resolve-url("#frag", "http://example.com/blog/post"),
+    "http://example.com/blog/post#frag", "fragment-only ref keeps base path";
+is $d.resolve-url("", "http://example.com/blog/post"),
+    "http://example.com/blog/post", "empty ref keeps base path";
+
+# ===== Bug 3: JSONFeed.to-hash isolation =====
+my $jf = Syndicate::JSONFeed.new(q:to/JSON/);
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "JF",
+  "author": {"name": "A"},
+  "items": [{"id": "1", "title": "T1", "tags": ["x", "y"]}]
+}
+JSON
+{
+    my %h = $jf.to-hash;
+    %h<author><name> = "MUTATED";
+    %h<items>[0]<title> = "MUTATED";
+    %h<items>[0]<tags>[0] = "MUTATED";
+    my %h2 = $jf.to-hash;
+    is %h2<author><name>, "A", "to-hash author hash not leaked";
+    is %h2<items>[0]<title>, "T1", "to-hash item hash not leaked";
+    is %h2<items>[0]<tags>[0], "x", "to-hash item tags not leaked";
+}
+
+# ===== Bug 4: MediaRSS non-numeric attributes survive parsing =====
+my $mrss-feed;
+lives-ok {
+    $mrss-feed = Syndicate::RSS.new(q:to/XML/);
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel>
+  <title>T</title><link>http://x.com</link><description>D</description>
+  <item><title>I</title><link>http://x.com/i</link><description>ID</description>
+    <media:content url="http://x.com/v.mp4" type="video/mp4" fileSize="abc" width="640" height="480"/>
+    <media:thumbnail url="http://x.com/t.jpg" width="big"/>
+  </item>
+</channel></rss>
+XML
+}, "MediaRSS feed with non-numeric attrs parses";
+my $mc = $mrss-feed.items[0].media-contents[0];
+is $mc<fileSize>, "abc", "non-numeric fileSize kept as string";
+is $mc<width>, 640, "numeric width parsed as Int";
+is $mrss-feed.items[0].media-thumbnails[0]<width>, "big",
+    "non-numeric thumbnail width kept as string";
+
+# ===== Bug 5: IPv6 translation-prefix SSRF =====
+my constant $OK-RSS = q:to/END/;
+<rss version="2.0"><channel><title>t</title><link>http://e.com</link><description>d</description></channel></rss>
+END
+class ReachedUA {
+    method get($url) {
+        %( :status(200), :success(True), :reason("OK"),
+           :headers(%(:content-type("application/rss+xml"))),
+           :content($OK-RSS.encode) )
+    }
+}
+sub fetch-result(Str $url) {
+    my $d = Syndicate::Discovery.new(:ua(ReachedUA.new));
+    my $ok = False;
+    try {
+        my $feed = $d.fetch($url);
+        $ok = $feed.defined;
+    }
+    $ok
+}
+for <
+    http://[2002:7f00:1::]/feed
+    http://[2002:c0a8:1::]/feed
+    http://[2001:0:7f00:1::]/feed
+    http://[64:ff9b::7f00:1]/feed
+    http://[64:ff9b::c0a8:1]/feed
+    http://[::7f00:1]/feed
+> -> $u {
+    ok !fetch-result($u), "SSRF blocked: $u";
+}
+for <
+    http://[2002:0808:0808::]/feed
+    http://[64:ff9b::0808:0808]/feed
+    http://[2001:db8::abcd]/feed
+> -> $u {
+    ok fetch-result($u), "SSRF allowed: $u";
+}
+
+# ===== Bug 6: set-active namespace URI tracking =====
+my $start-count = extension-count;
+register-ext(:namespace<audit>, :namespace-uri('http://example.com/audit'),
+    parse => sub ($e, %a) {}, generate => sub ($x, $i) {});
+my $audit-idx = extension-count() - 1;
+sub audit-active(Str $xml --> Bool) {
+    my $root = XML::Document.new($xml).root;
+    so set-active(active-extensions, $root){$audit-idx}
+}
+ok audit-active(q:to/XML/), "prefix bound to matching namespace-uri is active";
+<root xmlns:audit="http://example.com/audit"><child><audit:x/></child></root>
+XML
+nok audit-active(q:to/XML/), "prefix bound to wrong namespace-uri is inactive";
+<root xmlns:audit="http://other.example/audit"><child><audit:x/></child></root>
+XML
+nok audit-active(q:to/XML/), "unbound prefix with namespace-uri requirement is inactive";
+<root><child><audit:x/></child></root>
+XML
+remove-last-ext;
+is extension-count, $start-count, "extension registry restored after set-active tests";
+
+# ===== Q3: find-feeds rel token-based matching =====
+my $html-rel-tokens = q:to/END/;
+<html><head>
+  <link rel="alternate nofollow" type="application/rss+xml" href="/a.xml" />
+  <link rel="nofollow alternate" type="application/rss+xml" href="/b.xml" />
+  <link rel="self" type="application/rss+xml" href="/c.xml" />
+</head><body></body></html>
+END
+my @token-feeds = $d.find-feeds($html-rel-tokens, "http://example.com/");
+is @token-feeds, ["http://example.com/a.xml", "http://example.com/b.xml"],
+    "rel tokens other than 'alternate' do not prevent match";
+nok @token-feeds.any eq "http://example.com/c.xml", "rel without alternate token excluded";
+
+# ===== Q5: Atom empty category term skipped =====
+my $atom-empty-cat = q:to/XML/;
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>urn:x</id><title>t</title><updated>2025-01-01T00:00:00Z</updated>
+  <category />
+  <category term="real" />
+  <entry>
+    <id>urn:y</id><title>e</title><updated>2025-01-01T00:00:00Z</updated>
+    <category />
+    <category term="entry-real" />
+  </entry>
+</feed>
+XML
+my $a-feed = Syndicate::Atom.new($atom-empty-cat);
+is $a-feed.categories, ["real"], "empty feed category term skipped";
+is $a-feed.items[0].categories, ["entry-real"], "empty entry category term skipped";
+nok ~$a-feed ~~ /'term=""'/, "no empty term attribute regenerated in output";
+
+# ===== Q6: JSONFeed tags validation =====
+dies-ok { Syndicate::JSONFeed::Item.new-from-hash(%( :id<1>, tags => 'notarray' )) },
+    "JSONFeed tags must be an array";
+dies-ok { Syndicate::JSONFeed::Item.new-from-hash(%( :id<1>, tags => [1, 2] )) },
+    "JSONFeed tags elements must be strings";
+is Syndicate::JSONFeed::Item.new-from-hash(%( :id<1>, tags => ['ok', 'fine'] )).tags,
+    ['ok', 'fine'], "valid JSONFeed tags accepted";
+
+done-testing;
