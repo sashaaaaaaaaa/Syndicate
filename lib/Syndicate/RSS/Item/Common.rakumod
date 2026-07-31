@@ -44,24 +44,11 @@ multi method new(Str $xml) {
         Syndicate::Stats.record-error;
         die "Not an {self!item-type-name} element";
     }
-    my $item;
-    {
-        $item = self.from-xml($doc.root);
-        CATCH {
-            when X::Control { .rethrow }
-            default { Syndicate::Stats.record-error; .rethrow }
-        }
-    }
-    $item
+    with-error-recording { self.from-xml($doc.root) }
 }
 
 multi method new(XML::Element $xml-elem) {
-    my $item = self.from-xml($xml-elem);
-    CATCH {
-        when X::Control { .rethrow }
-        default { Syndicate::Stats.record-error; .rethrow }
-    }
-    $item
+    with-error-recording { self.from-xml($xml-elem) }
 }
 
 method !parse-guid(XML::Element $item-elem) {

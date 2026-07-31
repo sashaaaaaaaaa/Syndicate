@@ -13,12 +13,6 @@ use Syndicate::Extensions;
 my constant NS-RDF     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 my constant NS-RSS1    = 'http://purl.org/rss/1.0/';
 
-my sub has-nonempty-text($elem, $tag --> Bool) {
-    my $e = $elem.elements(:TAG($tag))[0]
-        or return False;
-    so element-text($e).trim.chars
-}
-
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.about;
@@ -32,56 +26,54 @@ method categories() { @!categories.List }
 has Bool $!lang-from-dc is built;
 
 multi method new(XML::Document $doc) {
-    my $root = $doc.root;
-    die "Not RSS 1.0" unless $root.name eq "rdf:RDF" || $root.name eq "RDF";
-    my $channel = $root.elements(:TAG<channel>)[0];
-    die "No channel element" unless $channel;
+    with-error-recording {
+        my $root = $doc.root;
+        die "Not RSS 1.0" unless $root.name eq "rdf:RDF" || $root.name eq "RDF";
+        my $channel = $root.elements(:TAG<channel>)[0];
+        die "No channel element" unless $channel;
 
-    my $about = decode-entities($channel.attribs{'rdf:about'} // $channel.attribs<about> // Str);
-    my %common = self.parse-channel-common($channel);
-    my $title   = %common<title>;
-    my $link    = %common<link>;
-    my $desc    = %common<desc>;
-    my $gen     = %common<gen>;
-    my %image   = self.parse-image($root, :rdf-about);
-    my $lang    = %common<lang>;
-    my $lang-fallback = False;
-    unless $lang.defined {
-        $lang = get-dc-text($channel, "language");
-        $lang-fallback = True if $lang.defined;
-    }
-
-    my $it-author  = %common<it-author>;
-    my $it-summary = %common<it-summary>;
-
-    my @categories;
-    for $channel.elements(:TAG<dc:subject>) -> $s {
-        my $text = decode-entities(element-text($s)).trim;
-        @categories.push: $text if $text.chars;
-    }
-
-    my @items;
-    my $feed-active = set-active(active-extensions, $root);
-    for $root.elements(:TAG<item>) -> $item-elem {
-        unless has-nonempty-text($item-elem, "title") && has-nonempty-text($item-elem, "link") {
-            note "Skipping RSS 1.0 item without title or link";
-            Syndicate::Stats.record-error;
-            next;
+        my $about = decode-entities($channel.attribs{'rdf:about'} // $channel.attribs<about> // Str);
+        my %common = self.parse-channel-common($channel);
+        my $title   = %common<title>;
+        my $link    = %common<link>;
+        my $desc    = %common<desc>;
+        my $gen     = %common<gen>;
+        my %image   = self.parse-image($root, :rdf-about);
+        my $lang    = %common<lang>;
+        my $lang-fallback = False;
+        unless $lang.defined {
+            $lang = get-dc-text($channel, "language");
+            $lang-fallback = True if $lang.defined;
         }
-        my $item = Syndicate::RSS::V1_0::Item.from-xml($item-elem, :active($feed-active));
-        @items.push: $item;
-    }
 
-    CATCH {
-        when X::Control { .rethrow }
-        default { Syndicate::Stats.record-error; .rethrow }
+        my $it-author  = %common<it-author>;
+        my $it-summary = %common<it-summary>;
+
+        my @categories;
+        for $channel.elements(:TAG<dc:subject>) -> $s {
+            my $text = decode-entities(element-text($s)).trim;
+            @categories.push: $text if $text.chars;
+        }
+
+        my @items;
+        my $feed-active = set-active(active-extensions, $root);
+        for $root.elements(:TAG<item>) -> $item-elem {
+            unless has-nonempty-text($item-elem, "title") && has-nonempty-text($item-elem, "link") {
+                note "Skipping RSS 1.0 item without title or link";
+                Syndicate::Stats.record-error;
+                next;
+            }
+            my $item = Syndicate::RSS::V1_0::Item.from-xml($item-elem, :active($feed-active));
+            @items.push: $item;
+        }
+
+        self.bless(:$about, :$title, :$link, :description($desc),
+                   :generator($gen), :language($lang),
+                   :image(%image),
+                   :itunes-author($it-author), :itunes-summary($it-summary),
+                   :lang-from-dc($lang-fallback),
+                   :categories(@categories), :@items)
     }
-    self.bless(:$about, :$title, :$link, :description($desc),
-               :generator($gen), :language($lang),
-               :image(%image),
-               :itunes-author($it-author), :itunes-summary($it-summary),
-               :lang-from-dc($lang-fallback),
-               :categories(@categories), :@items)
 }
 
 method !type-name { "RSS 1.0" }

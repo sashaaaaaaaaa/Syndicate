@@ -1,0 +1,73 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate::RSS::V0_91;
+use Syndicate::JSONFeed;
+use Syndicate::Stats;
+
+plan 10;
+
+Syndicate::Stats.reset;
+my $errors-before = Syndicate::Stats.errors;
+
+# ===== skipDays validation =====
+
+my $valid = qq:to/XML/.trim;
+<rss version="0.91"><channel><title>T</title><link>L</link><description>D</description>
+<skipDays><day>Monday</day><day>friday</day><day>SUNDAY</day></skipDays>
+</channel></rss>
+XML
+
+my $feed = Syndicate::RSS::V0_91.new($valid);
+is $feed.skipDays.join(','), 'Monday,Friday,Sunday', 'skipDays normalizes day names';
+
+my $mixed = qq:to/XML/.trim;
+<rss version="0.91"><channel><title>T</title><link>L</link><description>D</description>
+<skipDays><day>Monday</day><day>Blursday</day><day>Friday</day></skipDays>
+</channel></rss>
+XML
+
+my $mixed-feed = Syndicate::RSS::V0_91.new($mixed);
+is $mixed-feed.skipDays.join(','), 'Monday,Friday', 'invalid skipDays value is skipped';
+
+my $all-bad = qq:to/XML/.trim;
+<rss version="0.91"><channel><title>T</title><link>L</link><description>D</description>
+<skipDays><day>Blursday</day></skipDays>
+</channel></rss>
+XML
+
+my $bad-feed = Syndicate::RSS::V0_91.new($all-bad);
+is $bad-feed.skipDays.elems, 0, 'all-invalid skipDays yields empty list';
+nok $bad-feed.skipDays, 'all-invalid skipDays feeds still parse';
+
+# ===== JSON Feed expired validation =====
+
+my %good-hash = (
+    version  => 'https://jsonfeed.org/version/1.1',
+    title    => 'T',
+    items    => [],
+    expired  => True,
+);
+my $expired-true = Syndicate::JSONFeed.new-from-hash(%good-hash);
+is $expired-true.expired, True, 'expired: true accepted';
+
+%good-hash<expired> = False;
+my $expired-false = Syndicate::JSONFeed.new-from-hash(%good-hash);
+is $expired-false.expired, False, 'expired: false accepted';
+
+%good-hash<expired> = 'yes';
+dies-ok { Syndicate::JSONFeed.new-from-hash(%good-hash) }, 'non-Bool expired dies';
+my $msg;
+try { Syndicate::JSONFeed.new-from-hash(%good-hash) }
+$msg = $!.message if $!;
+like $msg, / expired /, 'non-Bool expired dies with graceful message';
+
+# ===== Stats error recording is unchanged for constructor failures =====
+
+is Syndicate::Stats.errors - $errors-before, 2, 'rethrow-style constructors still record errors';
+
+my $skip-days-xml = ~$feed;
+like $skip-days-xml, / '<skipDays>' .* '<day>Monday</day>' .* '<day>Friday</day>' .* '<day>Sunday</day>' .* '</skipDays>' /,
+    'normalized skipDays regenerated';
+
+done-testing;

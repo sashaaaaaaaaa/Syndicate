@@ -26,81 +26,79 @@ has XML::Element $!cached-xml;
 has Lock $!xml-lock = Lock.new;
 
 multi method new(XML::Document $doc) {
-    my $feed = $doc.root;
-    die "Not an Atom feed" unless $feed.name eq "feed";
+    with-error-recording {
+        my $feed = $doc.root;
+        die "Not an Atom feed" unless $feed.name eq "feed";
 
-    my $id    = get-text($feed, "id");
-    my $title = get-text($feed, "title");
-    my $desc  = get-text-optional($feed, "subtitle");
-    my $rights = get-text-optional($feed, "rights");
-    my $gen      = get-text-optional($feed, "generator");
-    my $icon     = get-text-optional($feed, "icon");
-    my $logo     = get-text-optional($feed, "logo");
-    my $lang     = $feed.attribs{'xml:lang'} // Str;
-    my $upd      = parse-date(get-text($feed, "updated"));
+        my $id    = get-text($feed, "id");
+        my $title = get-text($feed, "title");
+        my $desc  = get-text-optional($feed, "subtitle");
+        my $rights = get-text-optional($feed, "rights");
+        my $gen      = get-text-optional($feed, "generator");
+        my $icon     = get-text-optional($feed, "icon");
+        my $logo     = get-text-optional($feed, "logo");
+        my $lang     = $feed.attribs{'xml:lang'} // Str;
+        my $upd      = parse-date(get-text($feed, "updated"));
 
-    my %author-detail;
-    with $feed.elements(:TAG<author>)[0] {
-        %author-detail<name>  = get-text-optional($_, "name");
-        %author-detail<email> = get-text-optional($_, "email");
-        %author-detail<uri>   = get-text-optional($_, "uri");
-    }
-
-    my @categories;
-    for $feed.elements(:TAG<category>) {
-        my $term = decode-entities(.attribs<term> // "");
-        @categories.push: $term if $term.chars;
-    }
-
-    my @contributors;
-    for $feed.elements(:TAG<contributor>) -> $c {
-        my %c;
-        %c<name>  = get-text-optional($c, "name");
-        %c<email> = get-text-optional($c, "email");
-        %c<uri>   = get-text-optional($c, "uri");
-        @contributors.push: %c;
-    }
-
-    my @link-self;
-    my @link-alternate;
-    my @extra-links;
-    my $primary-link = Str;
-    for $feed.elements(:TAG<link>) {
-        my $rel = .attribs<rel> // "alternate";
-        my $href = decode-entities(.attribs<href> // "");
-        if $rel eq "self" {
-            @link-self.push: %( href => $href, type => decode-entities(.attribs<type> // Str) );
+        my %author-detail;
+        with $feed.elements(:TAG<author>)[0] {
+            %author-detail<name>  = get-text-optional($_, "name");
+            %author-detail<email> = get-text-optional($_, "email");
+            %author-detail<uri>   = get-text-optional($_, "uri");
         }
-        elsif $rel eq "alternate" {
-            @link-alternate.push: %( href => $href, type => decode-entities(.attribs<type> // Str) );
-            $primary-link ||= $href;
-        } else {
-            @extra-links.push: %( rel => $rel, href => $href, type => decode-entities(.attribs<type> // Str) );
+
+        my @categories;
+        for $feed.elements(:TAG<category>) {
+            my $term = decode-entities(.attribs<term> // "");
+            @categories.push: $term if $term.chars;
         }
-    }
-    $primary-link ||= @link-self[0]<href> if @link-self;
 
-    my @items;
-    for $feed.elements(:TAG<entry>) -> $entry-elem {
-        @items.push: Syndicate::Atom::Item.from-xml($entry-elem);
-    }
+        my @contributors;
+        for $feed.elements(:TAG<contributor>) -> $c {
+            my %c;
+            %c<name>  = get-text-optional($c, "name");
+            %c<email> = get-text-optional($c, "email");
+            %c<uri>   = get-text-optional($c, "uri");
+            @contributors.push: %c;
+        }
 
-    my $author = %author-detail<name> // %author-detail<email> // Str;
+        my @link-self;
+        my @link-alternate;
+        my @extra-links;
+        my $primary-link = Str;
+        for $feed.elements(:TAG<link>) {
+            my $rel = .attribs<rel> // "alternate";
+            my $href = decode-entities(.attribs<href> // "");
+            if $rel eq "self" {
+                @link-self.push: %( href => $href, type => decode-entities(.attribs<type> // Str) );
+            }
+            elsif $rel eq "alternate" {
+                @link-alternate.push: %( href => $href, type => decode-entities(.attribs<type> // Str) );
+                $primary-link ||= $href;
+            } else {
+                @extra-links.push: %( rel => $rel, href => $href, type => decode-entities(.attribs<type> // Str) );
+            }
+        }
+        $primary-link ||= @link-self[0]<href> if @link-self;
 
-    my %bless = :$id, :$title, :link($primary-link),
-        :description($desc),  # Feed role expects $.description
-        :subtitle($desc),     # Atom expects subtitle; same value intentionally
-        :$rights,
-        :$author, :language($lang),
-        :generator($gen), :$icon, :$logo,
-        :author-detail(%author-detail);
-    %bless<updated> = $upd if $upd ~~ DateTime;
-    CATCH {
-        when X::Control { .rethrow }
-        default { Syndicate::Stats.record-error; .rethrow }
+        my @items;
+        for $feed.elements(:TAG<entry>) -> $entry-elem {
+            @items.push: Syndicate::Atom::Item.from-xml($entry-elem);
+        }
+
+        my $author = %author-detail<name> // %author-detail<email> // Str;
+
+        my %bless = :$id, :$title, :link($primary-link),
+            :description($desc),  # Feed role expects $.description
+            :subtitle($desc),     # Atom expects subtitle; same value intentionally
+            :$rights,
+            :$author, :language($lang),
+            :generator($gen), :$icon, :$logo,
+            :author-detail(%author-detail);
+        %bless<updated> = $upd if $upd ~~ DateTime;
+        self.bless(|%bless, :@items, :@contributors, :categories(@categories),
+                   :@link-self, :@link-alternate, :@extra-links)
     }
-    self.bless(|%bless, :@items, :@contributors, :categories(@categories),
-               :@link-self, :@link-alternate, :@extra-links)
 }
 
 multi method new(Str $xml) {

@@ -34,49 +34,51 @@ multi method new(Str $json) {
 }
 
 multi method new-from-hash(%h) {
-    my $version = %h<version> // JSONFEED-VERSION;
-    die "Invalid JSON Feed version: $version"
-        unless $version.starts-with(JSONFEED-VERSION-PREFIX) && $version.chars > JSONFEED-VERSION-PREFIX.chars;
-    my $title       = %h<title> // Str;
-    die "JSON Feed requires title" unless $title.defined && $title.chars;
-    my $link        = %h<home_page_url> // Str;
-    my $desc        = %h<description> // Str;
-    my $gen         = %h<generator> // Str;
+    with-error-recording {
+        my $version = %h<version> // JSONFEED-VERSION;
+        die "Invalid JSON Feed version: $version"
+            unless $version.starts-with(JSONFEED-VERSION-PREFIX) && $version.chars > JSONFEED-VERSION-PREFIX.chars;
+        my $title       = %h<title> // Str;
+        die "JSON Feed requires title" unless $title.defined && $title.chars;
+        my $link        = %h<home_page_url> // Str;
+        my $desc        = %h<description> // Str;
+        my $gen         = %h<generator> // Str;
 
-    my %author;
-    if %h<author> ~~ Hash {
-        with %h<author> {
-            %author<name>   = .<name> // Str;
-            %author<url>    = .<url> // Str;
-            %author<avatar> = .<avatar> // Str;
+        my %author;
+        if %h<author> ~~ Hash {
+            with %h<author> {
+                %author<name>   = .<name> // Str;
+                %author<url>    = .<url> // Str;
+                %author<avatar> = .<avatar> // Str;
+            }
+        } elsif %h<author>.defined {
+            die "JSON Feed 'author' must be a Hash, got {%h<author>.^name}";
         }
-    } elsif %h<author>.defined {
-        die "JSON Feed 'author' must be a Hash, got {%h<author>.^name}";
-    }
 
-    my @items;
-    die "JSON Feed requires 'items' key" unless %h<items>:exists;
-    die "JSON Feed 'items' must be an array" unless %h<items> ~~ Array;
-    for @(%h<items>) -> $item-data {
-        die "JSON Feed 'items' must contain objects, got: {$item-data.^name}" unless $item-data ~~ Hash;
-        @items.push: Syndicate::JSONFeed::Item.new-from-hash(%$item-data);
-    }
+        my @items;
+        die "JSON Feed requires 'items' key" unless %h<items>:exists;
+        die "JSON Feed 'items' must be an array" unless %h<items> ~~ Array;
+        for @(%h<items>) -> $item-data {
+            die "JSON Feed 'items' must contain objects, got: {$item-data.^name}" unless $item-data ~~ Hash;
+            @items.push: Syndicate::JSONFeed::Item.new-from-hash(%$item-data);
+        }
 
-    my %bless = :$version, :$title, :$link, :description($desc),
-        :generator($gen),
-        :feed_url(%h<feed_url> // Str),
-        :user_comment(%h<user_comment> // Str),
-        :next_url(%h<next_url> // Str),
-        :icon(%h<icon> // Str),
-        :favicon(%h<favicon> // Str),
-        :author(%author),
-        :language(%h<locale> // %h<language> // Str);
-    %bless<expired> = %h<expired> if %h<expired>:exists;
-    CATCH {
-        when X::Control { .rethrow }
-        default { Syndicate::Stats.record-error; .rethrow }
+        my %bless = :$version, :$title, :$link, :description($desc),
+            :generator($gen),
+            :feed_url(%h<feed_url> // Str),
+            :user_comment(%h<user_comment> // Str),
+            :next_url(%h<next_url> // Str),
+            :icon(%h<icon> // Str),
+            :favicon(%h<favicon> // Str),
+            :author(%author),
+            :language(%h<locale> // %h<language> // Str);
+        if %h<expired>:exists {
+            die "JSON Feed 'expired' must be a Bool, got {%h<expired>.^name}"
+                unless %h<expired> ~~ Bool;
+            %bless<expired> = %h<expired>;
+        }
+        self.bless(|%bless, :@items)
     }
-    self.bless(|%bless, :@items)
 }
 
 method to-hash {

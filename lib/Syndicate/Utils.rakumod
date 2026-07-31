@@ -3,6 +3,7 @@ use XML;
 use XML::Entity;
 use DateTime::Grammar;
 use DateTime::Format::RFC2822;
+use Syndicate::Stats;
 
 my constant NS-ATOM is export = 'http://www.w3.org/2005/Atom';
 my constant %TZ-OFFSET = (
@@ -41,6 +42,23 @@ sub add-element($parent, $name, $value --> Nil) is export {
 sub add-attrib($elem, $name, $value --> Nil) is export {
     return unless $value.defined;
     $elem.attribs{$name} = encode-entities($value);
+}
+
+# Runs $fn and records a Stats error when it throws, then rethrows.
+# X::Control exceptions (return/next/etc.) pass through untouched so they
+# never inflate the error count.
+sub with-error-recording(&fn --> Any) is export {
+    CATCH {
+        when X::Control { .rethrow }
+        default { Syndicate::Stats.record-error; .rethrow }
+    }
+    &fn()
+}
+
+sub has-nonempty-text($elem, $tag --> Bool) is export {
+    my $e = $elem.elements(:TAG($tag))[0]
+        or return False;
+    so element-text($e).trim.chars
 }
 
 proto sub node-text($node --> Str) is export {*}
@@ -152,6 +170,8 @@ Not typically needed by end users.
 =item C<get-text($parent, $tag)> - Get required text content, dies if element missing
 =item C<get-text-optional($parent, $tag)> - Get optional text content (returns C<Str>)
 =item C<parse-categories($parent)> - Extract category tags text content
+=item C<with-error-recording(&fn)> - Run block, recording a Stats error on throw
+=item C<has-nonempty-text($elem, $tag)> - Whether element has non-empty text content
 =item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>
 =item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Nil>
 

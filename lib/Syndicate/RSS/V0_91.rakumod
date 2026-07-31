@@ -12,12 +12,6 @@ use Syndicate::Extensions;
 
 unit class Syndicate::RSS::V0_91:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
-my sub has-nonempty-text($elem, $tag --> Bool) {
-    my $e = $elem.elements(:TAG($tag))[0]
-        or return False;
-    so element-text($e).trim.chars
-}
-
 has Str $.copyright;
 has Str $.managingEditor;
 has Str $.webMaster;
@@ -33,61 +27,59 @@ has Str $.itunes-author;
 has Str $.itunes-summary;
 
 multi method new(XML::Document $doc) {
-    my $rss = $doc.root;
-    die "Not an RSS feed" unless $rss.name eq "rss";
-    my $ver = $rss.attribs<version> // "";
-    die "Not RSS 0.91 (version: $ver)" unless $ver eq "0.91";
-    my $channel = $rss.elements(:TAG<channel>)[0];
-    die "No channel element" unless $channel;
+    with-error-recording {
+        my $rss = $doc.root;
+        die "Not an RSS feed" unless $rss.name eq "rss";
+        my $ver = $rss.attribs<version> // "";
+        die "Not RSS 0.91 (version: $ver)" unless $ver eq "0.91";
+        my $channel = $rss.elements(:TAG<channel>)[0];
+        die "No channel element" unless $channel;
 
-    my %common = self.parse-channel-common($channel);
-    my $title   = %common<title>;
-    my $link    = %common<link>;
-    my $desc    = %common<desc>;
-    my $lang    = %common<lang>;
-    my $gen     = %common<gen>;
-    my $cpy     = %common<cpy>;
-    my $me      = %common<me>;
-    my $wm      = %common<wm>;
-    my $docs    = %common<docs>;
-    my $pd      = %common<pd>;
-    my $lbd     = %common<lbd>;
-    my %image   = self.parse-image($channel);
-    my $it-author  = %common<it-author>;
-    my $it-summary = %common<it-summary>;
-    my $rating  = get-text-optional($channel, "rating");
-    my %textInput = self.parse-textinput($channel);
-    my @skipHours = self.parse-skip-hours($channel);
-    my @skipDays  = self.parse-skip-days($channel);
+        my %common = self.parse-channel-common($channel);
+        my $title   = %common<title>;
+        my $link    = %common<link>;
+        my $desc    = %common<desc>;
+        my $lang    = %common<lang>;
+        my $gen     = %common<gen>;
+        my $cpy     = %common<cpy>;
+        my $me      = %common<me>;
+        my $wm      = %common<wm>;
+        my $docs    = %common<docs>;
+        my $pd      = %common<pd>;
+        my $lbd     = %common<lbd>;
+        my %image   = self.parse-image($channel);
+        my $it-author  = %common<it-author>;
+        my $it-summary = %common<it-summary>;
+        my $rating  = get-text-optional($channel, "rating");
+        my %textInput = self.parse-textinput($channel);
+        my @skipHours = self.parse-skip-hours($channel);
+        my @skipDays  = self.parse-skip-days($channel);
 
-    my @items;
-    my $feed-active = set-active(active-extensions, $rss);
-    for $channel.elements(:TAG<item>) -> $item-elem {
-        # Per the RSS 0.91 DTD every item requires title, link, and description.
-        unless has-nonempty-text($item-elem, "title")
-            && has-nonempty-text($item-elem, "link")
-            && has-nonempty-text($item-elem, "description") {
-            note "Skipping RSS 0.91 item without title, link, or description";
-            Syndicate::Stats.record-error;
-            next;
+        my @items;
+        my $feed-active = set-active(active-extensions, $rss);
+        for $channel.elements(:TAG<item>) -> $item-elem {
+            # Per the RSS 0.91 DTD every item requires title, link, and description.
+            unless has-nonempty-text($item-elem, "title")
+                && has-nonempty-text($item-elem, "link")
+                && has-nonempty-text($item-elem, "description") {
+                note "Skipping RSS 0.91 item without title, link, or description";
+                Syndicate::Stats.record-error;
+                next;
+            }
+            my $item = Syndicate::RSS::V0_91::Item.from-xml($item-elem, :active($feed-active));
+            @items.push: $item;
         }
-        my $item = Syndicate::RSS::V0_91::Item.from-xml($item-elem, :active($feed-active));
-        @items.push: $item;
-    }
 
-    my %bless = :$title, :$link, :description($desc),
-        :language($lang), :generator($gen), :copyright($cpy),
-        :managingEditor($me), :webMaster($wm),
-        :rating($rating), :$docs,
-        :image(%image), :textInput(%textInput),
-        :itunes-author($it-author), :itunes-summary($it-summary);
-    %bless<pubDate> = $pd if $pd ~~ DateTime;
-    %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
-    CATCH {
-        when X::Control { .rethrow }
-        default { Syndicate::Stats.record-error; .rethrow }
+        my %bless = :$title, :$link, :description($desc),
+            :language($lang), :generator($gen), :copyright($cpy),
+            :managingEditor($me), :webMaster($wm),
+            :rating($rating), :$docs,
+            :image(%image), :textInput(%textInput),
+            :itunes-author($it-author), :itunes-summary($it-summary);
+        %bless<pubDate> = $pd if $pd ~~ DateTime;
+        %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
+        self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays))
     }
-    self.bless(|%bless, :@items, :skipHours(@skipHours), :skipDays(@skipDays))
 }
 
 method !type-name { "RSS 0.91" }
@@ -171,10 +163,19 @@ method parse-skip-hours($channel --> Array) {
 }
 
 method parse-skip-days($channel --> Array) {
+    my constant %DAYS = Map.new: %(
+        Monday => True, Tuesday => True, Wednesday => True,
+        Thursday => True, Friday => True, Saturday => True, Sunday => True,
+    );
     my @skipDays;
     with $channel.elements(:TAG<skipDays>)[0] {
         for .elements(:TAG<day>) -> $d {
-            @skipDays.push: decode-entities(element-text($d)).tclc;
+            my $val = decode-entities(element-text($d)).tclc;
+            if %DAYS{$val}:exists {
+                @skipDays.push: $val;
+            } else {
+                note "Invalid day value in skipDays: $val (must be a day name, e.g. Friday)";
+            }
         }
     }
     @skipDays

@@ -27,73 +27,71 @@ has Str $.itunes-summary;
 has Str $.atom-self-link;
 
 multi method new(XML::Document $doc) {
-    my $rss = $doc.root;
-    die "Not an RSS feed" unless $rss.name eq "rss";
-    my $ver = $rss.attribs<version> // "2.0";
-    die "Unsupported RSS version: $ver" unless $ver eq "2.0";
-    my $channel = $rss.elements(:TAG<channel>)[0];
-    die "No channel element" unless $channel;
+    with-error-recording {
+        my $rss = $doc.root;
+        die "Not an RSS feed" unless $rss.name eq "rss";
+        my $ver = $rss.attribs<version> // "2.0";
+        die "Unsupported RSS version: $ver" unless $ver eq "2.0";
+        my $channel = $rss.elements(:TAG<channel>)[0];
+        die "No channel element" unless $channel;
 
-    my %common = self.parse-channel-common($channel);
-    my $title   = %common<title>;
-    my $link    = %common<link>;
-    my $desc    = %common<desc>;
-    my $lang    = %common<lang>;
-    my $cpy     = %common<cpy>;
-    my $me      = %common<me>;
-    my $wm      = %common<wm>;
-    my $pd      = %common<pd>;
-    my $lbd     = %common<lbd>;
-    my $gen     = %common<gen>;
-    my $docs    = %common<docs>;
-    my %image   = self.parse-image($channel);
-    my $it-author  = %common<it-author>;
-    my $it-summary = %common<it-summary>;
-    my @categories = parse-categories($channel);
-    my $ttl-str = get-text-optional($channel, "ttl");
+        my %common = self.parse-channel-common($channel);
+        my $title   = %common<title>;
+        my $link    = %common<link>;
+        my $desc    = %common<desc>;
+        my $lang    = %common<lang>;
+        my $cpy     = %common<cpy>;
+        my $me      = %common<me>;
+        my $wm      = %common<wm>;
+        my $pd      = %common<pd>;
+        my $lbd     = %common<lbd>;
+        my $gen     = %common<gen>;
+        my $docs    = %common<docs>;
+        my %image   = self.parse-image($channel);
+        my $it-author  = %common<it-author>;
+        my $it-summary = %common<it-summary>;
+        my @categories = parse-categories($channel);
+        my $ttl-str = get-text-optional($channel, "ttl");
 
-    my $atom-self-link = Str;
-    for $channel.elements -> $l {
-        next unless $l ~~ XML::Element;
-        my $ln = $l.name;
-        next unless $ln.ends-with(':link');
-        if ($l.attribs<rel> // "") eq "self" {
-            $atom-self-link = decode-entities($l.attribs<href> // Str);
-            last;
+        my $atom-self-link = Str;
+        for $channel.elements -> $l {
+            next unless $l ~~ XML::Element;
+            my $ln = $l.name;
+            next unless $ln.ends-with(':link');
+            if ($l.attribs<rel> // "") eq "self" {
+                $atom-self-link = decode-entities($l.attribs<href> // Str);
+                last;
+            }
         }
-    }
 
-    my @items;
-    my $feed-active = set-active(active-extensions, $rss);
-    for $channel.elements(:TAG<item>) -> $item-elem {
-        my $item = Syndicate::RSS::Item.from-xml($item-elem, :active($feed-active));
-        @items.push: $item;
-    }
-
-    my %bless = :$title, :$link, :description($desc),
-        :language($lang), :copyright($cpy),
-        :managingEditor($me), :webMaster($wm),
-        :generator($gen), :docs($docs),
-        :image(%image),
-        :itunes-author($it-author), :itunes-summary($it-summary),
-        :$atom-self-link;
-    %bless<pubDate> = $pd if $pd ~~ DateTime;
-    %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
-    if $ttl-str.defined && $ttl-str.chars {
-        my $ttl = try { $ttl-str.Int };
-        if $ttl.defined {
-            %bless<ttl> = $ttl;
-        } else {
-            note "Warning: Invalid TTL value '$ttl-str' — must be an integer string";
+        my @items;
+        my $feed-active = set-active(active-extensions, $rss);
+        for $channel.elements(:TAG<item>) -> $item-elem {
+            my $item = Syndicate::RSS::Item.from-xml($item-elem, :active($feed-active));
+            @items.push: $item;
         }
+
+        my %bless = :$title, :$link, :description($desc),
+            :language($lang), :copyright($cpy),
+            :managingEditor($me), :webMaster($wm),
+            :generator($gen), :docs($docs),
+            :image(%image),
+            :itunes-author($it-author), :itunes-summary($it-summary),
+            :$atom-self-link;
+        %bless<pubDate> = $pd if $pd ~~ DateTime;
+        %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
+        if $ttl-str.defined && $ttl-str.chars {
+            my $ttl = try { $ttl-str.Int };
+            if $ttl.defined {
+                %bless<ttl> = $ttl;
+            } else {
+                note "Warning: Invalid TTL value '$ttl-str' — must be an integer string";
+            }
+        }
+        # with-error-recording records a Stats error and rethrows for any
+        # exception raised anywhere in the constructor body above.
+        self.bless(|%bless, :@categories, :@items)
     }
-    CATCH {
-        when X::Control { .rethrow }
-        default { Syndicate::Stats.record-error; .rethrow }
-    }
-    # CATCH covers the entire method scope (Raku phaser semantics),
-    # not just the single self.bless call below.
-    self.bless(|%bless, :@categories, :@items)
 }
 
 method TWEAK {
