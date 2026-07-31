@@ -42,6 +42,8 @@ dies-ok { Syndicate::JSONFeed.new('not json') }, 'invalid JSON dies';
 dies-ok { Syndicate::RSS::V1_0.new('<not-rdf/>') }, 'wrong RDF root element dies';
 
 # ===== Stats error count =====
-is Syndicate::Stats.errors - $errors-before, 10, 'all errors recorded by Stats';
+# 5 feed-format errors (2 pre-existing + empty/whitespace/unknown-root
+# now recording too) + 8 constructor errors = 13
+is Syndicate::Stats.errors - $errors-before, 13, 'all errors recorded by Stats';
 
 done-testing;

@@ -8,7 +8,7 @@ use Syndicate::Atom;
 use Syndicate::Atom::Item;
 use Syndicate::JSONFeed;
 
-plan 30;
+plan 39;
 
 my constant DC      = 'http://purl.org/dc/elements/1.1/';
 my constant MEDIA   = 'http://search.yahoo.com/mrss/';
@@ -138,5 +138,33 @@ my %h = $empty.to-hash;
 ok %h<items>:exists, 'empty JSON Feed to-hash includes items key';
 is %h<items>.elems, 0, 'empty JSON Feed items is an empty array';
 like $empty.to-json, / '"items":' \s* '[' \s* ']' /, 'empty JSON Feed to-json includes items: []';
+
+# ===== 4. Numeric character references =====
+
+use Syndicate::Utils;
+
+is decode-entities("Don&#8217;t &#65;"), "Don\x[2019]t A",
+    'decimal character references decode';
+is decode-entities("&#x41;&#x2014;"), "A\x[2014]",
+    'hexadecimal character references decode';
+is decode-entities("&amp;#8217;"), "&#8217;",
+    'encoded numeric reference stays literal (no double decode)';
+is encode-entities(decode-entities("A &#8217; B")), "A \x[2019] B",
+    'numeric reference roundtrips single-encoded';
+is decode-entities("&nbsp;x"), "&nbsp;x",
+    'unknown named entity stays literal';
+is decode-entities("&#x110000;"), "&#x110000;",
+    'out-of-range numeric reference stays literal';
+
+my $num-xml = q:to/XML/;
+<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>Don&#8217;t &amp; &#65;</title><link>L</link></item>
+</channel></rss>
+XML
+
+my $num-feed = Syndicate::RSS.new($num-xml);
+is $num-feed.items[0].title, "Don\x[2019]t & A", 'numeric references decoded on parse';
+ok ~$num-feed ~~ / 'Don’t &amp; A' /, 'numeric references single-encoded on generate';
+nok ~$num-feed ~~ / '&amp;amp;' /, 'no double-encoded ampersand';
 
 done-testing;

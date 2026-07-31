@@ -83,38 +83,42 @@ method XML {
         add-attrib($xml, 'rdf:about', $.about) if $!is-rdf && $.about.defined;
         add-element($xml, "title", $.title);
         add-element($xml, "link",  $.link);
-        if $.guid.defined && $.guid.chars {
-            my $guid-elem = XML::Element.new(:name<guid>, :nodes([encode-entities($.guid)]));
-            $guid-elem.attribs<isPermaLink> = $.guid-is-permalink ?? "true" !! "false";
-            $xml.append: $guid-elem;
+        unless $!is-v091 {
+            if $.guid.defined && $.guid.chars {
+                my $guid-elem = XML::Element.new(:name<guid>, :nodes([encode-entities($.guid)]));
+                $guid-elem.attribs<isPermaLink> = $.guid-is-permalink ?? "true" !! "false";
+                $xml.append: $guid-elem;
+            }
         }
         add-element($xml, "description", $.summary);
         if !$!is-v091 && $.content.defined && $.content.chars {
             $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
         }
-        if $.updated.defined {
-            if $!is-rdf {
-                # The DublinCore extension emits <dc:date> when
-                # has-dc-creator is set, so only emit it here when the
-                # extension will not (avoids duplicate <dc:date>).
-                unless $!has-dc-creator {
-                    $xml.append: XML::Element.new(:name<dc:date>, :nodes([$.updated.Str]));
+        unless $!is-v091 {
+            if $.updated.defined {
+                if $!is-rdf {
+                    # The DublinCore extension emits <dc:date> when
+                    # has-dc-creator is set, so only emit it here when the
+                    # extension will not (avoids duplicate <dc:date>).
+                    unless $!has-dc-creator {
+                        $xml.append: XML::Element.new(:name<dc:date>, :nodes([$.updated.Str]));
+                    }
+                } else {
+                    $xml.append: XML::Element.new(:name<pubDate>, :nodes([RFC2822-FORMAT.to-string($.updated)]));
                 }
-            } else {
-                $xml.append: XML::Element.new(:name<pubDate>, :nodes([RFC2822-FORMAT.to-string($.updated)]));
             }
+            add-element($xml, "author",   $.author);
+            add-element($xml, "category", $_) for @.categories;
+            add-element($xml, "comments", $.comments);
+            if %.enclosure<url>.defined && %.enclosure<url>.chars {
+                my $enc = XML::Element.new(:name<enclosure>);
+                $enc.attribs<url> = encode-entities(%.enclosure<url>);
+                $enc.attribs<length> = encode-entities(%.enclosure<length>) if %.enclosure<length>.defined && %.enclosure<length>.chars;
+                $enc.attribs<type>   = encode-entities(%.enclosure<type>)   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
+                $xml.append: $enc;
+            }
+            add-element($xml, "source", $.source);
         }
-        add-element($xml, "author",   $.author);
-        add-element($xml, "category", $_) for @.categories;
-        add-element($xml, "comments", $.comments);
-        if %.enclosure<url>.defined && %.enclosure<url>.chars {
-            my $enc = XML::Element.new(:name<enclosure>);
-            $enc.attribs<url> = encode-entities(%.enclosure<url>);
-            $enc.attribs<length> = encode-entities(%.enclosure<length>) if %.enclosure<length>.defined && %.enclosure<length>.chars;
-            $enc.attribs<type>   = encode-entities(%.enclosure<type>)   if %.enclosure<type>.defined   && %.enclosure<type>.chars;
-            $xml.append: $enc;
-        }
-        add-element($xml, "source", $.source);
 
         run-generators($xml, self, :active($!active-ext));
 
@@ -125,12 +129,14 @@ method XML {
 
 method namespace-flags() {
     %(
-        :dc($!has-dc-creator),
+        :dc($!has-dc-creator && !$!is-v091),
         :media(?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined),
         :itunes($!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined),
         :content(!$!is-v091 && ?($.content.defined && $.content.chars)),
     )
 }
+
+method is-v091(--> Bool) { $!is-v091 }
 
 =begin pod
 

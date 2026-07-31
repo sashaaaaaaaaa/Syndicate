@@ -83,8 +83,6 @@ method !decode-response($resp --> Str) {
 method !ipv4-octets(Str $host --> List) {
     my @parts = $host.split('.');
     return () unless 1 <= @parts.elems <= 4;
-    die "Blocked IPv4 address with octal notation"
-        if @parts.first({ .chars > 1 && .starts-with('0') && !.starts-with('0x') && !.starts-with('0X') });
     my @vals;
     for @parts {
         my $v;
@@ -98,6 +96,11 @@ method !ipv4-octets(Str $host --> List) {
         return () unless $v.defined;
         @vals.push: $v;
     }
+    # Octal notation is ambiguous and rejected outright, but only when every
+    # label is a genuine numeric/hex IPv4 component. A hostname like
+    # '01.example.com' has non-numeric labels and is not an IP literal.
+    die "Blocked IPv4 address with octal notation"
+        if @parts.first({ .chars > 1 && .starts-with('0') && !.starts-with('0x') && !.starts-with('0X') });
     # inet_aton-style expansion: the first n-1 values are single octets;
     # the last value spans the remaining 5-n octets, big-endian.
     my @octets = 0 xx 4;
@@ -252,9 +255,10 @@ method !ipv4-from-translation-prefix(Str $addr --> List) {
 method fetch(Str $url --> Syndicate::Feed:D) {
     my $resp = self!fetch-url($url);
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
-    my $ct = header-value($resp<headers><content-type>);
+    my $ct = header-value($resp<headers><content-type>) // '';
     die "Unexpected Content-Type: '$ct' — expected application/atom+xml, application/rss+xml, application/feed+json, or text/xml"
-        unless $ct.lc ~~ /^ :i [ 'application/' [ atom\+xml | rss\+xml | feed\+json | xml ] | 'text/xml' ] [';' <-[;]>*]? $/;
+        unless !$ct.trim.chars
+            || $ct.lc ~~ /^ :i [ 'application/' [ atom\+xml | rss\+xml | feed\+json | xml ] | 'text/xml' ] [ ';' <-[;]>* ]* $/;
     my $body = self!decode-response($resp);
     parse-feed($body)
 }

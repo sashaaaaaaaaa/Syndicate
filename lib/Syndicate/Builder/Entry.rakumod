@@ -116,15 +116,12 @@ method build-v0_91-item {
     my %bless = :title($!title // Str), :link($!link // Str),
         :summary($!summary // Str),
         :id($item-id);
-    %bless<author>   = $!author-name if $!author-name.defined;
-    %bless<comments>  = $!comments if $!comments.defined;
-    %bless<source>    = $!source if $!source.defined;
-    %bless<enclosure> = %!enclosure if %!enclosure;
     # has-dc-creator is intentionally not set — V0_91 does not use dc:
     # namespace. The xmlns:dc declaration should only appear in formats
     # that support Dublin Core (RSS 2.0, RSS 1.0).
-    # Content is intentionally not passed — RSS 0.91 has no content
-    # element, so emitting <content:encoded> would be invalid.
+    # Content, author, comments, source, and enclosure are intentionally
+    # not passed — the RSS 0.91 DTD only allows title, link, and
+    # description inside <item>.
     Syndicate::RSS::V0_91::Item.new(|%bless, :is-v091)
 }
 

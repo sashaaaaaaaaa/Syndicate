@@ -17,12 +17,20 @@ enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 our sub sanitize-input(Str $input --> Str) is export {
     my $clean = $input.trim;
     $clean .= subst(/^\xFEFF/, '');
-    die "empty input" unless $clean.chars;
-    die "input too large ({$clean.chars} chars)" if $clean.chars > MAX-FEED-SIZE;
+    unless $clean.chars {
+        Syndicate::Stats.record-error;
+        die "empty input";
+    }
+    if $clean.chars > MAX-FEED-SIZE {
+        Syndicate::Stats.record-error;
+        die "input too large ({$clean.chars} chars)";
+    }
     if $clean.chars > MAX-FEED-SIZE / 4 {
         my $bytes = $clean.encode.bytes;
-        die "input too large ($bytes bytes, max {MAX-FEED-SIZE})"
-            if $bytes > MAX-FEED-SIZE;
+        if $bytes > MAX-FEED-SIZE {
+            Syndicate::Stats.record-error;
+            die "input too large ($bytes bytes, max {MAX-FEED-SIZE})";
+        }
     }
     $clean
 }
@@ -50,7 +58,10 @@ multi sub feed-format(Str $name, Str $ver) {
         when 'feed'   { return Atom }
         when 'rss'    { return $ver eq RSS_VER_091 ?? RSS091 !! RSS2 }
         when 'rdf:RDF' | 'RDF' { return RSS1 }
-        default { die "Unknown feed format: <$_>" }
+        default {
+            Syndicate::Stats.record-error;
+            die "Unknown feed format: <$_>"
+        }
     }
 }
 

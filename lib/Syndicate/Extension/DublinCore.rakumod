@@ -22,6 +22,8 @@ register-ext(:namespace<dc>, :namespace-uri(NS-DC),
         %attrs<dc-subjects> = @subjects if @subjects;
     },
     generate => sub ($xml, $item) {
+        # RSS 0.91 has no Dublin Core in its DTD; skip the namespace entirely.
+        return if $item.?is-v091;
         with $item.?has-dc-creator -> $v {
             if $v {
                 add-dc-element($xml, "creator", ~$item.author) if $item.author.defined;

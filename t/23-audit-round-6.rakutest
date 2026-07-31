@@ -1,0 +1,122 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate::RSS;
+use Syndicate::RSS::V0_91;
+use Syndicate::RSS::Item;
+use Syndicate::Utils;
+use Syndicate::Builder::Feed;
+
+my constant CONTENT = 'http://purl.org/rss/1.0/modules/content/';
+my constant DC      = 'http://purl.org/dc/elements/1.1/';
+
+plan 29;
+
+# ===== B2: content:encoded with a non-content prefix =====
+
+my $alt-prefix = qq:to/XML/.trim;
+<rss xmlns:content-enc="{CONTENT}"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>IL</link><content-enc:encoded>the-content</content-enc:encoded>
+</item></channel></rss>
+XML
+
+my $alt-feed = Syndicate::RSS.new($alt-prefix);
+is $alt-feed.items[0].content, 'the-content', 'content:encoded found via URI-bound prefix';
+
+my $wrong-uri = qq:to/XML/.trim;
+<rss xmlns:foo="http://wrong/"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>IL</link><foo:encoded>x</foo:encoded>
+</item></channel></rss>
+XML
+
+my $wrong-feed = Syndicate::RSS.new($wrong-uri);
+nok $wrong-feed.items[0].content.defined && $wrong-feed.items[0].content.chars,
+    'wrong-URI prefix does not match as content';
+
+my $default-ns = qq:to/XML/.trim;
+<rss xmlns="{CONTENT}"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>IL</link><encoded>def</encoded>
+</item></channel></rss>
+XML
+
+my $ns-feed = Syndicate::RSS.new($default-ns);
+is $ns-feed.items[0].content, 'def', 'default-namespace encoded element matches';
+
+# ===== B3: space-separated ISO datetimes with timezone =====
+
+my $est = parse-date-optional('2024-01-15 08:30:00 EST');
+ok $est.defined, 'space-separated ISO + EST parses';
+is $est.utc, DateTime.new('2024-01-15T13:30:00Z'), 'EST offset applied';
+
+my $numeric = parse-date-optional('2024-01-15 08:30:00 -0500');
+ok $numeric.defined, 'space-separated ISO + numeric offset parses';
+is $numeric.utc, DateTime.new('2024-01-15T13:30:00Z'), 'numeric offset applied';
+
+my $colon = parse-date-optional('2024-01-15 08:30:00 +05:30');
+ok $colon.defined, 'space-separated ISO + colon offset parses';
+
+ok parse-date-optional('2024-01-15 08:30:00').not, 'space-separated ISO without TZ stays Nil';
+
+my $rfc = parse-date-optional('Sat, 15 Jan 2024 08:30:00 EST');
+ok $rfc.defined, 'RFC 2822 dates still parse';
+
+my $feed-date = Syndicate::RSS.new(q:to/XML/);
+<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>IL</link><pubDate>2024-01-15 08:30:00 EST</pubDate>
+</item></channel></rss>
+XML
+ok $feed-date.items[0].updated.defined, 'RSS pubDate with space-separated ISO parses';
+is $feed-date.items[0].updated.utc, DateTime.new('2024-01-15T13:30:00Z'),
+    'RSS pubDate space-separated ISO offset applied';
+
+# ===== B6: RSS 0.91 strict item output =====
+
+my $v091-xml = qq:to/XML/.trim;
+<rss version="0.91" xmlns:dc="{DC}"><channel>
+<title>T</title><link>http://e.com/</link><description>D</description><language>en</language>
+<item><title>I</title><link>http://e.com/i</link><description>Desc</description>
+<guid>http://e.com/i</guid><comments>http://e.com/c</comments>
+<enclosure url="http://e.com/a.mp3" length="123" type="audio/mpeg"/>
+<source url="http://e.com/src">Src</source><author>a@b.c</author>
+<dc:creator>Jane</dc:creator>
+</item></channel></rss>
+XML
+
+my $v091-feed = Syndicate::RSS::V0_91.new($v091-xml);
+my $v091-item = $v091-feed.items[0];
+is $v091-item.guid, 'http://e.com/i', '0.91 item guid retained in object model';
+is $v091-item.comments, 'http://e.com/c', '0.91 item comments retained in object model';
+is $v091-item.source, 'Src', '0.91 item source retained in object model';
+is $v091-item.author, 'Jane', '0.91 item dc:creator author retained in object model';
+
+my $v091-out = ~$v091-feed;
+nok $v091-out ~~ / '<guid>' /, '0.91 output omits guid';
+nok $v091-out ~~ / '<comments>' /, '0.91 output omits comments';
+nok $v091-out ~~ / '<enclosure' /, '0.91 output omits enclosure';
+nok $v091-out ~~ / '<source' /, '0.91 output omits source';
+nok $v091-out ~~ / '<author>' /, '0.91 output omits author';
+nok $v091-out ~~ / '<pubDate>' /, '0.91 output omits item pubDate';
+nok $v091-out ~~ / 'xmlns:dc' /, '0.91 output omits xmlns:dc declaration';
+nok $v091-out ~~ / 'dc:creator' /, '0.91 output omits dc:creator';
+ok $v091-out.contains('<item><title>I</title><link>http://e.com/i</link><description>Desc</description></item>'),
+    '0.91 item regenerates only title, link, description';
+
+my $vb = Syndicate::Builder::Feed.new;
+$vb.title('B');
+$vb.link('http://e.com/');
+$vb.description('BD');
+my $ve = $vb.add-entry;
+$ve.title('BI');
+$ve.link('http://e.com/bi');
+$ve.summary('BDesc');
+$ve.author(:name('Jane'));
+$ve.comments('http://e.com/c');
+$ve.source('http://e.com/src');
+my $v091-built = $vb.rss091-str;
+ok $v091-built.contains('<item><title>BI</title><link>http://e.com/bi</link><description>BDesc</description></item>'),
+    'builder 0.91 item emits only title, link, description';
+nok $v091-built ~~ / '<author>' /, 'builder 0.91 item omits author';
+nok $v091-built ~~ / '<comments>' /, 'builder 0.91 item omits comments';
+nok $v091-built ~~ / '<source>' /, 'builder 0.91 item omits source';
+
+done-testing;

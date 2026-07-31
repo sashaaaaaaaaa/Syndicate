@@ -26,7 +26,28 @@ my constant RFC2822-FORMAT is export = DateTime::Format::RFC2822.new;
 
 sub decode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
-    $XML-ENTITY.decode($text)
+    # Single-pass decoder: numeric character references (&#NN; / &#xHH;) plus
+    # the five predefined entities. Unknown named entities are left as literal
+    # text, and the replacement is never rescanned, so a raw '&amp;#8217;'
+    # decodes to '&#8217;' rather than to an apostrophe.
+    $text.subst(:g,
+        / '&' [ $<hex>   = ( '#x' <[0..9a..fA..F]>+ ';' )
+               | $<dec>  = ( '#' \d+ ';' )
+               | $<named> = ( <[a..zA..Z]>+ ';' ) ] /,
+        {
+            with $<hex> { try { chr(:16(~$<hex>.substr(2, *-1))) } // ~$/ }
+            orwith $<dec> { try { chr(+~$<dec>.substr(1, *-1)) } // ~$/ }
+            else {
+                given ~$<named>.substr(0, *-1).lc {
+                    when 'amp'  { '&' }
+                    when 'lt'   { '<' }
+                    when 'gt'   { '>' }
+                    when 'quot' { '"' }
+                    when 'apos' { "'" }
+                    default     { ~$/ }
+                }
+            }
+        });
 }
 
 sub encode-entities(Str $text --> Str) is export {
@@ -90,7 +111,14 @@ sub get-text-optional($parent, $tag --> Str) is export {
 }
 
 sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
-    my $e = $parent.elements(:TAG($local-name), :namespace($ns-uri))[0];
+    # XML::Element.elements() can only match literal element names, so a
+    # namespaced element whose prefix differs from the canonical one (e.g.
+    # <content-enc:encoded>) would be missed. Resolve the URI to the prefix
+    # actually in scope and match that spelling instead.
+    my $prefix = $parent.nsPrefix($ns-uri);
+    return Str without $prefix;
+    my $tag = $prefix.chars ?? "$prefix:$local-name" !! $local-name;
+    my $e = $parent.elements(:TAG($tag))[0];
     $e.defined ?? text-of-optional($e) !! Str
 }
 
@@ -126,6 +154,14 @@ sub normalize-date-str(Str $str --> Str) {
     /, {
         %TZ-OFFSET{~$/}
     });
+    # Space-separated ISO datetimes (e.g. '2024-01-15 08:30:00 -0500') are
+    # rejected by datetime-interpret; convert them to the T-separated form.
+    # The date prefix requires an ISO YYYY-MM-DD shape, so RFC 2822 dates
+    # (month names) are never affected.
+    $s .= subst(:g, /
+        (\d ** 4 '-' \d ** 2 '-' \d ** 2) ' ' (\d ** 2 ':' \d ** 2 ':' \d ** 2)
+        ' '? (<[+-]> \d ** 2 ':'? \d ** 2) $ /
+    , { "$0T$1$2" });
     $s
 }
 
