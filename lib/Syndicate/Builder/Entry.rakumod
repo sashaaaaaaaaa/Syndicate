@@ -89,10 +89,17 @@ method enclosure(Str :$url, Str :$length, Str :$type) {
     %!enclosure
 }
 
+method !require-text(Str $format, Str $field, $value --> Str) {
+    $value.defined && $value.chars
+        ?? $value
+        !! die "$format item requires $field"
+}
+
 method build-rss-item {
-    my $item-id = $!id // $!link // Str;
-    my %bless = :title($!title // Str), :link($!link // Str),
-        :summary($!summary // Str),
+    my $title = self!require-text("RSS 2.0", "title", $!title);
+    my $link  = self!require-text("RSS 2.0", "link", $!link);
+    my $item-id = $!id // $link // Str;
+    my %bless = :$title, :$link, :summary($!summary // Str),
         :author($!author-name // Str),
         :id($item-id),
         # content maps to content:encoded in RSS, <content> in Atom,
@@ -112,9 +119,11 @@ method build-rss-item {
 }
 
 method build-v0_91-item {
-    my $item-id = $!id // $!link // Str;
-    my %bless = :title($!title // Str), :link($!link // Str),
-        :summary($!summary // Str),
+    my $title = self!require-text("RSS 0.91", "title", $!title);
+    my $link  = self!require-text("RSS 0.91", "link", $!link);
+    my $desc  = self!require-text("RSS 0.91", "description", $!summary);
+    my $item-id = $!id // $link // Str;
+    my %bless = :$title, :$link, :summary($desc),
         :id($item-id);
     # has-dc-creator is intentionally not set — V0_91 does not use dc:
     # namespace. The xmlns:dc declaration should only appear in formats
@@ -126,6 +135,7 @@ method build-v0_91-item {
 }
 
 method build-json-item {
+    my $title = self!require-text("JSON Feed", "title", $!title);
     my %author-detail;
     %author-detail<name> = $!author-name if $!author-name.defined;
     %author-detail<url>  = $!author-uri  if $!author-uri.defined;
@@ -133,7 +143,7 @@ method build-json-item {
 
     my $item-id = $!id // $!link // Str;
     my $c = $!content // Str;
-    my %bless = :title($!title // Str),
+    my %bless = :$title,
         :id($item-id),
         :summary($!summary // Str);
     if $c.defined {
@@ -154,8 +164,10 @@ method build-json-item {
 }
 
 method build-v1_0-item {
-    my $item-id = $!id // $!link // Str;
-    my %bless = :title($!title // Str), :link($!link // Str),
+    my $title = self!require-text("RSS 1.0", "title", $!title);
+    my $link  = self!require-text("RSS 1.0", "link", $!link);
+    my $item-id = $!id // $link // Str;
+    my %bless = :$title, :$link,
         :summary($!summary // Str),
         :id($item-id),
         :about($item-id),
@@ -178,7 +190,7 @@ method build-atom-item(:$now = DateTime.now) {
     %author-detail<uri>   = $!author-uri   if $!author-uri.defined;
 
     my $atom-id = $!id // $!link // Str;
-    my %bless = :title($!title // Str), :link($!link // Str),
+    my %bless = :title(self!require-text("Atom", "title", $!title)), :link($!link // Str),
         :id($atom-id),
         :summary($!summary // Str),
         :author($!author-name // Str),

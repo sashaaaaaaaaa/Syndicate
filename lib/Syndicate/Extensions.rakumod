@@ -43,7 +43,6 @@ our sub run-parsers($elem, %attrs, :$active?) is export {
             default {
                 $extension-errors⚛++;
                 Syndicate::Stats.record-error;
-                note "Extension parse callback failed: $_\n{.backtrace}";
             }
         }
     }
@@ -63,7 +62,6 @@ our sub run-generators($xml, $item, :$active?) is export {
             default {
                 $extension-errors⚛++;
                 Syndicate::Stats.record-error;
-                note "Extension generate callback failed: $_\n{.backtrace}";
             }
         }
     }

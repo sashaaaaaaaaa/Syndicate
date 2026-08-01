@@ -319,6 +319,7 @@ $fb091.description("091 content test");
 my $en4 = $fb091.add-entry;
 $en4.title("Item");
 $en4.link("http://example.com/091/1");
+$en4.summary("Item desc");
 $en4.content("<p>should not appear</p>");
 my $rss091c-str = $fb091.rss091-str;
 unlike $rss091c-str, /'content:encoded'/, "RSS 0.91 builder output has no content:encoded";

@@ -11,13 +11,17 @@ register-ext(:namespace<media>, :namespace-uri(NS-MEDIA),
     parse => sub ($elem, %attrs) {
         # Single pass over direct children so contents/thumbnails/groups are
         # not scanned separately (and group contents are never double-counted).
+        # Membership is namespace-aware (any prefix bound to the MRSS URI, or
+        # an undeclared canonical 'media:' prefix) like the DC/ITunes helpers.
         my (@mc, @mt, @mg);
         my $has-media = False;
         for $elem.elements -> $e {
-            given $e.name {
-                when 'media:content'   { @mc.push: media-content-of($e);   $has-media = True }
-                when 'media:thumbnail' { @mt.push: media-thumbnail-of($e); $has-media = True }
-                when 'media:group'     { with media-group-of($e) { @mg.push: $_; $has-media = True } }
+            next unless is-media-element($e);
+            my $local = $e.name.contains(':') ?? $e.name.split(':')[1] !! $e.name;
+            given $local {
+                when 'content'   { @mc.push: media-content-of($e);   $has-media = True }
+                when 'thumbnail' { @mt.push: media-thumbnail-of($e); $has-media = True }
+                when 'group'     { with media-group-of($e) { @mg.push: $_; $has-media = True } }
             }
         }
         my $mt = get-media-text($elem, "title");
@@ -43,11 +47,36 @@ register-ext(:namespace<media>, :namespace-uri(NS-MEDIA),
 );
 
 sub get-media-text($parent, Str $tag --> Str) is export {
-    with $parent.elements(:TAG("media:$tag"))[0] -> $e {
+    with media-elements($parent, $tag)[0] -> $e {
         my $text = decode-entities(element-text($e)).trim;
         return $text.defined && $text.chars ?? $text !! Str;
     }
     Str
+}
+
+sub is-media-element(XML::Element $e --> Bool) is export {
+    # Namespace-aware membership: the element resolves to the MRSS URI via
+    # any declared prefix (in its own or an ancestor scope), or is a lenient
+    # undeclared canonical 'media:'-prefixed element. A prefix bound to a
+    # different URI is never a match.
+    my $name = $e.name;
+    my $idx = $name.index(':');
+    my $prefix = $idx.defined ?? $name.substr(0, $idx) !! '';
+    with $e.nsPrefix(NS-MEDIA) -> $resolved {
+        return $resolved.chars ?? $resolved eq $prefix !! !$prefix.chars
+    }
+    $prefix eq 'media'
+}
+
+sub media-elements($parent, Str $local-name --> List) is export {
+    my @matched;
+    for $parent.elements -> $e {
+        next unless is-media-element($e);
+        my $name = $e.name;
+        my $local = $name.contains(':') ?? $name.split(':')[1] !! $name;
+        @matched.push: $e if $local eq $local-name;
+    }
+    @matched
 }
 
 sub media-numeric(Str $val) {
@@ -79,10 +108,10 @@ sub media-thumbnail-of(XML::Element $e --> Hash) {
 sub media-group-of(XML::Element $g) {
     my (@gc, @gt);
     for $g.elements -> $e {
-        given $e.name {
-            when 'media:content'   { @gc.push: media-content-of($e) }
-            when 'media:thumbnail' { @gt.push: media-thumbnail-of($e) }
-        }
+        next unless is-media-element($e);
+        my $local = $e.name.contains(':') ?? $e.name.split(':')[1] !! $e.name;
+        if $local eq 'content'   { @gc.push: media-content-of($e) }
+        elsif $local eq 'thumbnail' { @gt.push: media-thumbnail-of($e) }
     }
     return unless @gc || @gt;
     my %group;
@@ -93,7 +122,7 @@ sub media-group-of(XML::Element $g) {
 
 sub get-media-contents($parent --> Array) is export {
     my @contents;
-    for $parent.elements(:TAG<media:content>) -> $e {
+    for media-elements($parent, 'content') -> $e {
         @contents.push: media-content-of($e);
     }
     @contents
@@ -101,7 +130,7 @@ sub get-media-contents($parent --> Array) is export {
 
 sub get-media-thumbnails($parent --> Array) is export {
     my @thumbs;
-    for $parent.elements(:TAG<media:thumbnail>) -> $e {
+    for media-elements($parent, 'thumbnail') -> $e {
         @thumbs.push: media-thumbnail-of($e);
     }
     @thumbs
@@ -109,7 +138,7 @@ sub get-media-thumbnails($parent --> Array) is export {
 
 sub get-media-groups($parent --> Array) is export {
     my @groups;
-    for $parent.elements(:TAG<media:group>) -> $g {
+    for media-elements($parent, 'group') -> $g {
         with media-group-of($g) { @groups.push: $_ }
     }
     @groups

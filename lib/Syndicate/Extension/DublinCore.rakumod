@@ -9,10 +9,11 @@ unit module Syndicate::Extension::DublinCore:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(:namespace<dc>, :namespace-uri(NS-DC),
     parse => sub ($elem, %attrs) {
-        my $creator = get-dc-text($elem, "creator");
-        if $creator.defined && $creator.chars {
-            %attrs<author> = $creator;
+        my @creators = get-dc-texts($elem, "creator");
+        if @creators {
+            %attrs<author> = @creators[0];
             %attrs<has-dc-creator> = True;
+            %attrs<dc-creators> = @creators;
         }
         with get-dc-text($elem, "date") -> $d {
             %attrs<updated> = $d if $d.defined && $d.chars;
@@ -25,7 +26,15 @@ register-ext(:namespace<dc>, :namespace-uri(NS-DC),
         return if $item.?is-v091;
         with $item.?has-dc-creator -> $v {
             if $v {
-                add-dc-element($xml, "creator", ~$item.author) if $item.author.defined;
+                # Prefer the original dc:creator value(s) so the element
+                # round-trips exactly; fall back to the author for items
+                # built with only the flag (Builder path).
+                my @creators = @($item.?dc-creators // []);
+                if @creators {
+                    add-dc-element($xml, "creator", $_) for @creators;
+                } elsif $item.author.defined {
+                    add-dc-element($xml, "creator", ~$item.author);
+                }
                 with $item.updated -> $dt {
                     add-dc-element($xml, "date", ~$dt);
                 }

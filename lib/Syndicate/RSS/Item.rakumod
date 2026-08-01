@@ -30,7 +30,10 @@ method from-xml(XML::Element $item-elem, :$active?) {
     #   itunes-author, itunes-summary, itunes-duration
     # Prefer explicit <author> over dc:creator to match RSS 2.0 element priority
     $author = $author.defined && $author.chars ?? $author !! %extra<author> // Str;
-    # dc:subject is intentionally not stored here — only V1_0 items track @.dc-subjects
+    # The original dc:creator/dc:subject values are preserved so they round-trip
+    # even when an explicit <author> overrides the author slot.
+    my @dc-creators = @(%extra<dc-creators> // []);
+    my @dc-subjects = @(%extra<dc-subjects> // []);
     my $dc-updated = %extra<updated>:exists
         ?? parse-date-optional(%extra<updated>)
         !! Nil;
@@ -56,7 +59,8 @@ method from-xml(XML::Element $item-elem, :$active?) {
         :itunes-duration(%extra<itunes-duration> // Str);
     %bless<updated> = $pubdate if $pubdate ~~ DateTime;
     %bless<updated> //= $dc-updated if $dc-updated ~~ DateTime;
-    my $item = self.bless(|%bless, :@categories, :@media-contents, :@media-thumbnails, :@media-groups, :active-ext($act));
+    my $item = self.bless(|%bless, :@categories, :@dc-creators, :@dc-subjects,
+        :@media-contents, :@media-thumbnails, :@media-groups, :active-ext($act));
     Syndicate::Stats.record-item;
     $item
 }

@@ -23,7 +23,6 @@ has Str $.itunes-summary;
 # attribute via the constructor without exposing a public accessor.
 has @!categories of Str is built;
 method categories() { @!categories.List }
-has Bool $!lang-from-dc is built;
 
 method to-hash {
     my %h = self.to-hash-common;
@@ -50,10 +49,8 @@ multi method new(XML::Document $doc) {
         my $gen     = %common<generator>;
         my %image   = self.parse-image($root, :rdf-about);
         my $lang    = %common<language>;
-        my $lang-fallback = False;
         unless $lang.defined {
             $lang = get-dc-text($channel, "language");
-            $lang-fallback = True if $lang.defined;
         }
 
         my $it-author  = %common<itunes-author>;
@@ -80,7 +77,6 @@ multi method new(XML::Document $doc) {
                    :generator($gen), :language($lang),
                    :image(%image),
                    :itunes-author($it-author), :itunes-summary($it-summary),
-                   :lang-from-dc($lang-fallback),
                    :categories(@categories), :@items)
     }
 }
@@ -90,9 +86,9 @@ method !type-name { "RSS 1.0" }
 method TWEAK {
     self!apply-item-needs(@!items, $.itunes-author, $.itunes-summary);
     $!needs-dc ||= ?@!categories;
-    # A language that came from <dc:language> is emitted as <dc:language>
-    # on regeneration, which requires the xmlns:dc declaration.
-    $!needs-dc ||= $!lang-from-dc;
+    # RSS 1.0 has no <language> element; the language is emitted as
+    # <dc:language>, which requires the xmlns:dc declaration.
+    $!needs-dc ||= $.language.defined;
 }
 
 method !build-xml {
@@ -116,11 +112,9 @@ method !build-xml {
     add-itunes-element($channel, "author", $.itunes-author) if $.itunes-author.defined;
     add-itunes-element($channel, "summary", $.itunes-summary) if $.itunes-summary.defined;
     if $.language.defined {
-        if $!lang-from-dc {
-            add-dc-element($channel, "language", $.language);
-        } else {
-            add-element($channel, "language", $.language);
-        }
+        # RSS 1.0 has no <language> element; always use <dc:language> so the
+        # value round-trips without emitting a non-standard element.
+        add-dc-element($channel, "language", $.language);
     }
     add-dc-element($channel, "subject", $_) for @!categories;
 

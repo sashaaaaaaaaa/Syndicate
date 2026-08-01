@@ -28,6 +28,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
     my $updated = %extra<updated>:exists
         ?? parse-date-optional(%extra<updated>)
         !! Nil;
+    my @dc-creators = @(%extra<dc-creators> // []);
 
     my @media-contents    = @(%extra<media-contents>    // []);
     my @media-thumbnails  = @(%extra<media-thumbnails>  // []);
@@ -40,7 +41,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
         :$guid, :$guid-is-permalink,
         :comments($comment), :enclosure(%enclosure), :source($source);
     %bless<updated> = $updated if $updated ~~ DateTime;
-    my $item = self.bless(|%bless, :@categories,
+    my $item = self.bless(|%bless, :@categories, :@dc-creators,
         :@media-contents, :@media-thumbnails, :@media-groups, :$media-title, :$media-description,
         :itunes-author(%extra<itunes-author> // Str),
         :itunes-summary(%extra<itunes-summary> // Str),

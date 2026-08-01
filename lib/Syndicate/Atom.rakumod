@@ -263,4 +263,11 @@ Parses and generates Atom 1.0 feeds. Does L<C<Syndicate::Feed>|rakudoc:Syndicate
 =item C<@.link-self> - Self link hashes (href, type)
 =item C<@.link-alternate> - Alternate link hashes (href, type)
 
+=head1 updated DIVERGENCE
+
+Atom requires an C<updated> timestamp, so C<XML()>/C<Str()> die when neither
+the feed nor any entry carries one. C<to-hash()> is intentionally lenient for
+inspection: it simply omits the C<updated> key in that case rather than
+throwing, mirroring the computed value (newest entry timestamp) when one exists.
+
 =end pod

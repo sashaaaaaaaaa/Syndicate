@@ -101,18 +101,21 @@ sub decode-entities(Str $text --> Str) is export {
     # the five predefined XML entities, and the HTML 4.01 named character
     # references. Unknown named entities are left as literal text, and the
     # replacement is never rescanned, so a raw '&amp;#8217;' decodes to
-    # '&#8217;' rather than to an apostrophe.
+    # '&#8217;' rather than to an apostrophe. The named reference's
+    # semicolon is optional to tolerate lenient feeds ('&amp' == '&'), but
+    # the name is consumed greedily so '&ampx' stays literal.
     $text.subst(:g,
         / '&' [ $<hex>   = ( '#x' <[0..9a..fA..F]>+ ';' )
                | $<dec>  = ( '#' \d+ ';' )
-               | $<named> = ( <[a..zA..Z0..9]>+ ';' ) ] /,
+               | $<named> = ( <[a..zA..Z0..9]>+ ';'? ) ] /,
         {
             with $<hex> { try { chr(:16(~$<hex>.substr(2, *-1))) } // ~$/ }
             orwith $<dec> { try { chr(+~$<dec>.substr(1, *-1)) } // ~$/ }
             else {
                 # Named references: the XML predefined entities plus the
                 # HTML 4.01 set, matched case-sensitively.
-                my $name = ~$<named>.substr(0, *-1);
+                my $name = ~$<named>;
+                $name = $name.substr(0, *-1) if $name.ends-with(';');
                 with %HTML-ENTITIES{$name} -> $cp {
                     try { chr($cp) } // ~$/
                 } else {

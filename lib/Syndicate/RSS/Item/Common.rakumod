@@ -10,6 +10,7 @@ unit role Syndicate::RSS::Item::Common:ver<0.0.1>:auth<zef:sasha> does Syndicate
 has Str $.guid;
 has Bool $.guid-is-permalink = True;
 has Bool $.has-dc-creator;
+has @.dc-creators of Str;
 has @.categories of Str;
 has Str $.comments;
 has %.enclosure of Str;
@@ -33,6 +34,7 @@ method to-hash {
     %h<guid>              = $.guid              if $.guid.defined;
     %h<guid-is-permalink> = $.guid-is-permalink if $.guid.defined;
     %h<has-dc-creator>    = $.has-dc-creator    if $.has-dc-creator;
+    %h<dc-creators>       = @.dc-creators.List if @.dc-creators;
     %h<categories>        = @.categories.List  if @.categories;
     %h<comments>          = $.comments          if $.comments.defined;
     %h<enclosure>         = %.enclosure         if %.enclosure;
@@ -155,7 +157,7 @@ method XML {
 
 method namespace-flags() {
     %(
-        :dc($!has-dc-creator && !$!is-v091),
+        :dc((!$!is-v091) && ($!has-dc-creator || ?(@!dc-creators) || ?(@!dc-subjects))),
         :media(?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined),
         :itunes($!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined),
         :content(!$!is-v091 && ?($.content.defined && $.content.chars)),

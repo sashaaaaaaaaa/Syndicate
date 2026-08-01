@@ -14,7 +14,7 @@ use Syndicate::Parse;
 use Syndicate::Stats;
 use XML;
 
-plan 38;
+plan 41;
 
 my constant DC      = 'http://purl.org/dc/elements/1.1/';
 my constant RDF     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
@@ -48,9 +48,9 @@ is parse-date("2026-01-02 10:00:00").utc.DateTime.Str,
     my $d = Syndicate::Discovery.new;
     sub ru($r, $b) { $d.resolve-url($r, $b) }
     my $base = 'http://e.com/a/b/c?x=1';
-    is ru("#frag", $base), 'http://e.com/a/b/c#frag',
+    is ru("#frag", $base), 'http://e.com/a/b/c?x=1#frag',
         'fragment-only ref keeps base query';
-    is ru("", $base), 'http://e.com/a/b/c',
+    is ru("", $base), 'http://e.com/a/b/c?x=1',
         'empty ref keeps base query';
     is ru("?y", $base), 'http://e.com/a/b/c?y',
         'query-only ref replaces base query';
@@ -207,8 +207,11 @@ JSON
             "no per-item note() left in {$f.IO.basename}";
     }
     my $ext = slurp 'lib/Syndicate/Extensions.rakumod';
-    is +$ext.comb('note "Extension '), 2,
-        'extension callback-failure notes retained';
+    nok $ext ~~ /'note "Extension '/, 'extension callback failures are not noted';
+    like $ext, /'extension-errors⚛++'/, 'extension error counter retained';
+    like $ext, /'Syndicate::Stats.record-error'/, 'extension errors recorded in stats';
+    is +$ext.comb('note "Extension '), 0,
+        'no extension callback-failure notes remain';
 }
 
 # ===== 12. RSS 2.0 atom:link scan still finds self links =====

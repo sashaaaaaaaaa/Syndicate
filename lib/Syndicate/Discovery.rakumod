@@ -381,8 +381,9 @@ method resolve-url(Str $url, Str $base --> Str) {
     $result.path($rp);
     # Per RFC 3986 §5.4, a reference without a query component (fragment-only
     # or empty reference) keeps the base query, so only overwrite it when the
-    # reference actually carries a path or an explicit '?'.
-    if $rp.chars || $url.split('#')[0].contains('?') {
+    # reference actually carries a path (test the RAW reference path, not the
+    # merged one) or an explicit '?'.
+    if ~$u.path || $url.split('#')[0].contains('?') {
         $result.query($u.query // "");
     }
     $result.fragment($u.fragment // "");

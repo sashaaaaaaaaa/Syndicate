@@ -1,0 +1,204 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::RSS;
+use Syndicate::RSS::V1_0;
+use Syndicate::Discovery;
+use Syndicate::Extensions;
+use Syndicate::Utils;
+use Syndicate::Builder::Feed;
+
+plan 41;
+
+# ===== B1: fragment/query refs resolve per RFC 3986 =====
+
+{
+    my $d = Syndicate::Discovery.new;
+    sub ru($r) { $d.resolve-url($r, 'http://e.com/a/b/c?x=1') }
+    is ru("g?y"), 'http://e.com/a/b/g?y', 'path+query ref replaces query';
+    is ru("g#s"), 'http://e.com/a/b/g#s', 'path+fragment ref drops base query';
+    is ru("./g"), 'http://e.com/a/b/g', 'dot-relative ref';
+    is ru("../g"), 'http://e.com/a/g', 'parent-relative ref';
+}
+
+# ===== B2: MediaRSS namespace-aware matching =====
+
+my $mrss-alt = q:to/END/;
+<rss version="2.0" xmlns:m="http://search.yahoo.com/mrss/">
+  <channel><title>T</title><link>http://e.com</link><description>D</description>
+    <item><title>I</title><link>http://e.com/i</link><description>D</description>
+      <m:content url="http://e.com/v.mp4" type="video/mp4"/></item>
+  </channel>
+</rss>
+END
+is Syndicate::RSS.new($mrss-alt).items[0].media-contents.elems, 1,
+    'alt prefix bound to MRSS URI parses as media:content';
+
+my $mrss-lenient = q:to/END/;
+<rss version="2.0">
+  <channel><title>T</title><link>http://e.com</link><description>D</description>
+    <item><title>I</title><link>http://e.com/i</link><description>D</description>
+      <media:content url="http://e.com/v.mp4" type="video/mp4"/></item>
+  </channel>
+</rss>
+END
+is Syndicate::RSS.new($mrss-lenient).items[0].media-contents.elems, 1,
+    'undeclared canonical media: prefix parses leniently';
+
+my $mrss-spoof = q:to/END/;
+<rss version="2.0" xmlns:bad="http://wrong.example/mrss">
+  <channel><title>T</title><link>http://e.com</link><description>D</description>
+    <item><title>I</title><link>http://e.com/i</link><description>D</description>
+      <bad:content url="http://e.com/v.mp4" type="video/mp4"/></item>
+  </channel>
+</rss>
+END
+is Syndicate::RSS.new($mrss-spoof).items[0].media-contents.elems, 0,
+    'prefix bound to a wrong URI is never media:content';
+
+# ===== B3: dc:creator round-trips alongside author =====
+
+my $dc-xml = q:to/END/;
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel><title>T</title><link>http://e.com</link><description>D</description>
+    <item><title>I</title><link>http://e.com/i</link><description>D</description>
+      <author>real@x.com</author>
+      <dc:creator>Creator@x.com</dc:creator></item>
+  </channel>
+</rss>
+END
+my $dc-feed = Syndicate::RSS.new($dc-xml);
+is $dc-feed.items[0].author, 'real@x.com', 'author preserved from parse';
+is $dc-feed.items[0].dc-creators.join('|'), 'Creator@x.com', 'dc:creator values stored';
+my $dc-str = $dc-feed.Str;
+like $dc-str, /'<dc:creator>Creator@x.com</dc:creator>'/, 'dc:creator regenerated';
+my $dc-rt = Syndicate::RSS.new($dc-str);
+is $dc-rt.items[0].author, 'real@x.com', 'author preserved through round-trip';
+
+# ===== B4: RSS 2.0 dc:subject round-trips =====
+
+my $subj-xml = q:to/END/;
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel><title>T</title><link>http://e.com</link><description>D</description>
+    <item><title>I</title><link>http://e.com/i</link><description>D</description>
+      <dc:subject>One</dc:subject><dc:subject>Two</dc:subject></item>
+  </channel>
+</rss>
+END
+my $subj-feed = Syndicate::RSS.new($subj-xml);
+is $subj-feed.items[0].dc-subjects.join('|'), 'One|Two', 'dc:subject values stored';
+my $subj-str = $subj-feed.Str;
+like $subj-str, /'<dc:subject>One</dc:subject>'/, 'dc:subject 1 regenerated';
+like $subj-str, /'<dc:subject>Two</dc:subject>'/, 'dc:subject 2 regenerated';
+like $subj-str, /'xmlns:dc='/, 'xmlns:dc declared for subject-only item';
+is Syndicate::RSS.new($subj-str).items[0].dc-subjects.join('|'), 'One|Two',
+    'dc:subject survives round-trip';
+
+# ===== B5: RSS 1.0 language always regenerates as dc:language =====
+
+my $v10-xml = q:to/END/;
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns="http://purl.org/rss/1.0/"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <channel rdf:about="http://example.com">
+    <title>1.0 Language</title>
+    <link>http://example.com</link>
+    <description>Lang test</description>
+    <language>en</language>
+  </channel>
+  <item rdf:about="http://example.com/1">
+    <title>Item</title>
+    <link>http://example.com/1</link>
+    <description>Item</description>
+  </item>
+</rdf:RDF>
+END
+my $v10-feed = Syndicate::RSS::V1_0.new($v10-xml);
+is $v10-feed.language, 'en', 'plain <language> parsed as $.language';
+my $v10-str = $v10-feed.Str;
+like $v10-str, /'<dc:language>en</dc:language>'/, 'language regenerates as dc:language';
+like $v10-str, /'xmlns:dc='/, 'xmlns:dc declared for dc:language';
+
+# ===== P1: cached item hashes are deep-cloned per call =====
+
+my $p1-feed = Syndicate::RSS.new($mrss-alt);
+my %h1 = $p1-feed.to-hash;
+my %h2 = $p1-feed.to-hash;
+%h1<items>[0]<title> = 'MUTATED';
+%h1<items>[0]<media-contents>[0]<url> = 'MUTATED';
+is %h2<items>[0]<title>, 'I', 'second to-hash unaffected by title mutation';
+is %h2<items>[0]<media-contents>[0]<url>, 'http://e.com/v.mp4',
+    'second to-hash unaffected by nested media mutation';
+is %h1<items>[0]<title>, 'MUTATED', 'mutation visible only in first result';
+my %h3 = $p1-feed.to-hash;
+is %h3<items>[0]<title>, 'I', 'third to-hash still pristine';
+
+# ===== C2: extension errors are counted silently, never noted =====
+
+{
+    my $script = q:to/RAKU/;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Extensions;
+register-ext(
+    :namespace<zzz>, :namespace-uri('http://x.invalid/z'),
+    parse    => sub ($e, %a) { die 'boom' },
+    generate => sub ($x, $i) { });
+Syndicate::RSS.new(q:to/XML/);
+<rss version="2.0" xmlns:zzz="http://x.invalid/z">
+  <channel><title>T</title><link>http://e.com</link><description>D</description>
+    <item><title>I</title><link>http://e.com/i</link><description>D</description>
+      <zzz:boom/></item>
+  </channel>
+</rss>
+XML
+print extension-errors;
+RAKU
+    my $p = run('raku', '-Ilib', '-e', $script, :out, :err);
+    is $p.out.slurp, '1', 'failing extension parse is counted';
+    is $p.err.slurp, '', 'failing extension parse is not noted to STDERR';
+}
+
+# ===== C3: lenient named entities without semicolons =====
+
+is decode-entities("Tom &amp Jerry"), "Tom & Jerry", 'missing semicolon tolerated';
+is decode-entities("&amp"), "&", 'bare &amp decodes';
+is decode-entities("&frac12"), "½", 'bare digit-named entity decodes';
+is decode-entities("&amp;frac12;"), "&frac12;", 'encoded entity stays literal';
+is decode-entities("&ampx"), "&ampx", 'greedy unknown name stays literal';
+is decode-entities("AT&T"), "AT&T", 'ampersand without &name untouched';
+is decode-entities("R&D"), "R&D", 'ampersand mid-word untouched';
+is decode-entities("&copy 2026"), "© 2026", 'name terminated by space decodes';
+
+# ===== C5: Builder items require their spec-mandated fields =====
+
+{
+    my sub feed-with(&entry) {
+        my $fb = Syndicate::Builder::Feed.new;
+        $fb.title('F'); $fb.link('http://f/'); $fb.description('FD');
+        &entry($fb.add-entry);
+        $fb
+    }
+    dies-ok { feed-with({ $_.title('T'); $_.link('http://e/') }).rss091-str },
+        'RSS 0.91 item dies without description';
+    dies-ok { feed-with({ $_.title('T'); $_.summary('D') }).rss-str },
+        'RSS 2.0 item dies without link';
+    dies-ok { feed-with({ $_.link('http://e/') }).rss-str },
+        'RSS 2.0 item dies without title';
+    dies-ok { feed-with({ $_.title('T'); $_.summary('D') }).rss1-str },
+        'RSS 1.0 item dies without link';
+    dies-ok { feed-with({ $_.link('http://e/') }).atom-str },
+        'Atom item dies without title';
+    dies-ok { feed-with({ $_.link('http://e/') }).json-str },
+        'JSON Feed item dies without title';
+    sub message-of(&code) {
+        &code();
+        return '';
+        CATCH { default { return ~.message } }
+    }
+    like message-of({ feed-with({ $_.link('http://e/') }).rss-str }),
+        /'RSS 2.0 item requires title'/, 'RSS 2.0 title error message';
+    like message-of({ feed-with({ $_.title('T') }).rss-str }),
+        /'RSS 2.0 item requires link'/, 'RSS 2.0 link error message';
+}
