@@ -6,6 +6,8 @@ use Syndicate::Stats;
 
 unit class Syndicate::Atom::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
+my constant XHTML-NS = 'http://www.w3.org/1999/xhtml';
+
 submethod TWEAK {
     unless $!updated.defined {
         my $label = $!id.defined ?? $!id !! $!title.defined ?? $!title !! "<unnamed>";
@@ -68,9 +70,21 @@ method from-xml(XML::Element $entry-elem) {
         if $content-type eq "xhtml" {
             my @xhtml-divs = $ce.elements;
             if @xhtml-divs {
-                # Keep all child elements — a lenient feed with several sibling
-                # <div>s must not lose all but the first.
-                $content = @xhtml-divs.map(~*).join;
+                # Normalize to the div-wrapped form the generator emits, so a
+                # bare single child (e.g. <p>) roundtrips byte-stably instead
+                # of gaining a wrapper only on the second pass.
+                if @xhtml-divs.elems == 1 {
+                    my $only = @xhtml-divs[0];
+                    if $only.name eq "div" && $only.attribs<xmlns> eq XHTML-NS {
+                        $content = ~$only;
+                    } else {
+                        $content = '<div xmlns="' ~ XHTML-NS ~ '">' ~ ~$only ~ '</div>';
+                    }
+                } else {
+                    # Keep all child elements — a lenient feed with several
+                    # sibling <div>s must not lose all but the first.
+                    $content = @xhtml-divs.map(~*).join;
+                }
             }
             # No element child (e.g. <content type="xhtml"/>) is a benign empty
             # content — leave $content as Str rather than counting an error.
@@ -169,10 +183,10 @@ method XML {
             my @nodes;
             if %attribs<type> eq "xhtml" {
                 my $xhtml = try { XML::Document.new($.content) };
-                my $div  = XML::Element.new(:name<div>, :attribs({:xmlns('http://www.w3.org/1999/xhtml')}));
+                my $div  = XML::Element.new(:name<div>, :attribs({:xmlns(XHTML-NS)}));
                 if $xhtml {
                     my $root = $xhtml.root;
-                    if $root.name eq "div" && $root.attribs<xmlns> eq 'http://www.w3.org/1999/xhtml' {
+                    if $root.name eq "div" && $root.attribs<xmlns> eq XHTML-NS {
                         $div = $root;
                     } else {
                         $div.nodes = [$root];

@@ -71,7 +71,11 @@ method !decode-response($resp --> Str) {
             .trim ~~ /^charset\s* \= \s* (<[^\s;]>+)/ and $charset = ~$0.subst(/<[\'\"]>/, '', :g);
         }
     }
-    $resp<content>.decode($charset)
+    my $body = try { $resp<content>.decode($charset) };
+    without $body {
+        die "Cannot decode response body using charset '$charset': $!";
+    }
+    $body
 }
 
 # Expand an IPv4 literal into its four octets. Accepts the standard
@@ -268,9 +272,11 @@ method discover(Str $url --> Syndicate::Feed:D) {
     die "HTTP {$resp<status>} - {$resp<reason> // ''}" unless $resp<success>;
     my $body = self!decode-response($resp);
 
-    # Probe non-recordingly first: HTML pages are a normal case for
-    # discover(), so a failed probe is not an error condition.
-    return parse-feed($body) if probe-feed($body).defined;
+    # Parse in a single XML/JSON pass and non-recordingly: HTML pages are a
+    # normal case for discover(), so a non-feed body is not an error.
+    with parse-feed-or-nil($body) -> $feed {
+        return $feed;
+    }
 
     my $feed-url = self!find-first-feed($body, $url);
     die "No feeds found at $url" unless $feed-url;
@@ -373,7 +379,12 @@ method resolve-url(Str $url, Str $base --> Str) {
     $rp = normalize-path($rp);
     my $result = $b.clone;
     $result.path($rp);
-    $result.query($u.query // "");
+    # Per RFC 3986 §5.4, a reference without a query component (fragment-only
+    # or empty reference) keeps the base query, so only overwrite it when the
+    # reference actually carries a path or an explicit '?'.
+    if $rp.chars || $url.split('#')[0].contains('?') {
+        $result.query($u.query // "");
+    }
     $result.fragment($u.fragment // "");
     ~$result
 }

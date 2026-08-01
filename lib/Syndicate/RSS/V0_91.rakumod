@@ -80,7 +80,6 @@ multi method new(XML::Document $doc) {
             unless has-nonempty-text($item-elem, "title")
                 && has-nonempty-text($item-elem, "link")
                 && has-nonempty-text($item-elem, "description") {
-                note "Skipping RSS 0.91 item without title, link, or description";
                 Syndicate::Stats.record-error;
                 next;
             }
@@ -167,13 +166,7 @@ method parse-skip-hours($channel --> Array) {
             my $val = element-text($h).trim;
             if $val ~~ /^\d+$/ {
                 my $hour = $val.Int;
-                if 0 <= $hour <= 23 {
-                    @skipHours.push: $hour;
-                } else {
-                    note "Invalid hour value in skipHours: $val (must be 0-23)";
-                }
-            } else {
-                note "Non-numeric hour value in skipHours: $val";
+                @skipHours.push: $hour if 0 <= $hour <= 23;
             }
         }
     }
@@ -189,11 +182,7 @@ method parse-skip-days($channel --> Array) {
     with $channel.elements(:TAG<skipDays>)[0] {
         for .elements(:TAG<day>) -> $d {
             my $val = decode-entities(element-text($d)).tclc;
-            if %DAYS{$val}:exists {
-                @skipDays.push: $val;
-            } else {
-                note "Invalid day value in skipDays: $val (must be a day name, e.g. Friday)";
-            }
+            @skipDays.push: $val if %DAYS{$val}:exists;
         }
     }
     @skipDays

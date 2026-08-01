@@ -80,6 +80,28 @@ our sub probe-feed(Str $input --> FeedFormat) is export {
     Nil
 }
 
+# Single-parse non-recording probe that also parses the feed, for code
+# paths (e.g. Discovery) that must not count a non-feed (e.g. an HTML page)
+# as an error. Detects format and builds the feed from one XML/JSON parse,
+# returning Nil when the input is not a feed — without recording an error.
+# Errors raised while parsing an actual feed (bad entries, etc.) still
+# propagate, matching parse-feed().
+our sub parse-feed-or-nil(Str $input --> Syndicate::Feed) is export {
+    my $clean = $input.trim;
+    $clean .= subst(/^\xFEFF/, '');
+    return Nil unless $clean.chars;
+    return Nil if $clean.chars > MAX-FEED-SIZE;
+    with try-xml-parse($clean) -> $root-info {
+        return Nil unless format-for($root-info<name>, $root-info<ver>).defined;
+        return parse-feed($root-info<doc>);
+    }
+    my $parsed-json = try { from-json($clean) };
+    if is-json-feed($parsed-json) {
+        return Syndicate::JSONFeed.new-from-hash(%$parsed-json);
+    }
+    Nil
+}
+
 sub format-for(Str $name, Str $ver --> FeedFormat) {
     given $name {
         when 'feed'   { return Atom }
@@ -169,7 +191,10 @@ multi sub parse-feed-with-format(Str $input --> List) is export {
 our proto sub parse-file(|) is export {*}
 
 multi sub parse-file(Str $path --> Syndicate::Feed:D) is export {
-    my $size = $path.IO.s;
+    my $size = try { $path.IO.s };
+    unless $size.defined {
+        die "Could not read file '$path': $!";
+    }
     die "File too large ($size bytes, max {MAX-FEED-SIZE})" if $size > MAX-FEED-SIZE;
     my $contents = try { slurp($path) };
     without $contents {

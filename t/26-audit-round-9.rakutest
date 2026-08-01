@@ -1,0 +1,225 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate::RSS;
+use Syndicate::RSS::V1_0;
+use Syndicate::RSS::V0_91;
+use Syndicate::Atom;
+use Syndicate::Atom::Item;
+use Syndicate::JSONFeed;
+use Syndicate::Discovery;
+use Syndicate::Extensions;
+use Syndicate::Utils;
+use Syndicate::Parse;
+use Syndicate::Stats;
+use XML;
+
+plan 38;
+
+my constant DC      = 'http://purl.org/dc/elements/1.1/';
+my constant RDF     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+my constant RSS1NS  = 'http://purl.org/rss/1.0/';
+my constant ATOM    = 'http://www.w3.org/2005/Atom';
+
+# ===== 1. Named HTML entities with digits in their name decode =====
+
+is decode-entities("&frac12; &sup2; &frac34;"), "½ ² ¾",
+    'digit-named entities (frac12/sup2/frac34) decode';
+is decode-entities("&amp;frac12;"), "&frac12;",
+    'encoded digit-entity stays literal (no double decode)';
+is decode-entities("&nosuch42;x"), "&nosuch42;x",
+    'unknown digit-named entity stays literal';
+
+# ===== 2. RFC 2822 UT and tz-less dates =====
+
+is parse-date("Sat, 02 Jan 2026 10:00:00 UT").utc.DateTime.Str,
+    '2026-01-02T10:00:00Z',
+    'RFC 2822 UT offset parses as UTC';
+is parse-date("Sat, 02 Jan 2026 10:00:00").utc.DateTime.Str,
+    '2026-01-02T10:00:00Z',
+    'tz-less RFC 2822 month-name date defaults to UTC';
+is parse-date("2026-01-02 10:00:00").utc.DateTime.Str,
+    '2026-01-02T10:00:00Z',
+    'tz-less ISO shape still defaults to UTC';
+
+# ===== 3. resolve-url keeps base query for fragment/empty refs =====
+
+{
+    my $d = Syndicate::Discovery.new;
+    sub ru($r, $b) { $d.resolve-url($r, $b) }
+    my $base = 'http://e.com/a/b/c?x=1';
+    is ru("#frag", $base), 'http://e.com/a/b/c#frag',
+        'fragment-only ref keeps base query';
+    is ru("", $base), 'http://e.com/a/b/c',
+        'empty ref keeps base query';
+    is ru("?y", $base), 'http://e.com/a/b/c?y',
+        'query-only ref replaces base query';
+    is ru("g", $base), 'http://e.com/a/b/g',
+        'path ref drops base query';
+}
+
+# ===== 4. RSS 1.0 dc:subject via non-canonical or undeclared prefix =====
+
+sub rss1(Str $chan-extra, Str $subject --> Syndicate::RSS::V1_0) {
+    my $xml = qq:to/XML/.trim;
+<rdf:RDF xmlns:rdf="{RDF}" xmlns="{RSS1NS}" {$chan-extra}>
+<channel rdf:about="http://e/"><title>T</title><link>L</link><description>D</description>
+{$subject}</channel></rdf:RDF>
+XML
+    Syndicate::RSS::V1_0.new($xml)
+}
+
+{
+    is rss1('xmlns:d="' ~ DC ~ '"', '<d:subject>Alt</d:subject>').categories.join(","), 'Alt',
+        'RSS 1.0 dc:subject via declared alt prefix';
+    is rss1('', '<dc:subject>Alt</dc:subject>').categories.join(","), 'Alt',
+        'RSS 1.0 dc:subject via undeclared canonical prefix';
+}
+
+# ===== 5. Undeclared canonical extension elements parse at item level =====
+
+{
+    my $it = Syndicate::RSS.new(qq:to/R/);
+<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>http://e/i</link>
+<itunes:author>Pod Person</itunes:author><itunes:duration>1:23</itunes:duration></item>
+</channel></rss>
+R
+    is $it.items[0].itunes-author, 'Pod Person',
+        'undeclared itunes:author parsed at item level';
+    is $it.items[0].itunes-duration, '1:23',
+        'undeclared itunes:duration parsed at item level';
+
+    my $dc = Syndicate::RSS.new(qq:to/R/);
+<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>http://e/i</link><dc:creator>Jane</dc:creator></item>
+</channel></rss>
+R
+    is $dc.items[0].author, 'Jane',
+        'undeclared dc:creator parsed at item level';
+
+    my $spoof = Syndicate::RSS.new(qq:to/R/);
+<rss version="2.0" xmlns:itunes="http://wrong/"><channel><title>T</title><link>L</link><description>D</description>
+<item><title>I</title><link>http://e/i</link><itunes:author>No</itunes:author></item>
+</channel></rss>
+R
+    nok $spoof.items[0].itunes-author.defined && $spoof.items[0].itunes-author.chars,
+        'canonical prefix bound to wrong URI stays inactive';
+}
+
+# ===== 6. Atom xhtml content roundtrips byte-stably =====
+
+{
+    my $bare = Syndicate::Atom::Item.new(qq:to/XML/.trim);
+<entry xmlns="{ATOM}"><id>urn:1</id><title>T</title><updated>2026-01-01T00:00:00Z</updated>
+<content type="xhtml"><p>hi</p></content></entry>
+XML
+    is $bare.content, '<div xmlns="http://www.w3.org/1999/xhtml"><p>hi</p></div>',
+        'bare xhtml child normalized to div-wrapped form at parse';
+    is ~$bare, ~Syndicate::Atom::Item.new(~$bare),
+        'bare xhtml parse->regen->reparse is byte-stable';
+
+    my $div = Syndicate::Atom::Item.new(qq:to/XML/.trim);
+<entry xmlns="{ATOM}"><id>urn:1</id><title>T</title><updated>2026-01-01T00:00:00Z</updated>
+<content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p>hi</p></div></content></entry>
+XML
+    is $div.content, '<div xmlns="http://www.w3.org/1999/xhtml"><p>hi</p></div>',
+        'single xhtml div kept as-is at parse';
+    is ~$div, ~Syndicate::Atom::Item.new(~$div),
+        'div xhtml parse->regen->reparse is byte-stable';
+
+    my $multi = Syndicate::Atom::Item.new(qq:to/XML/.trim);
+<entry xmlns="{ATOM}"><id>urn:1</id><title>T</title><updated>2026-01-01T00:00:00Z</updated>
+<content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">first</div><div xmlns="http://www.w3.org/1999/xhtml">second</div></content></entry>
+XML
+    ok $multi.content ~~ / 'first' / && $multi.content ~~ / 'second' /,
+        'multi-div xhtml keeps all children at parse';
+}
+
+# ===== 7. discover parses a feed body in a single pass =====
+
+{
+    is parse-feed-or-nil(q{<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description></channel></rss>}).^name,
+        'Syndicate::RSS', 'parse-feed-or-nil returns parsed feed';
+    nok parse-feed-or-nil('<html><body></body></html>').defined,
+        'parse-feed-or-nil returns Nil for HTML';
+    nok parse-feed-or-nil('not a feed').defined,
+        'parse-feed-or-nil returns Nil for garbage';
+    my $before = Syndicate::Stats.errors;
+    parse-feed-or-nil('garbage here');
+    is Syndicate::Stats.errors, $before,
+        'parse-feed-or-nil records no error for non-feed input';
+}
+
+# ===== 8. JSON Feed to-hash cached items survive caller mutation =====
+
+{
+    my $f = Syndicate::JSONFeed.new(q:to/JSON/);
+{"version":"https://jsonfeed.org/version/1.1","title":"a",
+ "items":[{"id":"1","title":"a","authors":[{"name":"Bob"}],"tags":["x","y"]}]}
+JSON
+    my %h1 = $f.to-hash;
+    %h1<items>[0]<authors>[0]<name> = "HACKED";
+    %h1<items>[0]<tags>.push("MUT");
+    my %h2 = $f.to-hash;
+    is %h2<items>[0]<authors>[0]<name>, "Bob", "items cache: author nested hash intact";
+    is %h2<items>[0]<tags>.join(","), "x,y", "items cache: tags array intact";
+    %h2<items>[0]<authors>[0] = %(name => "Z");
+    %h2<items>[0]<tags> = ["q"];
+    my %h3 = $f.to-hash;
+    is %h3<items>[0]<authors>[0]<name>, "Bob", "items cache: author container replace isolated";
+    is %h3<items>[0]<tags>.join(","), "x,y", "items cache: tags container replace isolated";
+}
+
+# ===== 9. Atom feed to-hash includes computed updated =====
+
+{
+    my $item = Syndicate::Atom::Item.new(
+        :id<urn:1>, :title<I>,
+        :updated(DateTime.new('2025-06-01T00:00:00Z')));
+    my $feed = Syndicate::Atom.new(:id<urn:f>, :title<T>, :items([$item]));
+    nok $feed.updated.defined, 'feed built without its own updated';
+    is $feed.to-hash<updated>, '2025-06-01T00:00:00Z',
+        'Atom to-hash includes computed (entry-max) updated when feed updated unset';
+    like ~$feed, /'<updated>2025-06-01T00:00:00Z</updated>'/,
+        'Atom XML emits the same computed updated';
+}
+
+# ===== 10. parse-file missing path raises a friendly error =====
+
+{
+    my $err = try { parse-file("/nonexistent/syndicate-round-9.xml") } // $!;
+    ok $err.defined && $err ~~ / 'Could not read file' /,
+        'parse-file missing path raises friendly error';
+}
+
+# ===== 11. per-item note() calls are gone =====
+
+{
+    my @sources = (
+        'lib/Syndicate/RSS/V0_91.rakumod',
+        'lib/Syndicate/RSS/V1_0.rakumod',
+        'lib/Syndicate/RSS.rakumod',
+    );
+    for @sources -> $f {
+        my $src = slurp $f;
+        nok $src ~~ /'note ' ('.*Skipping|.*skipHours|.*skipDays|.*Invalid TTL')/,
+            "no per-item note() left in {$f.IO.basename}";
+    }
+    my $ext = slurp 'lib/Syndicate/Extensions.rakumod';
+    is +$ext.comb('note "Extension '), 2,
+        'extension callback-failure notes retained';
+}
+
+# ===== 12. RSS 2.0 atom:link scan still finds self links =====
+
+{
+    my $self = Syndicate::RSS.new(qq:to/R/);
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>T</title><link>L</link><description>D</description>
+<atom:link rel="self" href="http://e.com/feed?x=1&amp;y=2"/></channel></rss>
+R
+    is $self.atom-self-link, 'http://e.com/feed?x=1&y=2',
+        'atom:link rel=self still parsed after redundant-check removal';
+}
+
+done-testing;

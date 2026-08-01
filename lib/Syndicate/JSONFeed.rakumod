@@ -19,6 +19,7 @@ has Str $.favicon;
 has %.author of Str;
 has Bool $.expired;
 has Hash $!cached-hash;
+has $!cached-items;
 has Lock $!hash-lock = Lock.new;
 has Str $!cached-json;
 has Lock $!json-lock = Lock.new;
@@ -117,13 +118,28 @@ method to-hash {
             %a{$_} = %h<author>{$_} for %h<author>.keys;
             %h<author> = %a;
         }
-        # Items are rebuilt fresh on every call: JSONFeed::Item.to-hash
-        # returns a new hash (with new nested containers) each time, which
-        # is cheaper than deep-copying cached item hashes and guarantees
-        # callers cannot mutate cache state.
-        %h<items> = @.items.map(*.to-hash).Array;
+        # Item hashes are cached once and cloned on every call: JSONFeed::Item
+        # hashes contain nested containers (authors, tags), and cloning cached
+        # hashes is cheaper than rebuilding them and guarantees callers cannot
+        # mutate cache state.
+        $!cached-items //= @.items.map(*.to-hash).Array;
+        %h<items> = $!cached-items.map({ self!clone-item-hash($_) }).Array;
         %h
     }
+}
+
+method !clone-item-hash(%h --> Hash) {
+    my %c;
+    for %h.kv -> $k, $v {
+        given $v {
+            when Array {
+                %c{$k} = $v.map({ $_ ~~ Hash ?? $_.clone !! $_ }).Array;
+            }
+            when Hash { %c{$k} = $v.clone }
+            default   { %c{$k} = $v }
+        }
+    }
+    %c
 }
 
 method to-json {

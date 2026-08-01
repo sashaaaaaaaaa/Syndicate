@@ -7,6 +7,7 @@ use Syndicate::Stats;
 
 my constant NS-ATOM is export = 'http://www.w3.org/2005/Atom';
 my constant %TZ-OFFSET = (
+    'UT'   => '+0000',
     'EST'  => '-0500', 'EDT'  => '-0400',
     'CST'  => '-0600', 'CDT'  => '-0500',
     'MST'  => '-0700', 'MDT'  => '-0600',
@@ -104,7 +105,7 @@ sub decode-entities(Str $text --> Str) is export {
     $text.subst(:g,
         / '&' [ $<hex>   = ( '#x' <[0..9a..fA..F]>+ ';' )
                | $<dec>  = ( '#' \d+ ';' )
-               | $<named> = ( <[a..zA..Z]>+ ';' ) ] /,
+               | $<named> = ( <[a..zA..Z0..9]>+ ';' ) ] /,
         {
             with $<hex> { try { chr(:16(~$<hex>.substr(2, *-1))) } // ~$/ }
             orwith $<dec> { try { chr(+~$<dec>.substr(1, *-1)) } // ~$/ }
@@ -245,7 +246,7 @@ sub normalize-date-str(Str $str --> Str) {
         sprintf "%02d:%02d:%02d", $h, +$1, 0;
     });
     $s .= subst(:g, /
-        << EST >> | << EDT >> | << CST >> | << CDT >> |
+        << UT >> | << EST >> | << EDT >> | << CST >> | << CDT >> |
         << MST >> | << MDT >> | << PST >> | << PDT >> |
         << CET >> | << CEST >> | << EET >> | << EEST >> |
         << IST >> | << HKT >> | << JST >> |
@@ -264,8 +265,13 @@ sub normalize-date-str(Str $str --> Str) {
     # Datetimes without any timezone designator are treated as UTC rather
     # than silently dropped. Only clock times qualify, so bare dates like
     # '2024-01-15' (which datetime-interpret already handles) are untouched.
-    $s ~= 'Z' if $s ~~ / \d ** 2 ':' \d ** 2 \s* $ /
-        && $s !~~ / ( 'Z' | <[+-]> \d ** 2 ':'? \d ** 2 ) \s* $ /;
+    # ISO YYYY-MM-DD shapes append 'Z'; RFC 2822 month-name shapes are not
+    # understood by DateTime::Grammar with a trailing 'Z', so they get a
+    # space-separated 'GMT' instead.
+    if $s ~~ / \d ** 2 ':' \d ** 2 \s* $ /
+        && $s !~~ / ( 'Z' | <[+-]> \d ** 2 ':'? \d ** 2 ) \s* $ / {
+        $s ~= $s ~~ / \d ** 4 '-' / ?? 'Z' !! ' GMT';
+    }
     $s
 }
 

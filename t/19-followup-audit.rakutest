@@ -151,7 +151,7 @@ XML
 nok audit-active(q:to/XML/), "prefix bound to wrong namespace-uri is inactive";
 <root xmlns:audit="http://other.example/audit"><child><audit:x/></child></root>
 XML
-nok audit-active(q:to/XML/), "unbound prefix with namespace-uri requirement is inactive";
+ok audit-active(q:to/XML/), "unbound canonical prefix is active (lenient feeds)";
 <root><child><audit:x/></child></root>
 XML
 remove-last-ext;

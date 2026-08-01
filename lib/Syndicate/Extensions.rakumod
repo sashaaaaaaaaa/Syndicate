@@ -93,11 +93,13 @@ our sub set-active(@exts, $elem) is export {
         $declared ?? %b !! %parent
     }
 
-    # An element using a registered prefix only counts when the prefix
-    # is bound to the extension's namespace-uri (or the extension does
-    # not require one). A non-canonical prefix bound to a registered
-    # namespace-uri activates the extension too. Returns True when the
-    # extension newly activated.
+    # An element using a registered prefix counts when the prefix is bound
+    # to the extension's namespace-uri, or — for an unbound prefix — when it
+    # is the extension's own canonical prefix (lenient feeds omit the
+    # xmlns declaration). A non-canonical prefix bound to a registered
+    # namespace-uri activates the extension too, while a prefix bound to a
+    # wrong namespace-uri never does. Returns True when the extension
+    # newly activated.
     my sub activate($name, %bindings --> Bool) {
         return False unless $name.defined;
         with $name.index(':') -> $j {
@@ -109,7 +111,9 @@ our sub set-active(@exts, $elem) is export {
             my $ext-prefix = $ext.<namespace>;
             return False unless %present{$ext-prefix}:exists;
             return False if %present{$ext-prefix};
+            my $canonical-undeclared = !$uri.defined && $prefix eq $ext-prefix;
             if !$ext.<namespace-uri>
+                || $canonical-undeclared
                 || ($uri.defined && $uri eq $ext.<namespace-uri>) {
                 %present{$ext-prefix} = True;
                 return True;

@@ -72,7 +72,6 @@ multi method new(XML::Document $doc) {
 
         my $atom-self-link = Str;
         for $channel.elements -> $l {
-            next unless $l ~~ XML::Element;
             my $ln = $l.name;
             next unless $ln.ends-with(':link');
             if ($l.attribs<rel> // "") eq "self" {
@@ -103,7 +102,6 @@ multi method new(XML::Document $doc) {
                 %bless<ttl> = $ttl;
             } else {
                 Syndicate::Stats.record-error;
-                note "Warning: Invalid TTL value '$ttl-str' — must be an integer string";
             }
         }
         # with-error-recording records a Stats error and rethrows for any

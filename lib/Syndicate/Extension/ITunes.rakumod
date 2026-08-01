@@ -5,11 +5,42 @@ use Syndicate::Utils;
 
 unit module Syndicate::Extension::ITunes:ver<0.0.1>:auth<zef:sasha>;
 
+my constant NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
+
 register-ext(:namespace<itunes>, :namespace-uri('http://www.itunes.com/dtds/podcast-1.0.dtd'),
     parse => sub ($elem, %attrs) {
-        %attrs<itunes-author>   = get-itunes-text($elem, "author");
-        %attrs<itunes-summary>  = get-itunes-text($elem, "summary");
-        %attrs<itunes-duration> = get-itunes-duration($elem);
+        # Single pass over the direct children, collecting author/summary/
+        # duration together, instead of scanning the tree once per field.
+        # Mirror the namespace resolution used by get-itunes-text.
+        my (Str $author, Str $summary, Str $duration);
+        for $elem.elements -> $e {
+            my $name = $e.name;
+            my $idx = $name.index(':');
+            my $prefix = $idx.defined ?? $name.substr(0, $idx) !! '';
+            my $local  = $idx.defined ?? $name.substr($idx + 1) !! $name;
+            next unless $local eq 'author' | 'summary' | 'duration';
+            my $match = False;
+            with $e.nsPrefix(NS) -> $resolved {
+                if $resolved.chars {
+                    $match = $resolved eq $prefix;
+                } elsif !$prefix.chars {
+                    $match = True;
+                }
+            }
+            # Lenient fallback: tolerate undeclared canonical-prefix elements.
+            $match = True if !$match && $prefix eq 'itunes';
+            next unless $match;
+            my $text = decode-entities(element-text($e)).trim;
+            $text = Str unless $text.defined && $text.chars;
+            given $local {
+                when 'author'   { $author   //= $text }
+                when 'summary'  { $summary  //= $text }
+                when 'duration' { $duration //= $text }
+            }
+        }
+        %attrs<itunes-author>   = $author;
+        %attrs<itunes-summary>  = $summary;
+        %attrs<itunes-duration> = $duration;
     },
     generate => sub ($xml, $item) {
         with $item.?itunes-author  { add-itunes-element($xml, "author",   $_) }
@@ -17,8 +48,6 @@ register-ext(:namespace<itunes>, :namespace-uri('http://www.itunes.com/dtds/podc
         with $item.?itunes-duration { add-itunes-element($xml, "duration", $_) }
     }
 );
-
-my constant NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
 sub get-itunes-text($parent, Str $tag --> Str) is export {
     # Namespace-aware: resolve the iTunes URI to whatever prefix is in scope

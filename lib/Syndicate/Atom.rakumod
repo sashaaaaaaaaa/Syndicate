@@ -27,6 +27,19 @@ method to-hash {
     my %h = self.to-hash-common;
     %h<id>            = $.id            if $.id.defined;
     %h<updated>       = $.updated.Str   if $.updated.defined;
+    if !$.updated.defined {
+        # Mirror the computed updated emitted by XML(): the newest entry
+        # timestamp, without dying when no timestamp exists anywhere.
+        my $computed = $!computed-updated;
+        unless $computed.defined {
+            for @!items -> $item {
+                with $item.updated {
+                    $computed = $_ if !$computed.defined || $_ > $computed;
+                }
+            }
+        }
+        %h<updated> = $computed.Str if $computed.defined;
+    }
     %h<subtitle>      = $.subtitle      if $.subtitle.defined;
     %h<rights>        = $.rights        if $.rights.defined;
     %h<icon>          = $.icon          if $.icon.defined;

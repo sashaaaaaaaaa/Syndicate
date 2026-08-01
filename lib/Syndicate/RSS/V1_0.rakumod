@@ -60,7 +60,7 @@ multi method new(XML::Document $doc) {
         my $it-summary = %common<itunes-summary>;
 
         my @categories;
-        for $channel.elements(:TAG<dc:subject>) -> $s {
+        for elements-by-local-ns($channel, NS-DC, "subject", "dc") -> $s {
             my $text = decode-entities(element-text($s)).trim;
             @categories.push: $text if $text.chars;
         }
@@ -69,7 +69,6 @@ multi method new(XML::Document $doc) {
         my $feed-active = set-active(active-extensions, $root);
         for $root.elements(:TAG<item>) -> $item-elem {
             unless has-nonempty-text($item-elem, "title") && has-nonempty-text($item-elem, "link") {
-                note "Skipping RSS 1.0 item without title or link";
                 Syndicate::Stats.record-error;
                 next;
             }
