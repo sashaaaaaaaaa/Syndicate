@@ -22,6 +22,23 @@ has @.link-self of Hash;
 has @.link-alternate of Hash;
 has @.extra-links of Hash;
 has DateTime $!computed-updated;
+
+method to-hash {
+    my %h = self.to-hash-common;
+    %h<id>            = $.id            if $.id.defined;
+    %h<updated>       = $.updated.Str   if $.updated.defined;
+    %h<subtitle>      = $.subtitle      if $.subtitle.defined;
+    %h<rights>        = $.rights        if $.rights.defined;
+    %h<icon>          = $.icon          if $.icon.defined;
+    %h<logo>          = $.logo          if $.logo.defined;
+    %h<author-detail> = %!author-detail if %!author-detail;
+    %h<categories>    = @.categories    if @.categories;
+    %h<contributors>  = @.contributors  if @.contributors;
+    %h<link-self>     = @.link-self     if @.link-self;
+    %h<link-alternate> = @.link-alternate if @.link-alternate;
+    %h<extra-links>   = @.extra-links   if @.extra-links;
+    %h
+}
 has XML::Element $!cached-xml;
 has Lock $!xml-lock = Lock.new;
 
@@ -79,7 +96,8 @@ multi method new(XML::Document $doc) {
                 @extra-links.push: %( rel => $rel, href => $href, type => decode-entities(.attribs<type> // Str) );
             }
         }
-        $primary-link ||= @link-self[0]<href> if @link-self;
+        # A feed with only a self link has no home-page URL: do not fall back
+        # to the self href, or generation would emit a bogus alternate link.
 
         my @items;
         for $feed.elements(:TAG<entry>) -> $entry-elem {

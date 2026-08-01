@@ -7,7 +7,6 @@ unit module Syndicate::Extension::ITunes:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(:namespace<itunes>, :namespace-uri('http://www.itunes.com/dtds/podcast-1.0.dtd'),
     parse => sub ($elem, %attrs) {
-        return unless $elem.elements.first({ .name.starts-with('itunes:') });
         %attrs<itunes-author>   = get-itunes-text($elem, "author");
         %attrs<itunes-summary>  = get-itunes-text($elem, "summary");
         %attrs<itunes-duration> = get-itunes-duration($elem);
@@ -22,11 +21,13 @@ register-ext(:namespace<itunes>, :namespace-uri('http://www.itunes.com/dtds/podc
 my constant NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
 sub get-itunes-text($parent, Str $tag --> Str) is export {
-    with $parent.elements(:TAG("itunes:$tag"))[0] -> $e {
-        my $text = decode-entities(element-text($e)).trim;
-        return $text.defined && $text.chars ?? $text !! Str;
-    }
-    Str
+    # Namespace-aware: resolve the iTunes URI to whatever prefix is in scope
+    # (canonical or otherwise), so <it:author> is matched like <itunes:author>.
+    # Mirrors the namespace resolution used for content:encoded.
+    my $e = elements-by-local-ns($parent, NS, $tag, "itunes")[0];
+    return Str without $e;
+    my $text = decode-entities(element-text($e)).trim;
+    $text.defined && $text.chars ?? $text !! Str
 }
 
 sub get-itunes-duration($parent --> Str) is export {

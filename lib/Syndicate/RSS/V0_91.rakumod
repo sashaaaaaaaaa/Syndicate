@@ -26,6 +26,24 @@ has @.skipDays of Str;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 
+method to-hash {
+    my %h = self.to-hash-common;
+    %h<copyright>       = $.copyright       if $.copyright.defined;
+    %h<managingEditor>  = $.managingEditor  if $.managingEditor.defined;
+    %h<webMaster>       = $.webMaster       if $.webMaster.defined;
+    %h<rating>          = $.rating          if $.rating.defined;
+    %h<docs>            = $.docs            if $.docs.defined;
+    %h<pubDate>         = $.pubDate.Str     if $.pubDate.defined;
+    %h<lastBuildDate>   = $.lastBuildDate.Str if $.lastBuildDate.defined;
+    %h<image>           = %.image           if %.image;
+    %h<textInput>       = %.textInput       if %.textInput;
+    %h<skipHours>       = @.skipHours       if @.skipHours;
+    %h<skipDays>        = @.skipDays        if @.skipDays;
+    %h<itunes-author>   = $.itunes-author   if $.itunes-author.defined;
+    %h<itunes-summary>  = $.itunes-summary  if $.itunes-summary.defined;
+    %h
+}
+
 multi method new(XML::Document $doc) {
     with-error-recording {
         my $rss = $doc.root;
@@ -148,9 +166,9 @@ method parse-skip-hours($channel --> Array) {
         for .elements(:TAG<hour>) -> $h {
             my $val = element-text($h).trim;
             if $val ~~ /^\d+$/ {
-                my $h = $val.Int;
-                if 0 <= $h <= 23 {
-                    @skipHours.push: $h;
+                my $hour = $val.Int;
+                if 0 <= $hour <= 23 {
+                    @skipHours.push: $hour;
                 } else {
                     note "Invalid hour value in skipHours: $val (must be 0-23)";
                 }

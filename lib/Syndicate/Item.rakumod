@@ -11,6 +11,10 @@ has Str $.id;
 has Str $.content;
 
 method to-hash {
+    self.to-hash-common
+}
+
+method to-hash-common {
     my %h;
     %h<title>   = $.title   if $.title.defined;
     %h<link>    = $.link    if $.link.defined;

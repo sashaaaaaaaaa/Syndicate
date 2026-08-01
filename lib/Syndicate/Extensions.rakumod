@@ -76,6 +76,7 @@ our sub set-active(@exts, $elem) is export {
     return @exts.keys.Set unless @prefixes;
     my %present = @prefixes.map({ $_ => False });
     my %ext-by-prefix = @exts.grep({ .<namespace>.defined }).map({ .<namespace> => $_ });
+    my %ext-by-uri = @exts.grep({ .<namespace-uri>.defined }).map({ .<namespace-uri> => $_ });
 
     # Thread in-scope xmlns URI bindings through the tree walk. A fresh
     # hash is built only when an element actually declares xmlns:
@@ -94,37 +95,46 @@ our sub set-active(@exts, $elem) is export {
 
     # An element using a registered prefix only counts when the prefix
     # is bound to the extension's namespace-uri (or the extension does
-    # not require one).
-    my sub activate($name, %bindings) {
-        return unless $name.defined;
+    # not require one). A non-canonical prefix bound to a registered
+    # namespace-uri activates the extension too. Returns True when the
+    # extension newly activated.
+    my sub activate($name, %bindings --> Bool) {
+        return False unless $name.defined;
         with $name.index(':') -> $j {
             my $prefix = $name.substr(0, $j);
-            my $ext = %ext-by-prefix{$prefix} or return;
-            return unless %present{$prefix}:exists;
             my $uri = %bindings{$prefix};
-            %present{$prefix} = True
-                if !$ext.<namespace-uri>
-                || ($uri.defined && $uri eq $ext.<namespace-uri>);
+            my $ext = %ext-by-prefix{$prefix}
+                // ($uri.defined ?? %ext-by-uri{$uri} !! Nil);
+            $ext or return False;
+            my $ext-prefix = $ext.<namespace>;
+            return False unless %present{$ext-prefix}:exists;
+            return False if %present{$ext-prefix};
+            if !$ext.<namespace-uri>
+                || ($uri.defined && $uri eq $ext.<namespace-uri>) {
+                %present{$ext-prefix} = True;
+                return True;
+            }
         }
+        False
     }
 
     my %b = with-bindings({}, $elem);
-    activate($elem.name, %b);
+    my Int $remaining = +@prefixes;
+    $remaining-- if activate($elem.name, %b);
     my @stack = ($elem, %b);
     my $i = 0;
     while $i < @stack.elems {
         my $e = @stack[$i++];
-        next unless $e ~~ XML::Element;
         my %bindings = @stack[$i++];
         for $e.nodes -> $node {
             next unless $node ~~ XML::Element;
             my %nb = with-bindings(%bindings, $node);
-            activate($node.name, %nb);
-            last if so %present.values.all;
+            $remaining-- if activate($node.name, %nb);
+            last unless $remaining;
             @stack.push: $node;
             @stack.push: %nb;
         }
-        last if so %present.values.all;
+        last unless $remaining;
     }
     @exts.kv.map(-> $i, %ext { $i if !%ext<namespace> || %present{%ext<namespace>} }).grep(*.defined).Set
 }

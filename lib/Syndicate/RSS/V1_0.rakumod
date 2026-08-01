@@ -25,6 +25,16 @@ has @!categories of Str is built;
 method categories() { @!categories.List }
 has Bool $!lang-from-dc is built;
 
+method to-hash {
+    my %h = self.to-hash-common;
+    %h<about>          = $.about           if $.about.defined;
+    %h<image>          = %.image           if %.image;
+    %h<categories>     = @!categories.List if @!categories;
+    %h<itunes-author>  = $.itunes-author   if $.itunes-author.defined;
+    %h<itunes-summary> = $.itunes-summary  if $.itunes-summary.defined;
+    %h
+}
+
 multi method new(XML::Document $doc) {
     with-error-recording {
         my $root = $doc.root;

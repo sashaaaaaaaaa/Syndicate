@@ -9,7 +9,6 @@ unit module Syndicate::Extension::DublinCore:ver<0.0.1>:auth<zef:sasha>;
 
 register-ext(:namespace<dc>, :namespace-uri(NS-DC),
     parse => sub ($elem, %attrs) {
-        return unless $elem.elements.first({ .name.starts-with('dc:') });
         my $creator = get-dc-text($elem, "creator");
         if $creator.defined && $creator.chars {
             %attrs<author> = $creator;
@@ -39,16 +38,15 @@ register-ext(:namespace<dc>, :namespace-uri(NS-DC),
 );
 
 sub get-dc-text($parent, Str $tag --> Str) is export {
-    with $parent.elements(:TAG("dc:$tag"))[0] -> $e {
-        my $text = element-text($e).trim;
-        return $text.chars ?? decode-entities($text) !! Str;
-    }
-    Str
+    my $e = elements-by-local-ns($parent, NS-DC, $tag, "dc")[0];
+    return Str without $e;
+    my $text = element-text($e).trim;
+    $text.chars ?? decode-entities($text) !! Str
 }
 
 sub get-dc-texts($parent, Str $tag --> Array) is export {
     my @values;
-    for $parent.elements(:TAG("dc:$tag")) -> $e {
+    for elements-by-local-ns($parent, NS-DC, $tag, "dc") -> $e {
         my $text = element-text($e).trim;
         @values.push: decode-entities($text) if $text.chars;
     }

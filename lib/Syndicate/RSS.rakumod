@@ -20,6 +20,23 @@ has DateTime $.lastBuildDate;
 has @!categories of Str is built;
 method categories() { @!categories.List }
 has Str $.docs;
+
+method to-hash {
+    my %h = self.to-hash-common;
+    %h<copyright>       = $.copyright       if $.copyright.defined;
+    %h<managingEditor>  = $.managingEditor  if $.managingEditor.defined;
+    %h<webMaster>       = $.webMaster       if $.webMaster.defined;
+    %h<pubDate>         = $.pubDate.Str     if $.pubDate.defined;
+    %h<lastBuildDate>   = $.lastBuildDate.Str if $.lastBuildDate.defined;
+    %h<categories>      = @!categories.List if @!categories;
+    %h<docs>            = $.docs            if $.docs.defined;
+    %h<ttl>             = $.ttl             if $.ttl.defined;
+    %h<image>           = %.image           if %.image;
+    %h<itunes-author>   = $.itunes-author   if $.itunes-author.defined;
+    %h<itunes-summary>  = $.itunes-summary  if $.itunes-summary.defined;
+    %h<atom-self-link>  = $.atom-self-link  if $.atom-self-link.defined;
+    %h
+}
 has Int $.ttl;
 has %.image;
 has Str $.itunes-author;

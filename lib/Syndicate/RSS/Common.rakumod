@@ -68,8 +68,10 @@ method parse-image($parent, Bool :$rdf-about = False --> Hash) {
         %image<link>        = get-text-optional($_, "link");
         my $w = get-text-optional($_, "width");
         my $h = get-text-optional($_, "height");
-        %image<width>       = try +$w if $w.defined;
-        %image<height>      = try +$h if $h.defined;
+        my $wn = $w.defined ?? try +$w !! Any;
+        my $hn = $h.defined ?? try +$h !! Any;
+        %image<width>       = $wn if $wn.defined;
+        %image<height>      = $hn if $hn.defined;
         %image<description> = get-text-optional($_, "description");
         %image<about>       = decode-entities($_.attribs{'rdf:about'} // $_.attribs<about> // Str) if $rdf-about;
     }

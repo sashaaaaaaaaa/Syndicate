@@ -24,6 +24,21 @@ has Str $.rights;
 has %.source-feed;
 has @.contributors of Hash;
 has @.link-alternate of Hash;
+
+method to-hash {
+    my %h = self.to-hash-common;
+    %h<xml-lang>      = $.xml-lang       if $.xml-lang.defined;
+    %h<author-detail> = %!author-detail  if %!author-detail;
+    %h<categories>    = @.categories.List if @.categories;
+    %h<published>     = $.published.Str  if $.published.defined;
+    %h<content-type>  = $.content-type   if $.content-type.defined;
+    %h<rights>        = $.rights         if $.rights.defined;
+    %h<source-feed>   = %.source-feed    if %.source-feed;
+    %h<contributors>  = @.contributors   if @.contributors;
+    %h<link-alternate> = @.link-alternate if @.link-alternate;
+    %h
+}
+
 has XML::Element $!cached-xml;
 has Lock $!xml-lock = Lock.new;
 has Str $!cached-str;

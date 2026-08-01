@@ -151,6 +151,12 @@ my %h = $feed.to-hash;
 
 Parses and generates JSON Feed 1.1. Does L<C<Syndicate::Feed>|rakudoc:Syndicate::Feed>.
 
+B<Note:> When constructed from a hash, a missing C<version> is defaulted to
+C<https://jsonfeed.org/version/1.1>. Auto-detection in L<C<Syndicate::Parse>|rakudoc:Syndicate::Parse>
+is deliberately stricter — it only treats input as a JSON Feed when a C<version>
+starting with C<https://jsonfeed.org/version/> is present, so that arbitrary JSON
+documents are not mistaken for feeds.
+
 =head1 ATTRIBUTES
 
 =item C<$.title>, C<$.link>, C<$.description> - from Feed role

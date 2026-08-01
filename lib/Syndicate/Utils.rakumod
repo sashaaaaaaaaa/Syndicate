@@ -193,6 +193,34 @@ sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
     $e.defined ?? text-of-optional($e) !! Str
 }
 
+sub elements-by-local-ns($parent, $ns-uri, $local-name, Str $canonical-prefix --> List) is export {
+    # Namespace-aware child lookup that honors bindings declared on the
+    # parent/ancestors AND on the child element itself (where nsPrefix on
+    # the parent cannot see them). Each child resolves the URI in its own
+    # scope and matches when the resolved prefix equals its own prefix
+    # (or both are unprefixed, i.e. a default-namespace element).
+    my @matched;
+    for $parent.elements -> $e {
+        my $name = $e.name;
+        my $idx = $name.index(':');
+        my $prefix = $idx.defined ?? $name.substr(0, $idx) !! '';
+        my $local  = $idx.defined ?? $name.substr($idx + 1) !! $name;
+        next unless $local eq $local-name;
+        with $e.nsPrefix($ns-uri) -> $resolved {
+            if $resolved.chars {
+                @matched.push: $e if $resolved eq $prefix;
+            } elsif !$prefix.chars {
+                @matched.push: $e;
+            }
+        }
+    }
+    # Lenient fallback: tolerate undeclared canonical-prefix elements
+    # (technically invalid XML that the parser otherwise accepts).
+    @matched = $parent.elements(:TAG("$canonical-prefix:$local-name")).List
+        unless @matched;
+    @matched
+}
+
 sub parse-categories($parent --> Array) is export {
     my @categories;
     for $parent.elements(:TAG<category>) -> $c {

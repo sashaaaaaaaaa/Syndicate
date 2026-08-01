@@ -27,6 +27,30 @@ has Str $.itunes-duration;
 has Set $.active-ext = Set.new;
 has Bool $!is-rdf is built = False;
 has Bool $!is-v091 is built = False;
+
+method to-hash {
+    my %h = self.to-hash-common;
+    %h<guid>              = $.guid              if $.guid.defined;
+    %h<guid-is-permalink> = $.guid-is-permalink if $.guid.defined;
+    %h<has-dc-creator>    = $.has-dc-creator    if $.has-dc-creator;
+    %h<categories>        = @.categories.List  if @.categories;
+    %h<comments>          = $.comments          if $.comments.defined;
+    %h<enclosure>         = %.enclosure         if %.enclosure;
+    %h<source>            = $.source            if $.source.defined;
+    %h<about>             = $.about             if $.about.defined;
+    %h<dc-subjects>       = @.dc-subjects.List if @.dc-subjects;
+    %h<media-contents>    = @.media-contents   if @.media-contents;
+    %h<media-thumbnails>  = @.media-thumbnails if @.media-thumbnails;
+    %h<media-groups>      = @.media-groups     if @.media-groups;
+    %h<media-title>       = $.media-title       if $.media-title.defined;
+    %h<media-description> = $.media-description if $.media-description.defined;
+    %h<itunes-author>     = $.itunes-author     if $.itunes-author.defined;
+    %h<itunes-summary>    = $.itunes-summary    if $.itunes-summary.defined;
+    %h<itunes-duration>   = $.itunes-duration   if $.itunes-duration.defined;
+    %h<active-ext>        = $.active-ext        if $.active-ext.elems;
+    %h
+}
+
 has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 has XML::Element $!cached-xml;
@@ -83,7 +107,7 @@ method XML {
         add-attrib($xml, 'rdf:about', $.about) if $!is-rdf && $.about.defined;
         add-element($xml, "title", $.title);
         add-element($xml, "link",  $.link);
-        unless $!is-v091 {
+        unless $!is-v091 || $!is-rdf {
             if $.guid.defined && $.guid.chars {
                 my $guid-elem = XML::Element.new(:name<guid>, :nodes([encode-entities($.guid)]));
                 $guid-elem.attribs<isPermaLink> = $.guid-is-permalink ?? "true" !! "false";

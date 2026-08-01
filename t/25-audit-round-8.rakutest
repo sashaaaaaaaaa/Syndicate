@@ -1,0 +1,209 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::RSS;
+use Syndicate::RSS::V1_0;
+use Syndicate::RSS::V0_91;
+use Syndicate::Atom;
+use Syndicate::Discovery;
+use Syndicate::Builder::Feed;
+use HTTP::Tiny;
+
+plan 47;
+
+# ===== Bug 1: Atom self-link-only feed must not emit a bogus alternate =====
+
+{
+    my $self-only = parse-atom(q:to/A/);
+<feed xmlns="http://www.w3.org/2005/Atom">
+<id>urn:self</id><title>T</title><updated>2024-01-01T00:00:00Z</updated>
+<link rel="self" href="http://example.com/feed.xml" type="application/atom+xml"/>
+</feed>
+A
+    ok !$self-only.link.defined, 'B1: self-only feed has no $.link (no alternate)';
+    my $out = ~$self-only;
+    unlike $out, /rel\=\"alternate\"/, 'B1: output emits no alternate link';
+    like $out, /rel\=\"self\"/, 'B1: output keeps the self link';
+    like $out, /"http://example.com/feed.xml"/, 'B1: self href preserved';
+    my $rt = parse-atom($out);
+    is $rt.link-self[0]<href>, 'http://example.com/feed.xml', 'B1: self link survives roundtrip';
+}
+
+# ===== Bug 2: to-hash is lossless for RSS and Atom =====
+
+{
+    my $rss = parse-rss(q:to/R/);
+<rss version="2.0"><channel>
+<title>T</title><link>http://e/</link><description>D</description>
+<copyright>C</copyright><ttl>60</ttl>
+<pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate>
+<image><url>http://e/i.png</url><title>IT</title><link>http://e/</link><width>88</width></image>
+<atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="http://e/feed" rel="self"/>
+<item>
+<title>I</title><link>http://e/i</link><description>D2</description>
+<guid isPermaLink="false">g1</guid>
+<comments>http://e/comments</comments>
+<enclosure url="http://e/m.mp3" type="audio/mpeg" length="1024"/>
+<pubDate>Tue, 02 Jan 2024 00:00:00 GMT</pubDate>
+</item>
+</channel></rss>
+R
+    my %fh = $rss.to-hash;
+    is %fh<copyright>, 'C', 'B2: RSS to-hash has copyright';
+    is %fh<ttl>, 60, 'B2: RSS to-hash has ttl';
+    ok %fh<pubDate>.defined, 'B2: RSS to-hash has pubDate';
+    is %fh<image><width>, 88, 'B2: RSS to-hash image includes width';
+    is %fh<atom-self-link>, 'http://e/feed', 'B2: RSS to-hash has atom-self-link';
+    nok %fh<categories>:exists, 'B2: RSS to-hash omits categories when empty';
+
+    my %ih = $rss.items[0].to-hash;
+    is %ih<guid>, 'g1', 'B2: item to-hash has guid';
+    is %ih<guid-is-permalink>, False, 'B2: item to-hash has guid-is-permalink';
+    is %ih<comments>, 'http://e/comments', 'B2: item to-hash has comments';
+    is %ih<enclosure><url>, 'http://e/m.mp3', 'B2: item to-hash has enclosure';
+    ok %ih<updated>.defined, 'B2: item to-hash has updated (pubDate)';
+}
+
+{
+    my $atom = parse-atom(q:to/A/);
+<feed xmlns="http://www.w3.org/2005/Atom">
+<id>urn:x</id><title>T</title><updated>2024-01-01T00:00:00Z</updated>
+<subtitle>Sub</subtitle><icon>http://e/i.png</icon><logo>http://e/l.png</logo><rights>R</rights>
+<author><name>N</name><email>e@x</email></author>
+<contributor><name>CN</name></contributor>
+<link rel="self" href="http://e/feed"/>
+<link rel="alternate" href="http://e/"/>
+<entry>
+<id>e1</id><title>E1</title><updated>2024-01-02T00:00:00Z</updated>
+<published>2024-01-02T00:00:00Z</published>
+<content type="html">Body</content>
+<contributor><name>EC</name></contributor>
+<category term="cat1"/>
+</entry>
+</feed>
+A
+    my %fh = $atom.to-hash;
+    is %fh<id>, 'urn:x', 'B2: Atom to-hash has id';
+    ok %fh<updated>.defined, 'B2: Atom to-hash has updated';
+    is %fh<subtitle>, 'Sub', 'B2: Atom to-hash has subtitle';
+    is %fh<icon>, 'http://e/i.png', 'B2: Atom to-hash has icon';
+    is %fh<logo>, 'http://e/l.png', 'B2: Atom to-hash has logo';
+    is %fh<rights>, 'R', 'B2: Atom to-hash has rights';
+    is %fh<author-detail><name>, 'N', 'B2: Atom to-hash has author-detail';
+    is %fh<contributors>[0]<name>, 'CN', 'B2: Atom to-hash has contributors';
+    is %fh<link-self>[0]<href>, 'http://e/feed', 'B2: Atom to-hash has link-self';
+    is %fh<link-alternate>[0]<href>, 'http://e/', 'B2: Atom to-hash has link-alternate';
+
+    my %ih = $atom.items[0].to-hash;
+    is %ih<content>, 'Body', 'B2: Atom item to-hash has content';
+    is %ih<content-type>, 'html', 'B2: Atom item to-hash has content-type';
+    ok %ih<published>.defined, 'B2: Atom item to-hash has published';
+    is %ih<contributors>[0]<name>, 'EC', 'B2: Atom item to-hash has contributors';
+    is %ih<categories>[0], 'cat1', 'B2: Atom item to-hash has categories';
+}
+
+# ===== Bug 4: fetch accepts JSON Feed served as application/json =====
+
+my constant $JSON-BODY = q:to/JSON/.trim;
+{"version":"https://jsonfeed.org/version/1.1","title":"t","home_page_url":"http://e.com/","items":[]}
+JSON
+
+class FakeUA is HTTP::Tiny {
+    has Str $.ct = "application/json";
+    method get($url) {
+        %( :status(200), :success(True), :reason("OK"),
+           :headers(%( :content-type($!ct) )),
+           :content($JSON-BODY.encode) )
+    }
+}
+
+sub fetch-json(Str $ct) {
+    my $d = Syndicate::Discovery.new(:ua(FakeUA.new(:ct($ct))));
+    my $ok = False;
+    try {
+        my $feed = $d.fetch("http://example.com/feed");
+        $ok = $feed.defined && $feed.title eq 't';
+    }
+    $ok
+}
+
+ok fetch-json("application/json"), 'B4: JSON feed served as application/json fetches';
+ok fetch-json("application/json; charset=utf-8"), 'B4: application/json with charset fetches';
+
+# ===== Bug 5: parse-skip-hours shadowed variable =====
+
+{
+    my $v091 = parse-rss091(q:to/R/);
+<rss version="0.91"><channel><title>T</title><link>L</link><description>D</description>
+<skipHours><hour>0</hour><hour>24</hour><hour>abc</hour><hour>12</hour></skipHours>
+</channel></rss>
+R
+    is-deeply $v091.skipHours.List, (0, 12), 'B5: skipHours keeps in-range hours, drops invalid';
+}
+
+# ===== P2: non-numeric image width/height leave no Any keys =====
+
+{
+    my $rss = parse-rss(q:to/R/);
+<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description>
+<image><url>U</url><title>IT</title><link>IL</link><width>wide</width><height>n/a</height></image>
+</channel></rss>
+R
+    ok $rss.image<width>:!exists, 'P2: non-numeric width leaves no key';
+    ok $rss.image<height>:!exists, 'P2: non-numeric height leaves no key';
+    is $rss.image<url>, 'U', 'P2: other image fields intact';
+}
+
+# ===== Q2: extension parsing is namespace-aware =====
+
+{
+    my $it = parse-rss(q:to/R/);
+<rss version="2.0" xmlns:it="http://www.itunes.com/dtds/podcast-1.0.dtd">
+<channel><title>T</title><link>L</link><description>D</description>
+<it:author>Alt Author</it:author><it:summary>Alt Summary</it:summary>
+<item><title>I</title><link>http://e/i</link><description>D</description>
+<it:summary>Item Alt</it:summary><it:duration>1:02</it:duration></item>
+</channel></rss>
+R
+    is $it.itunes-author, 'Alt Author', 'Q2: alt-prefix itunes:author parsed at feed level';
+    is $it.itunes-summary, 'Alt Summary', 'Q2: alt-prefix itunes:summary parsed at feed level';
+    is $it.items[0].itunes-summary, 'Item Alt', 'Q2: alt-prefix itunes:summary parsed at item level';
+    is $it.items[0].itunes-duration, '1:02', 'Q2: alt-prefix itunes:duration parsed (extension active)';
+}
+
+{
+    my $dc = parse-rss1(q:to/R/);
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/" xmlns:d="http://purl.org/dc/elements/1.1/">
+<channel rdf:about="http://e/"><title>T</title><link>L</link><description>D</description></channel>
+<item rdf:about="http://e/i"><title>I</title><link>http://e/i</link><description>D</description>
+<d:creator>Alt Creator</d:creator><d:subject>Alt Subj</d:subject></item>
+</rdf:RDF>
+R
+    is $dc.items[0].author, 'Alt Creator', 'Q2: alt-prefix dc:creator parsed as author';
+    is-deeply $dc.items[0].dc-subjects.List, ('Alt Subj',), 'Q2: alt-prefix dc:subject parsed';
+}
+
+# ===== Q4: Builder Feed category getter returns immutable List =====
+
+{
+    my $fb = Syndicate::Builder::Feed.new;
+    $fb.category("x");
+    my $cats = $fb.category;
+    ok $cats ~~ List, 'Q4: builder feed category returns a List';
+    is $cats[0], 'x', 'Q4: builder feed category value present';
+}
+
+# ===== Q6: RSS 1.0 items must not emit <guid> =====
+
+{
+    my $item = Syndicate::RSS::V1_0::Item.new(:title<I>, :link<http://e/i>, :guid<g>, :is-rdf);
+    my $feed = Syndicate::RSS::V1_0.new(:title<T>, :link<http://e/>, :description<D>, :items[$item]);
+    unlike ~$feed, /'<guid'/, 'Q6: RSS 1.0 output has no <guid>';
+
+    my $item2 = Syndicate::RSS::Item.new(:title<I>, :link<http://e/i>, :guid<g>);
+    my $feed2 = Syndicate::RSS.new(:title<T>, :link<http://e/>, :description<D>, :items[$item2]);
+    like ~$feed2, /'<guid'/, 'Q6: RSS 2.0 output still has <guid>';
+}
+
+done-testing;

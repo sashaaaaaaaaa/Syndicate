@@ -248,6 +248,12 @@ with explicit XXE and billion-laughs protections.
 Detects feed format by inspecting the raw input:
 JSON feeds starting with C<{>, XML feeds by root element name and version attribute.
 
+B<Note:> A JSON document is only recognized as a feed when it carries a
+C<version> starting with C<https://jsonfeed.org/version/>. Arbitrary JSON
+(e.g. a bare object without that field) is rejected as "not a JSON Feed"
+rather than silently treated as one. This is intentionally stricter than
+C<Syndicate::JSONFeed.new-from-hash>, which defaults a missing version to 1.1.
+
 =head2 C<parse-feed(Str $input)>
 
 Detects format and returns an object of the appropriate class
