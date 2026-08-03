@@ -73,9 +73,11 @@ sub media-elements($parent, Str $local-name --> List) is export {
     @matched
 }
 
-sub media-numeric(Str $val) {
-    my $decoded = decode-entities($val);
-    try { +$decoded } // $decoded
+sub media-numeric(Str $val --> Str) {
+    # Always return the source string so to-hash/to-json emit uniform types
+    # (matching enclosure-length's Str convention), rather than Int for
+    # parseable values and raw Str otherwise.
+    decode-entities($val)
 }
 
 sub media-content-of(XML::Element $e --> Hash) {

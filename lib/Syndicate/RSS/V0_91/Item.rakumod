@@ -9,6 +9,13 @@ unit class Syndicate::RSS::V0_91::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate
 
 method !item-type-name { "RSS 0.91 item" }
 
+# Direct construction (new(:title, ...)) must produce RSS 0.91-flavored
+# output rather than silently defaulting to RSS 2.0 output via the shared
+# role's is-v091 = False default.
+submethod TWEAK {
+    $!is-v091 = True;
+}
+
 method from-xml(XML::Element $item-elem, :$active?) {
     my $title = get-text-optional($item-elem, "title");
     my $link  = get-text-optional($item-elem, "link");

@@ -82,7 +82,7 @@ multi method new-from-hash(%h) {
     }
 }
 
-method to-hash {
+method to-hash(:$clone = True) {
     $!hash-lock.protect: {
         # Feed-level metadata is cached; the result returned to callers is a
         # shallow copy with the author hash rebuilt. Items are regenerated per
@@ -121,9 +121,11 @@ method to-hash {
         # Item hashes are cached once and cloned on every call: JSONFeed::Item
         # hashes contain nested containers (authors, tags), and cloning cached
         # hashes is cheaper than rebuilding them and guarantees callers cannot
-        # mutate cache state.
+        # mutate cache state. :!clone opts out of the O(items) copy for hot paths.
         $!cached-items //= @.items.map(*.to-hash).Array;
-        %h<items> = $!cached-items.map({ self!clone-item-hash($_) }).Array;
+        %h<items> = $clone
+            ?? $!cached-items.map({ self!clone-item-hash($_) }).Array
+            !! $!cached-items;
         %h
     }
 }

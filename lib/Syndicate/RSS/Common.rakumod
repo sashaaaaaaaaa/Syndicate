@@ -5,6 +5,7 @@ use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 
 my constant NS-CONTENT is export = 'http://purl.org/rss/1.0/modules/content/';
+my constant NS-RDF     is export = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 
 unit role Syndicate::RSS::Common:ver<0.0.1>:auth<zef:sasha>;
 

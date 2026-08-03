@@ -285,9 +285,9 @@ my $feed = $disc.fetch("https://example.com/feed.xml");
 # Discover feed from a webpage (finds <link> tags)
 my $feed = $disc.discover("https://example.com");
 
-# Customize HTTP options
-my $feed = $disc.fetch("https://example.com/feed.xml",
-    :max-redirects(10), :timeout(15));
+# Customize redirect handling (maximum of 10 redirects)
+my $disc = Syndicate::Discovery.new(:max-redirect(10));
+my $feed = $disc.fetch("https://example.com/feed.xml");
 
 # Find feed URLs without fetching
 my @urls = $disc.find-feeds($html-string, "https://example.com");

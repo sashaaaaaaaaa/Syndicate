@@ -1,0 +1,172 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Utils;
+use Syndicate::RSS::Item;
+use Syndicate::RSS::V1_0::Item;
+use Syndicate::RSS::V0_91::Item;
+
+plan 26;
+
+# ===== B1: V0_91 to-hash no longer leaks mutable containers =====
+
+{
+    my $feed = Syndicate::RSS::V0_91.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <rss version="0.91"><channel><title>T</title><link>L</link><description>D</description>
+    <image><title>IT</title><url>IU</url><link>IL</link></image>
+    <skipHours><hour>0</hour><hour>1</hour></skipHours>
+    <skipDays><day>Monday</day></skipDays>
+    <item><title>t</title><link>l</link><description>d</description></item>
+    </channel></rss>
+    XML
+
+    my %h = $feed.to-hash;
+    %h<image><url>   = 'MUTATED';
+    %h<skipHours>[0] = 99;
+    %h<skipDays>.pop;
+
+    is $feed.to-hash<image><url>, 'IU',
+        'B1: V0_91 mutating image in to-hash leaves the feed alone';
+    is $feed.to-hash<skipHours>.join(','), '0,1',
+        'B1: V0_91 mutating skipHours in to-hash leaves the feed alone';
+    is $feed.to-hash<skipDays>.join(','), 'Monday',
+        'B1: V0_91 mutating skipDays in to-hash leaves the feed alone';
+}
+
+# ===== B2: Atom to-hash no longer leaks categories =====
+
+{
+    my $feed = Syndicate::Atom.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+    <title>T</title><id>urn:1</id><updated>2024-05-01T12:00:00Z</updated>
+    <category term="fcat1"/><category term="fcat2"/>
+    <entry><title>e1</title><id>urn:e1</id><updated>2024-05-02T12:00:00Z</updated>
+    <category term="cat1"/><category term="cat2"/>
+    </entry></feed>
+    XML
+
+    my %h = $feed.to-hash;
+    %h<categories>[0] = 'LEAKED';
+
+    is $feed.to-hash<categories>.join(','), 'fcat1,fcat2',
+        'B2: Atom mutating categories in to-hash leaves the feed alone';
+
+    my %e = $feed.items[0].to-hash;
+    is %e<categories>.join(','), 'cat1,cat2',
+        'B2: Atom entry categories round-trip unchanged';
+}
+
+# ===== B3: standalone items self-declare namespaces; feed items stay bare =====
+
+{
+    my $item = Syndicate::RSS::Item.new(:title<t>, :link<l>, :content<c>);
+    my $str = ~$item;
+    ok $str.contains('xmlns:content'), 'B3: builder item declares xmlns:content';
+    ok $str.contains('<content:encoded>'), 'B3: builder item emits content:encoded';
+
+    my $media = Syndicate::RSS::Item.new(:title<t>, :link<l>, :media-description<md>);
+    ok ~$media ~~ /'xmlns:media'/, 'B3: builder item declares xmlns:media';
+
+    my $pod = Syndicate::RSS::Item.new(:title<t>, :link<l>, :itunes-author<a>);
+    ok ~$pod ~~ /'xmlns:itunes'/, 'B3: builder item declares xmlns:itunes';
+
+    my $feed = Syndicate::RSS.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+    <channel><title>T</title><link>L</link><description>D</description>
+    <item><title>t1</title><link>l1</link><description>d1</description><content:encoded>c1</content:encoded></item>
+    </channel></rss>
+    XML
+    is ~$feed.items[0].XML,
+        '<item><title>t1</title><link>l1</link><description>d1</description><content:encoded>c1</content:encoded></item>',
+        'B3: feed-embedded items stay byte-identical (no item-level xmlns)';
+}
+
+# ===== B4: direct construction keeps the version flavor =====
+
+{
+    my $now = DateTime.new('2024-01-02T03:04:05Z');
+    my $v1 = Syndicate::RSS::V1_0::Item.new(:title<t>, :link<l>, :updated($now));
+    ok ~$v1 ~~ /"<dc:date>2024-01-02T03:04:05Z</dc:date>"/,
+        'B4: V1_0 direct construction emits dc:date (not pubDate)';
+    nok ~$v1 ~~ /'<pubDate>'/,
+        'B4: V1_0 direct construction emits no pubDate';
+
+    my $v091 = Syndicate::RSS::V0_91::Item.new(:title<t>, :link<l>, :summary<d>, :content<c>);
+    nok ~$v091 ~~ /'<content:encoded>'/,
+        'B4: V0_91 direct construction emits no content:encoded';
+    nok ~$v091 ~~ /'<pubDate>'/,
+        'B4: V0_91 direct construction emits no pubDate';
+    ok ~$v091 ~~ /"<description>d</description>"/,
+        'B4: V0_91 direct construction emits description';
+}
+
+# ===== Q4: V1_0 namespace-flags include dc-only items =====
+
+{
+    my $dc-date = Syndicate::RSS::V1_0::Item.new(:title<t>, :link<l>, :has-dc-date);
+    ok ~$dc-date ~~ /'xmlns:dc'/, 'Q4: dc-only V1_0 builder item declares xmlns:dc';
+
+    my $plain = Syndicate::RSS::V1_0::Item.new(:title<t>, :link<l>);
+    nok ~$plain ~~ /'xmlns:'/, 'Q4: plain V1_0 builder item declares no namespaces';
+}
+
+# ===== Q2: Atom to-hash and XML agree on the computed updated =====
+
+{
+    my $entry = Syndicate::Atom::Item.new(q:to/XML/);
+    <entry xmlns="http://www.w3.org/2005/Atom"><title>e1</title><id>urn:e1</id><updated>2024-05-02T12:00:00Z</updated></entry>
+    XML
+    my $feed = Syndicate::Atom.bless(:title<T>, :id<urn:1>, :items([$entry]));
+    my %h = $feed.to-hash;
+    my $updated-elem = $feed.XML.elements(:TAG<updated>)[0].Str;
+    my $xml-updated = $updated-elem ~~ /'>'(.*?)'<'/ ?? $0.Str !! '';
+    is %h<updated>, $xml-updated, 'Q2: Atom to-hash updated matches XML updated';
+    is %h<updated>, '2024-05-02T12:00:00Z', 'Q2: computed updated is the newest entry timestamp';
+}
+
+# ===== Q3: media-numeric values are always Str =====
+
+{
+    my $feed = Syndicate::RSS.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+    <channel><title>T</title><link>L</link><description>D</description>
+    <item><title>t</title><link>l</link><description>d</description>
+    <media:content url="http://x/v.mp4" type="video/mp4" medium="video" duration="1:02:15" fileSize="1048576" width="640" height="360"/>
+    </item></channel></rss>
+    XML
+    my %c = $feed.items[0].to-hash<media-contents>[0];
+    ok %c<duration> ~~ Str, 'Q3: media duration is Str';
+    ok %c<fileSize> ~~ Str, 'Q3: media fileSize is Str';
+    ok %c<width>    ~~ Str, 'Q3: media width is Str';
+    is %c<duration>, '1:02:15', 'Q3: media duration value preserved';
+}
+
+# ===== P1: to-hash clone opt-out =====
+
+{
+    my $feed = Syndicate::RSS.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <rss version="2.0"><channel><title>T</title><link>L</link><description>D</description>
+    <item><title>t</title><link>l</link><description>d</description></item>
+    </channel></rss>
+    XML
+
+    my %h = $feed.to-hash;
+    %h<items>[0]<title> = 'MUT';
+    is $feed.to-hash<items>[0]<title>, 't',
+        'P1: default to-hash deep-clones item hashes';
+
+    my %h2 = $feed.to-hash(:!clone);
+    %h2<items>[0]<title> = 'MUT2';
+    is $feed.to-hash(:!clone)<items>[0]<title>, 'MUT2',
+        'P1: to-hash(:!clone) shares the cached item hashes (opt-out)';
+    is $feed.items[0].title, 't',
+        'P1: feed item object itself is never mutated';
+}
+
+done-testing;

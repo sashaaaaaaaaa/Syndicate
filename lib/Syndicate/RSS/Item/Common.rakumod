@@ -4,6 +4,10 @@ use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Extensions;
 use Syndicate::Stats;
+use Syndicate::Extension::DublinCore;
+use Syndicate::Extension::MediaRSS;
+use Syndicate::Extension::ITunes;
+use Syndicate::RSS::Common;
 
 unit role Syndicate::RSS::Item::Common:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
@@ -29,6 +33,7 @@ has Str $.itunes-duration;
 has Set $.active-ext = Set.new;
 has Bool $!is-rdf is built = False;
 has Bool $!is-v091 is built = False;
+has Bool $!is-standalone is built = False;
 
 method to-hash {
     my %h = self.to-hash-common;
@@ -76,11 +81,25 @@ multi method new(Str $xml) {
         Syndicate::Stats.record-error;
         die "Not an {self!item-type-name} element";
     }
-    with-error-recording { self.from-xml($doc.root) }
+    my $item = with-error-recording { self.from-xml($doc.root) };
+    $item!mark-standalone;
+    $item
 }
 
 multi method new(XML::Element $xml-elem) {
-    with-error-recording { self.from-xml($xml-elem) }
+    my $item = with-error-recording { self.from-xml($xml-elem) };
+    $item!mark-standalone;
+    $item
+}
+
+# Builder-style construction (named attributes only): the item is its own
+# document root, so XML() must self-declare any namespaces it uses.
+multi method new(*%args) {
+    self.bless(|%args, :is-standalone)
+}
+
+method !mark-standalone {
+    $!is-standalone = True;
 }
 
 method !parse-guid(XML::Element $item-elem) {
@@ -153,6 +172,18 @@ method XML {
                 $xml.append: $enc;
             }
             add-element($xml, "source", $.source);
+        }
+
+        if $!is-standalone {
+            # A standalone item is its own document root: declare every
+            # namespace it references so strict parsers accept the output.
+            # Feeds declare these on their root, so embedded items skip this.
+            my %nf = self.namespace-flags;
+            add-dc-declaration($xml)     if %nf<dc>;
+            add-media-declaration($xml)  if %nf<media>;
+            add-itunes-declaration($xml) if %nf<itunes>;
+            $xml.attribs{'xmlns:content'} = NS-CONTENT if %nf<content>;
+            $xml.attribs{'xmlns:rdf'}     = NS-RDF     if $!is-rdf && $.about.defined;
         }
 
         run-generators($xml, self, :active($!active-ext));

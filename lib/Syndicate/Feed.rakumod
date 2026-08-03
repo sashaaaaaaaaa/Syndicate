@@ -20,11 +20,11 @@ has Lock $!cache-lock = Lock.new;
 # never mutate the cache (see sanitize), mirroring the JSONFeed cache.
 has $!cached-item-hashes;
 
-method to-hash {
-    self.to-hash-common
+method to-hash(:$clone = True) {
+    self.to-hash-common(:$clone)
 }
 
-method to-hash-common {
+method to-hash-common(:$clone = True) {
     my %h;
     %h<title>       = $.title       if $.title.defined;
     %h<link>        = $.link        if $.link.defined;
@@ -33,7 +33,11 @@ method to-hash-common {
     %h<language>    = $.language    if $.language.defined;
     if @!items {
         $!cached-item-hashes //= @!items.map(*.to-hash).Array;
-        %h<items> = $!cached-item-hashes.map({ sanitize($_) }).Array;
+        # Cloned per call so callers can never mutate the cache (see
+        # sanitize); :!clone opts out of the O(items) copy for hot paths.
+        %h<items> = $clone
+            ?? $!cached-item-hashes.map({ sanitize($_) }).Array
+            !! $!cached-item-hashes;
     }
     %h
 }

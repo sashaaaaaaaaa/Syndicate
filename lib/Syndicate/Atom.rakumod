@@ -23,22 +23,14 @@ has @.link-alternate of Hash;
 has @.extra-links of Hash;
 has DateTime $!computed-updated;
 
-method to-hash {
-    my %h = self.to-hash-common;
+method to-hash(:$clone = True) {
+    my %h = self.to-hash-common(:$clone);
     %h<id>            = $.id            if $.id.defined;
-    %h<updated>       = $.updated.Str   if $.updated.defined;
-    if !$.updated.defined {
-        # Mirror the computed updated emitted by XML(): the newest entry
-        # timestamp, without dying when no timestamp exists anywhere.
-        my $computed = $!computed-updated;
-        unless $computed.defined {
-            for @!items -> $item {
-                with $item.updated {
-                    $computed = $_ if !$computed.defined || $_ > $computed;
-                }
-            }
-        }
-        %h<updated> = $computed.Str if $computed.defined;
+    # Mirror the computed updated emitted by XML(): the newest timestamp
+    # among the feed's own updated and its entries (floored at $.updated),
+    # without dying when no timestamp exists anywhere.
+    with self!latest-updated {
+        %h<updated> = $_.Str;
     }
     %h<subtitle>      = $.subtitle      if $.subtitle.defined;
     %h<rights>        = $.rights        if $.rights.defined;
@@ -46,7 +38,8 @@ method to-hash {
     %h<logo>          = $.logo          if $.logo.defined;
     my %author-detail = sanitize(%!author-detail);
     %h<author-detail> = %author-detail  if %author-detail;
-    %h<categories>    = @.categories    if @.categories;
+    my @categories    = sanitize(@.categories);
+    %h<categories>    = @categories     if @categories;
     my @contributors  = sanitize(@.contributors);
     %h<contributors>  = @contributors   if @contributors;
     my @link-self     = sanitize(@.link-self);
@@ -154,15 +147,21 @@ multi method new(Str $xml) {
     self.new($doc)
 }
 
-method !cache-updated {
-    $!computed-updated = $!updated;
-    unless $!computed-updated.defined {
+method !latest-updated {
+    my $computed = $!computed-updated;
+    unless $computed.defined {
+        $computed = $!updated;
         for @!items -> $item {
             with $item.updated {
-                $!computed-updated = $_ if !$!computed-updated.defined || $_ > $!computed-updated;
+                $computed = $_ if !$computed.defined || $_ > $computed;
             }
         }
     }
+    $computed
+}
+
+method !cache-updated {
+    $!computed-updated = self!latest-updated;
     die "Atom feed requires 'updated' timestamp" without $!computed-updated;
 }
 

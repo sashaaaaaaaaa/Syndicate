@@ -1,0 +1,118 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::RSS::V1_0::Item;
+use Syndicate::Builder::Feed;
+
+plan 13;
+
+# ===== Bug 1: Atom to-hash agrees with XML() on updated =====
+
+{
+    my $feed = Syndicate::Atom.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+    <title>T</title><id>urn:1</id><updated>2024-05-01T12:00:00Z</updated>
+    <entry><title>e1</title><id>urn:e1</id><updated>2024-05-02T12:00:00Z</updated></entry>
+    </feed>
+    XML
+
+    my %h = $feed.to-hash;
+    my $xml-updated = $feed.XML.elements(:TAG<updated>)[0].Str ~~ /'>'(.*?)'<'/ ?? $0.Str !! '';
+    is %h<updated>, '2024-05-02T12:00:00Z',
+        'B1: to-hash uses the newest entry updated when it beats the feed updated';
+    is %h<updated>, $xml-updated,
+        'B1: to-hash updated matches XML updated when an entry is newer';
+}
+
+{
+    my $feed = Syndicate::Atom.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+    <title>T</title><id>urn:1</id><updated>2024-05-02T12:00:00Z</updated>
+    <entry><title>e1</title><id>urn:e1</id><updated>2024-05-01T12:00:00Z</updated></entry>
+    </feed>
+    XML
+
+    is $feed.to-hash<updated>, '2024-05-02T12:00:00Z',
+        'B1: to-hash keeps the feed updated when it beats all entries';
+}
+
+# ===== Bug 2: standalone RSS 1.0 item declares rdf =====
+
+{
+    my $item = Syndicate::RSS::V1_0::Item.new(:about<https://x/a>, :title<t>, :link<l>);
+    ok ~$item ~~ /'xmlns:rdf'/,
+        'B2: standalone V1_0 item declares xmlns:rdf';
+    ok (~$item).contains('rdf:about="https://x/a"'),
+        'B2: standalone V1_0 item emits rdf:about';
+}
+
+{
+    my $item = Syndicate::RSS::V1_0::Item.new(:title<t>, :link<l>);
+    nok ~$item ~~ /'xmlns:'/, 'B2: V1_0 item without about declares no namespaces';
+}
+
+{
+    my $fb = Syndicate::Builder::Feed.new;
+    $fb.title('T'); $fb.link('http://example.com'); $fb.description('D');
+    my $e1 = $fb.add-entry; $e1.title('Entry One'); $e1.link('http://example.com/1');
+    my $s = $fb.rss1-str;
+
+    like $s, /'rdf:about="http://example.com/1"'/,
+        'B2: builder V1_0 feed item still carries rdf:about';
+    nok $s ~~ /'"<item xmlns:rdf"'/,
+        'B2: builder V1_0 feed item stays namespace-bare (root declares rdf)';
+}
+
+# ===== Bug 3: atom-self-link only matches the atom namespace =====
+
+{
+    my $feed = Syndicate::RSS.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <rss version="2.0">
+    <channel><title>T</title><link>L</link><description>D</description>
+    <foo:link xmlns:foo="http://example.com/foo" rel="self" href="http://foreign.example/self"/>
+    <item><title>t</title><link>l</link><description>d</description></item>
+    </channel></rss>
+    XML
+
+    nok $feed.atom-self-link.defined,
+        'B3: foreign-namespace link rel=self is not captured';
+    nok ~$feed ~~ /'<atom:link>'/,
+        'B3: foreign link is not re-emitted as atom:link';
+}
+
+{
+    my $feed = Syndicate::RSS.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <rss version="2.0">
+    <channel><title>T</title><link>L</link><description>D</description>
+    <foo:link xmlns:foo="http://example.com/foo" rel="self" href="http://foreign.example/self"/>
+    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="self" href="http://real.example/feed"/>
+    <item><title>t</title><link>l</link><description>d</description></item>
+    </channel></rss>
+    XML
+
+    is $feed.atom-self-link, 'http://real.example/feed',
+        'B3: atom-namespaced link rel=self is still parsed';
+}
+
+{
+    my $feed = Syndicate::RSS.new(q:to/XML/);
+    <?xml version="1.0"?>
+    <rss version="2.0">
+    <channel><title>T</title><link>L</link><description>D</description>
+    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="self" href=""/>
+    <item><title>t</title><link>l</link><description>d</description></item>
+    </channel></rss>
+    XML
+
+    nok $feed.atom-self-link.defined,
+        'B3: atom:link rel=self with empty href is not captured';
+    nok ~$feed ~~ /'<atom:link>'/,
+        'B3: no empty atom:link is emitted';
+}
+
+done-testing;

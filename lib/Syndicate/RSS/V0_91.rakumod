@@ -26,8 +26,8 @@ has @.skipDays of Str;
 has Str $.itunes-author;
 has Str $.itunes-summary;
 
-method to-hash {
-    my %h = self.to-hash-common;
+method to-hash(:$clone = True) {
+    my %h = self.to-hash-common(:$clone);
     %h<copyright>       = $.copyright       if $.copyright.defined;
     %h<managingEditor>  = $.managingEditor  if $.managingEditor.defined;
     %h<webMaster>       = $.webMaster       if $.webMaster.defined;
@@ -35,10 +35,14 @@ method to-hash {
     %h<docs>            = $.docs            if $.docs.defined;
     %h<pubDate>         = $.pubDate.Str     if $.pubDate.defined;
     %h<lastBuildDate>   = $.lastBuildDate.Str if $.lastBuildDate.defined;
-    %h<image>           = %.image           if %.image;
-    %h<textInput>       = %.textInput       if %.textInput;
-    %h<skipHours>       = @.skipHours       if @.skipHours;
-    %h<skipDays>        = @.skipDays        if @.skipDays;
+    my %image     = sanitize(%.image);
+    %h<image>           = %image            if %image;
+    my %textInput = sanitize(%.textInput);
+    %h<textInput>       = %textInput        if %textInput;
+    my @skipHours = sanitize(@.skipHours);
+    %h<skipHours>       = @skipHours        if @skipHours;
+    my @skipDays  = sanitize(@.skipDays);
+    %h<skipDays>        = @skipDays         if @skipDays;
     %h<itunes-author>   = $.itunes-author   if $.itunes-author.defined;
     %h<itunes-summary>  = $.itunes-summary  if $.itunes-summary.defined;
     %h

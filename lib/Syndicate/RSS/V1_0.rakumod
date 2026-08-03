@@ -10,7 +10,6 @@ use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 use Syndicate::Extensions;
 
-my constant NS-RDF     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 my constant NS-RSS1    = 'http://purl.org/rss/1.0/';
 
 unit class Syndicate::RSS::V1_0:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
@@ -24,8 +23,8 @@ has Str $.itunes-summary;
 has @!categories of Str is built;
 method categories() { @!categories.List }
 
-method to-hash {
-    my %h = self.to-hash-common;
+method to-hash(:$clone = True) {
+    my %h = self.to-hash-common(:$clone);
     %h<about>          = $.about           if $.about.defined;
     my %image = sanitize(%.image);
     %h<image>          = %image            if %image;

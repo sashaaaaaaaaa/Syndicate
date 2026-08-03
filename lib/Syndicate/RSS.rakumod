@@ -21,8 +21,8 @@ has @!categories of Str is built;
 method categories() { @!categories.List }
 has Str $.docs;
 
-method to-hash {
-    my %h = self.to-hash-common;
+method to-hash(:$clone = True) {
+    my %h = self.to-hash-common(:$clone);
     %h<copyright>       = $.copyright       if $.copyright.defined;
     %h<managingEditor>  = $.managingEditor  if $.managingEditor.defined;
     %h<webMaster>       = $.webMaster       if $.webMaster.defined;
@@ -72,11 +72,11 @@ multi method new(XML::Document $doc) {
         my $ttl-str = get-text-optional($channel, "ttl");
 
         my $atom-self-link = Str;
-        for $channel.elements -> $l {
-            my $ln = $l.name;
-            next unless $ln.ends-with(':link');
-            if ($l.attribs<rel> // "") eq "self" {
-                $atom-self-link = decode-entities($l.attribs<href> // Str);
+        for elements-by-local-ns($channel, NS-ATOM, "link", "atom") -> $l {
+            next unless ($l.attribs<rel> // "") eq "self";
+            my $href = decode-entities($l.attribs<href> // Str);
+            if $href.defined && $href.chars {
+                $atom-self-link = $href;
                 last;
             }
         }

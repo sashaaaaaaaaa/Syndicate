@@ -14,25 +14,33 @@ unit module Syndicate::Parse:ver<0.0.1>:auth<zef:sasha>;
 
 enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 
-our sub sanitize-input(Str $input --> Str) is export {
+sub sanitize-raw(Str $input --> Str) {
     my $clean = $input.trim;
     $clean .= subst(/^\xFEFF/, '');
-    unless $clean.chars {
-        Syndicate::Stats.record-error;
-        die "empty input";
-    }
-    if $clean.chars > MAX-FEED-SIZE {
-        Syndicate::Stats.record-error;
-        die "input too large ({$clean.chars} chars)";
-    }
+    die "empty input" unless $clean.chars;
+    die "input too large ({$clean.chars} chars)" if $clean.chars > MAX-FEED-SIZE;
     if $clean.chars > MAX-FEED-SIZE / 4 {
         my $bytes = $clean.encode.bytes;
-        if $bytes > MAX-FEED-SIZE {
-            Syndicate::Stats.record-error;
-            die "input too large ($bytes bytes, max {MAX-FEED-SIZE})";
-        }
+        die "input too large ($bytes bytes, max {MAX-FEED-SIZE})" if $bytes > MAX-FEED-SIZE;
     }
     $clean
+}
+
+# Shared trim/BOM/size normalization. The recording variant records a Stats
+# error and re-dies with the underlying message; the non-recording variant
+# returns Nil so probes (e.g. Discovery) can treat invalid input as "not a
+# feed" without counting an error.
+our sub sanitize-input(Str $input --> Str) is export {
+    my $clean = try { sanitize-raw($input) };
+    unless $clean.defined {
+        Syndicate::Stats.record-error;
+        die $!;
+    }
+    $clean
+}
+
+our sub sanitize-input-nonrecording(Str $input --> Str) is export {
+    try { sanitize-raw($input) }
 }
 
 # Note: feed-format() followed by parse-feed() parses XML twice.
@@ -64,22 +72,6 @@ multi sub feed-format(Str $name, Str $ver) {
     die "Unknown feed format: <{$name}>"
 }
 
-# Non-recording format probe for code paths (e.g. Discovery) that must not
-# count a failure as an error: returns Nil instead of recording or dying.
-our sub probe-feed(Str $input --> FeedFormat) is export {
-    my $clean = $input.trim;
-    $clean .= subst(/^\xFEFF/, '');
-    return Nil unless $clean.chars;
-    return Nil if $clean.chars > MAX-FEED-SIZE;
-    with try-xml-parse($clean) -> $root {
-        return format-for($root<name>, $root<ver>);
-    }
-    if is-json-feed(try { from-json($clean) }) {
-        return JSONFeedFmt;
-    }
-    Nil
-}
-
 # Single-parse non-recording probe that also parses the feed, for code
 # paths (e.g. Discovery) that must not count a non-feed (e.g. an HTML page)
 # as an error. Detects format and builds the feed from one XML/JSON parse,
@@ -87,10 +79,8 @@ our sub probe-feed(Str $input --> FeedFormat) is export {
 # Errors raised while parsing an actual feed (bad entries, etc.) still
 # propagate, matching parse-feed().
 our sub parse-feed-or-nil(Str $input --> Syndicate::Feed) is export {
-    my $clean = $input.trim;
-    $clean .= subst(/^\xFEFF/, '');
-    return Nil unless $clean.chars;
-    return Nil if $clean.chars > MAX-FEED-SIZE;
+    my $clean = sanitize-input-nonrecording($input);
+    return Nil unless $clean.defined;
     with try-xml-parse($clean) -> $root-info {
         return Nil unless format-for($root-info<name>, $root-info<ver>).defined;
         return parse-feed($root-info<doc>);

@@ -72,6 +72,23 @@ our sub active-extensions(--> List) is export { @ext-snapshot }
 our sub set-active(@exts, $elem) is export {
     my @prefixes = @exts.map({ .<namespace> }).grep(*.defined);
     return @exts.keys.Set unless @prefixes;
+
+    # Fast path: activation requires a ':'-prefixed element name (see
+    # activate below), so a document with no prefixed element names anywhere
+    # can activate no namespaced extension. This replaces the
+    # binding-aware BFS below with a plain name scan for extension-free
+    # feeds. Extensions registered without a namespace stay active
+    # regardless (mirroring the final activation set below).
+    my sub has-prefixed-name($e) {
+        return True if $e.name.contains(':');
+        for $e.nodes -> $node {
+            return True if $node ~~ XML::Element && has-prefixed-name($node);
+        }
+        False
+    }
+    return @exts.kv.map(-> $i, %ext { $i if !%ext<namespace> }).grep(*.defined).Set
+        unless has-prefixed-name($elem);
+
     my %present = @prefixes.map({ $_ => False });
     my %ext-by-prefix = @exts.grep({ .<namespace>.defined }).map({ .<namespace> => $_ });
     my %ext-by-uri = @exts.grep({ .<namespace-uri>.defined }).map({ .<namespace-uri> => $_ });

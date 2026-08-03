@@ -112,7 +112,7 @@ method build-rss-item {
     %bless<comments>  = $!comments if $!comments.defined;
     %bless<source>    = $!source if $!source.defined;
     %bless<enclosure> = %!enclosure if %!enclosure;
-    Syndicate::RSS::Item.new(|%bless,
+    Syndicate::RSS::Item.bless(|%bless,
         :categories(@!categories),
         :media-contents(@!media-contents),
         :media-thumbnails(@!media-thumbnails))
@@ -131,7 +131,7 @@ method build-v0_91-item {
     # Content, author, comments, source, and enclosure are intentionally
     # not passed — the RSS 0.91 DTD only allows title, link, and
     # description inside <item>.
-    Syndicate::RSS::V0_91::Item.new(|%bless, :is-v091)
+    Syndicate::RSS::V0_91::Item.bless(|%bless, :is-v091)
 }
 
 method build-json-item {
@@ -180,7 +180,7 @@ method build-v1_0-item {
     %bless<source>    = $!source if $!source.defined;
     %bless<enclosure> = %!enclosure if %!enclosure;
     my @dc-subjects = @!categories;
-    Syndicate::RSS::V1_0::Item.new(|%bless, :categories(@!categories), :@dc-subjects, :is-rdf)
+    Syndicate::RSS::V1_0::Item.bless(|%bless, :categories(@!categories), :@dc-subjects, :is-rdf)
 }
 
 method build-atom-item(:$now = DateTime.now) {

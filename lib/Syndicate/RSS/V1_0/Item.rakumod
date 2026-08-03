@@ -10,6 +10,13 @@ unit class Syndicate::RSS::V1_0::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate:
 
 method !item-type-name { "RSS 1.0 item" }
 
+# Direct construction (new(:title, ...)) must produce RSS 1.0-flavored
+# output (dc:date/dc:creator, rdf:about) rather than silently defaulting
+# to RSS 2.0 output via the shared role's is-rdf = False default.
+submethod TWEAK {
+    $!is-rdf = True;
+}
+
 method from-xml(XML::Element $item-elem, :$active?) {
     my $about   = decode-entities($item-elem.attribs{'rdf:about'} // $item-elem.attribs<about> // Str);
     my $title   = get-text-optional($item-elem, "title");
@@ -65,7 +72,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
 
 method namespace-flags() {
     %(
-        :dc($!has-dc-creator || $!updated.defined || ?(@!dc-subjects)),
+        :dc($!has-dc-creator || $!has-dc-date || $!updated.defined || ?(@!dc-subjects)),
         :media(?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined),
         :itunes($!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined),
         :content(?($.content.defined && $.content.chars)),
