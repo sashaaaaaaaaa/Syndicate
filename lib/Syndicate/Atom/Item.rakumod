@@ -30,14 +30,18 @@ has @.link-alternate of Hash;
 method to-hash {
     my %h = self.to-hash-common;
     %h<xml-lang>      = $.xml-lang       if $.xml-lang.defined;
-    %h<author-detail> = %!author-detail  if %!author-detail;
+    my %author-detail = sanitize(%!author-detail);
+    %h<author-detail> = %author-detail   if %author-detail;
     %h<categories>    = @.categories.List if @.categories;
     %h<published>     = $.published.Str  if $.published.defined;
     %h<content-type>  = $.content-type   if $.content-type.defined;
     %h<rights>        = $.rights         if $.rights.defined;
-    %h<source-feed>   = %.source-feed    if %.source-feed;
-    %h<contributors>  = @.contributors   if @.contributors;
-    %h<link-alternate> = @.link-alternate if @.link-alternate;
+    my %source-feed   = sanitize(%.source-feed);
+    %h<source-feed>   = %source-feed     if %source-feed;
+    my @contributors  = sanitize(@.contributors);
+    %h<contributors>  = @contributors    if @contributors;
+    my @link-alternate = sanitize(@.link-alternate);
+    %h<link-alternate> = @link-alternate if @link-alternate;
     %h
 }
 

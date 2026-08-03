@@ -44,12 +44,17 @@ method to-hash {
     %h<rights>        = $.rights        if $.rights.defined;
     %h<icon>          = $.icon          if $.icon.defined;
     %h<logo>          = $.logo          if $.logo.defined;
-    %h<author-detail> = %!author-detail if %!author-detail;
+    my %author-detail = sanitize(%!author-detail);
+    %h<author-detail> = %author-detail  if %author-detail;
     %h<categories>    = @.categories    if @.categories;
-    %h<contributors>  = @.contributors  if @.contributors;
-    %h<link-self>     = @.link-self     if @.link-self;
-    %h<link-alternate> = @.link-alternate if @.link-alternate;
-    %h<extra-links>   = @.extra-links   if @.extra-links;
+    my @contributors  = sanitize(@.contributors);
+    %h<contributors>  = @contributors   if @contributors;
+    my @link-self     = sanitize(@.link-self);
+    %h<link-self>     = @link-self      if @link-self;
+    my @link-alternate = sanitize(@.link-alternate);
+    %h<link-alternate> = @link-alternate if @link-alternate;
+    my @extra-links   = sanitize(@.extra-links);
+    %h<extra-links>   = @extra-links    if @extra-links;
     %h
 }
 has XML::Element $!cached-xml;
@@ -114,7 +119,15 @@ multi method new(XML::Document $doc) {
 
         my @items;
         for $feed.elements(:TAG<entry>) -> $entry-elem {
-            @items.push: Syndicate::Atom::Item.from-xml($entry-elem);
+            # Match the RSS 0.91/1.0 policy: an entry that fails its own
+            # required-field checks is skipped with one recorded error
+            # rather than aborting the whole feed.
+            my $item = try { Syndicate::Atom::Item.from-xml($entry-elem) };
+            if $item.defined {
+                @items.push: $item;
+            } else {
+                Syndicate::Stats.record-error;
+            }
         }
 
         my $author = %author-detail<name> // %author-detail<email> // Str;

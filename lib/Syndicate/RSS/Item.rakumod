@@ -51,6 +51,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
         :id($item-id), :$guid,
         :$content,
         :has-dc-creator(%extra<has-dc-creator> // False),
+        :has-dc-date(%extra<has-dc-date> // False),
         :comments($comment),
         :enclosure(%enclosure), :source($source), :$guid-is-permalink,
         :media-title($media-title), :media-description($media-description),

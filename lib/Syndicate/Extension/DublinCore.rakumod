@@ -17,6 +17,7 @@ register-ext(:namespace<dc>, :namespace-uri(NS-DC),
         }
         with get-dc-text($elem, "date") -> $d {
             %attrs<updated> = $d if $d.defined && $d.chars;
+            %attrs<has-dc-date> = True;
         }
         my @subjects = get-dc-texts($elem, "subject");
         %attrs<dc-subjects> = @subjects if @subjects;
@@ -24,6 +25,7 @@ register-ext(:namespace<dc>, :namespace-uri(NS-DC),
     generate => sub ($xml, $item) {
         # RSS 0.91 has no Dublin Core in its DTD; skip the namespace entirely.
         return if $item.?is-v091;
+        my $emit-date = $item.?has-dc-creator || $item.?has-dc-date;
         with $item.?has-dc-creator -> $v {
             if $v {
                 # Prefer the original dc:creator value(s) so the element
@@ -35,9 +37,14 @@ register-ext(:namespace<dc>, :namespace-uri(NS-DC),
                 } elsif $item.author.defined {
                     add-dc-element($xml, "creator", ~$item.author);
                 }
-                with $item.updated -> $dt {
-                    add-dc-element($xml, "date", ~$dt);
-                }
+            }
+        }
+        # A parsed dc:date round-trips as <dc:date> (in addition to the
+        # normalized pubDate/updated), while Builder items that never had
+        # one keep emitting only the native timestamp.
+        if $emit-date {
+            with $item.updated -> $dt {
+                add-dc-element($xml, "date", ~$dt);
             }
         }
         with $item.?dc-subjects -> @s {

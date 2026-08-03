@@ -27,7 +27,8 @@ method categories() { @!categories.List }
 method to-hash {
     my %h = self.to-hash-common;
     %h<about>          = $.about           if $.about.defined;
-    %h<image>          = %.image           if %.image;
+    my %image = sanitize(%.image);
+    %h<image>          = %image            if %image;
     %h<categories>     = @!categories.List if @!categories;
     %h<itunes-author>  = $.itunes-author   if $.itunes-author.defined;
     %h<itunes-summary> = $.itunes-summary  if $.itunes-summary.defined;
@@ -118,7 +119,10 @@ method !build-xml {
     }
     add-dc-element($channel, "subject", $_) for @!categories;
 
-    if %.image<about>.defined {
+    # Emit the channel image reference only when the root image element
+    # (which carries the url/title/link) will actually be emitted; an
+    # rdf:resource-only image would otherwise leave a dangling reference.
+    if %.image<about>.defined && (%.image<url>.defined || %.image<title>.defined) {
         my $img-ref = XML::Element.new(:name<image>);
         add-attrib($img-ref, 'rdf:resource', %.image<about>);
         $channel.append: $img-ref;

@@ -10,6 +10,7 @@ unit role Syndicate::RSS::Item::Common:ver<0.0.1>:auth<zef:sasha> does Syndicate
 has Str $.guid;
 has Bool $.guid-is-permalink = True;
 has Bool $.has-dc-creator;
+has Bool $.has-dc-date;
 has @.dc-creators of Str;
 has @.categories of Str;
 has Str $.comments;
@@ -34,16 +35,21 @@ method to-hash {
     %h<guid>              = $.guid              if $.guid.defined;
     %h<guid-is-permalink> = $.guid-is-permalink if $.guid.defined;
     %h<has-dc-creator>    = $.has-dc-creator    if $.has-dc-creator;
+    %h<has-dc-date>       = $.has-dc-date       if $.has-dc-date;
     %h<dc-creators>       = @.dc-creators.List if @.dc-creators;
     %h<categories>        = @.categories.List  if @.categories;
     %h<comments>          = $.comments          if $.comments.defined;
-    %h<enclosure>         = %.enclosure         if %.enclosure;
+    my %enclosure = sanitize(%.enclosure);
+    %h<enclosure> = %enclosure if %enclosure;
     %h<source>            = $.source            if $.source.defined;
     %h<about>             = $.about             if $.about.defined;
     %h<dc-subjects>       = @.dc-subjects.List if @.dc-subjects;
-    %h<media-contents>    = @.media-contents   if @.media-contents;
-    %h<media-thumbnails>  = @.media-thumbnails if @.media-thumbnails;
-    %h<media-groups>      = @.media-groups     if @.media-groups;
+    my @media-contents    = sanitize(@.media-contents);
+    my @media-thumbnails  = sanitize(@.media-thumbnails);
+    my @media-groups      = sanitize(@.media-groups);
+    %h<media-contents>    = @media-contents   if @media-contents;
+    %h<media-thumbnails>  = @media-thumbnails if @media-thumbnails;
+    %h<media-groups>      = @media-groups     if @media-groups;
     %h<media-title>       = $.media-title       if $.media-title.defined;
     %h<media-description> = $.media-description if $.media-description.defined;
     %h<itunes-author>     = $.itunes-author     if $.itunes-author.defined;
@@ -124,9 +130,10 @@ method XML {
             if $.updated.defined {
                 if $!is-rdf {
                     # The DublinCore extension emits <dc:date> when
-                    # has-dc-creator is set, so only emit it here when the
-                    # extension will not (avoids duplicate <dc:date>).
-                    unless $!has-dc-creator {
+                    # has-dc-creator or has-dc-date is set, so only emit it
+                    # here when the extension will not (avoids duplicate
+                    # <dc:date>).
+                    unless $!has-dc-creator || $!has-dc-date {
                         $xml.append: XML::Element.new(:name<dc:date>, :nodes([$.updated.Str]));
                     }
                 } else {
@@ -157,7 +164,7 @@ method XML {
 
 method namespace-flags() {
     %(
-        :dc((!$!is-v091) && ($!has-dc-creator || ?(@!dc-creators) || ?(@!dc-subjects))),
+        :dc((!$!is-v091) && ($!has-dc-creator || $!has-dc-date || ?(@!dc-creators) || ?(@!dc-subjects))),
         :media(?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined),
         :itunes($!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined),
         :content(!$!is-v091 && ?($.content.defined && $.content.chars)),

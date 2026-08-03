@@ -151,6 +151,28 @@ sub with-error-recording(&fn --> Any) is export {
     &fn()
 }
 
+# Recursively clones a value for safe export from to-hash, dropping undefined
+# slots (Str type objects standing in for absent optional fields) and empty
+# containers, so the returned hash never leaks nulls or shared references to
+# the live feed/item structures.
+sub sanitize($v) is export {
+    my sub keep($x) { $x.defined && !(($x ~~ Hash) && !$x) && !(($x ~~ List) && !$x) }
+    given $v {
+        when Hash {
+            my %c;
+            for $v.kv -> $k, $val {
+                my $s = $val.defined ?? sanitize($val) !! Any;
+                %c{$k} = $s if keep($s);
+            }
+            %c
+        }
+        when Array | List {
+            $v.map({ $_.defined ?? sanitize($_) !! Any }).grep(&keep).Array
+        }
+        default { $v }
+    }
+}
+
 sub has-nonempty-text($elem, $tag --> Bool) is export {
     my $e = $elem.elements(:TAG($tag))[0]
         or return False;
@@ -185,43 +207,55 @@ sub get-text-optional($parent, $tag --> Str) is export {
     $e.defined ?? text-of-optional($e) !! Str
 }
 
+sub matches-ns(XML::Element $e, Str $ns-uri, Str $canonical-prefix --> Bool) is export {
+    # Namespace membership resolved in the element's own scope (so xmlns
+    # declarations made on the element itself are honored). A prefix bound
+    # to $ns-uri matches; an undeclared prefix matches only when it is the
+    # canonical one (lenient feeds omit the xmlns declaration); an
+    # unprefixed element matches only when the default namespace is $ns-uri.
+    my $name = $e.name;
+    my $idx = $name.index(':');
+    my $prefix = $idx.defined ?? $name.substr(0, $idx) !! '';
+    with $e.nsURI($prefix) -> $uri {
+        $uri eq $ns-uri
+    } else {
+        so($prefix.chars && $prefix eq $canonical-prefix)
+    }
+}
+
 sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
     # XML::Element.elements() can only match literal element names, so a
     # namespaced element whose prefix differs from the canonical one (e.g.
-    # <content-enc:encoded>) would be missed. Resolve the URI to the prefix
-    # actually in scope and match that spelling instead.
-    my $prefix = $parent.nsPrefix($ns-uri);
-    return Str without $prefix;
-    my $tag = $prefix.chars ?? "$prefix:$local-name" !! $local-name;
-    my $e = $parent.elements(:TAG($tag))[0];
-    $e.defined ?? text-of-optional($e) !! Str
+    # <content-enc:encoded>) would be missed. Match children by local name
+    # and namespace URI resolved in each child's own scope (which also sees
+    # xmlns declarations made on the child element itself).
+    for $parent.elements -> $e {
+        my $name = $e.name;
+        my $idx  = $name.index(':');
+        my $local = $idx.defined ?? $name.substr($idx + 1) !! $name;
+        next unless $local eq $local-name;
+        my $prefix = $idx.defined ?? $name.substr(0, $idx) !! '';
+        with $e.nsURI($prefix) {
+            return text-of-optional($e) if $_ eq $ns-uri;
+        }
+    }
+    Str
 }
 
 sub elements-by-local-ns($parent, $ns-uri, $local-name, Str $canonical-prefix --> List) is export {
     # Namespace-aware child lookup that honors bindings declared on the
     # parent/ancestors AND on the child element itself (where nsPrefix on
     # the parent cannot see them). Each child resolves the URI in its own
-    # scope and matches when the resolved prefix equals its own prefix
-    # (or both are unprefixed, i.e. a default-namespace element).
+    # scope and matches when the resolved URI equals $ns-uri; an undeclared
+    # canonical prefix is tolerated as a lenient feed.
     my @matched;
     for $parent.elements -> $e {
         my $name = $e.name;
-        my $idx = $name.index(':');
-        my $prefix = $idx.defined ?? $name.substr(0, $idx) !! '';
-        my $local  = $idx.defined ?? $name.substr($idx + 1) !! $name;
+        my $idx  = $name.index(':');
+        my $local = $idx.defined ?? $name.substr($idx + 1) !! $name;
         next unless $local eq $local-name;
-        with $e.nsPrefix($ns-uri) -> $resolved {
-            if $resolved.chars {
-                @matched.push: $e if $resolved eq $prefix;
-            } elsif !$prefix.chars {
-                @matched.push: $e;
-            }
-        }
+        @matched.push: $e if matches-ns($e, $ns-uri, $canonical-prefix);
     }
-    # Lenient fallback: tolerate undeclared canonical-prefix elements
-    # (technically invalid XML that the parser otherwise accepts).
-    @matched = $parent.elements(:TAG("$canonical-prefix:$local-name")).List
-        unless @matched;
     @matched
 }
 
@@ -341,5 +375,9 @@ Not typically needed by end users.
 =item C<has-nonempty-text($elem, $tag)> - Whether element has non-empty text content
 =item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>
 =item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Nil>
+=item C<matches-ns(XML::Element, $ns-uri, $canonical-prefix)> - Namespace membership in the element's own scope
+=item C<get-text-by-ns($parent, $local-name, $ns-uri)> - Get optional text of the first child matching local name and namespace URI
+=item C<elements-by-local-ns($parent, $ns-uri, $local-name, $canonical-prefix)> - Namespace-aware child element lookup
+=item C<sanitize($value)> - Deep clone dropping undefined slots and empty containers for safe to-hash export
 
 =end pod

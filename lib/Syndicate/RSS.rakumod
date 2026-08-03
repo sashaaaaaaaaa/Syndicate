@@ -31,7 +31,8 @@ method to-hash {
     %h<categories>      = @!categories.List if @!categories;
     %h<docs>            = $.docs            if $.docs.defined;
     %h<ttl>             = $.ttl             if $.ttl.defined;
-    %h<image>           = %.image           if %.image;
+    my %image = sanitize(%.image);
+    %h<image>           = %image           if %image;
     %h<itunes-author>   = $.itunes-author   if $.itunes-author.defined;
     %h<itunes-summary>  = $.itunes-summary  if $.itunes-summary.defined;
     %h<atom-self-link>  = $.atom-self-link  if $.atom-self-link.defined;

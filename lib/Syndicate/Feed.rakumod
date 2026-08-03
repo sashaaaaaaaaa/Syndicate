@@ -1,5 +1,6 @@
 use v6.d;
 use Syndicate::Item;
+use Syndicate::Utils;
 
 unit role Syndicate::Feed:ver<0.0.1>:auth<zef:sasha>;
 
@@ -16,19 +17,11 @@ method items() { @!items.List }
 has Str $!cached-str;
 has Lock $!cache-lock = Lock.new;
 # Item hashes are built once and deep-cloned on every call so callers can
-# never mutate the cache (see !clone-any), mirroring the JSONFeed cache.
+# never mutate the cache (see sanitize), mirroring the JSONFeed cache.
 has $!cached-item-hashes;
 
 method to-hash {
     self.to-hash-common
-}
-
-method !clone-any($v) {
-    given $v {
-        when Hash   { %($v.keys.map: { $_ => self!clone-any($v{$_}) }) }
-        when Array | List { $v.map({ self!clone-any($_) }).Array }
-        default     { $v }
-    }
 }
 
 method to-hash-common {
@@ -40,7 +33,7 @@ method to-hash-common {
     %h<language>    = $.language    if $.language.defined;
     if @!items {
         $!cached-item-hashes //= @!items.map(*.to-hash).Array;
-        %h<items> = $!cached-item-hashes.map({ self!clone-any($_) }).Array;
+        %h<items> = $!cached-item-hashes.map({ sanitize($_) }).Array;
     }
     %h
 }

@@ -38,6 +38,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
 
     my %bless = :$title, :$link, :summary($desc), :$author, :id($guid // $link // Str),
         :has-dc-creator(%extra<has-dc-creator> // False),
+        :has-dc-date(%extra<has-dc-date> // False),
         :$guid, :$guid-is-permalink,
         :comments($comment), :enclosure(%enclosure), :source($source);
     %bless<updated> = $updated if $updated ~~ DateTime;

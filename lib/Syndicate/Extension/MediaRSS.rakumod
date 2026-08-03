@@ -59,13 +59,7 @@ sub is-media-element(XML::Element $e --> Bool) is export {
     # any declared prefix (in its own or an ancestor scope), or is a lenient
     # undeclared canonical 'media:'-prefixed element. A prefix bound to a
     # different URI is never a match.
-    my $name = $e.name;
-    my $idx = $name.index(':');
-    my $prefix = $idx.defined ?? $name.substr(0, $idx) !! '';
-    with $e.nsPrefix(NS-MEDIA) -> $resolved {
-        return $resolved.chars ?? $resolved eq $prefix !! !$prefix.chars
-    }
-    $prefix eq 'media'
+    matches-ns($e, NS-MEDIA, 'media')
 }
 
 sub media-elements($parent, Str $local-name --> List) is export {

@@ -243,17 +243,16 @@ my $json = Syndicate::JSONFeed.new(
 
 ### iTunes Podcast Extensions
 
-The builder supports iTunes podcast fields for RSS 2.0:
+The builder supports iTunes podcast fields at the **channel level** for RSS 2.0:
 
 ```raku
 $fb.itunes-author("John Doe");
 $fb.itunes-summary("A great podcast about Raku");
-
-# Per-item
-$e.itunes-author("John Doe");
-$e.itunes-summary("Episode summary");
-$e.itunes-duration("30:00");
 ```
+
+Per-item iTunes fields (`itunes-author`, `itunes-summary`, `itunes-duration`)
+are read-only: they are populated when an RSS 2.0 feed is parsed, not via the
+builder.
 
 ## Generating Output
 

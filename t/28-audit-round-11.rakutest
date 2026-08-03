@@ -1,0 +1,380 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use XML;
+use JSON::Fast;
+use Syndicate;
+use Syndicate::Stats;
+use Syndicate::Utils;
+use Syndicate::Extension::DublinCore;
+use Syndicate::Extension::MediaRSS;
+use Syndicate::Builder::Feed;
+
+my constant CONTENT-NS = 'http://purl.org/rss/1.0/modules/content/';
+
+sub has-undefined($v --> Bool) {
+    given $v {
+        when Hash {
+            for $v.kv -> $k, $val {
+                return True if !$val.defined || has-undefined($val);
+            }
+            False
+        }
+        when Array | List {
+            for @($v) -> $val {
+                return True if !$val.defined || has-undefined($val);
+            }
+            False
+        }
+        default { False }
+    }
+}
+
+plan 60;
+
+# ===== Bug 1 + Bug 2: namespace helpers =====
+
+{
+    my $doc = XML::Document.new(q:to/XML/);
+    <item xmlns:dc="http://www.w3.org/2000/svg" xmlns:foo="http://purl.org/dc/elements/1.1/">
+      <dc:subject>Foreign</dc:subject>
+      <foo:subject>Bound</foo:subject>
+      <subject xmlns="http://purl.org/dc/elements/1.1/">Default</subject>
+      <subject>Undeclared-plain</subject>
+      <dc:subject xmlns:dc="http://purl.org/dc/elements/1.1/">SelfDeclared</dc:subject>
+      <media:content xmlns:media="http://www.w3.org/2000/svg"/>
+      <media:thumbnail/>
+    </item>
+    XML
+    my $parent = $doc.root;
+
+    is elements-by-local-ns($parent, NS-DC, 'subject', 'dc').elems, 3,
+        'B1: wrong-URI and bare unprefixed dc:subject rejected; URI-bound/default-ns matched';
+    is [elements-by-local-ns($parent, NS-DC, 'subject', 'dc').map({ element-text($_) })].sort.join('|'),
+        'Bound|Default|SelfDeclared',
+        'B1: exactly the namespace-correct dc:subject elements match';
+    is get-media-contents($parent).elems, 0,
+        'B1: media:content bound to a foreign URI is not media';
+    is get-media-thumbnails($parent).elems, 1,
+        'B1: undeclared canonical media:thumbnail still matches (lenient)';
+}
+
+{
+    my $doc = XML::Document.new(q:to/XML/);
+    <item>
+      <ce:encoded xmlns:ce="http://purl.org/rss/1.0/modules/content/">CHILD-DECL</ce:encoded>
+    </item>
+    XML
+    is get-text-by-ns($doc.root, 'encoded', CONTENT-NS), 'CHILD-DECL',
+        'B2: get-text-by-ns sees a prefix declared on the child element itself';
+}
+
+{
+    my $doc = XML::Document.new(q:to/XML/);
+    <item>
+      <ce:encoded xmlns:ce="http://wrong.example/">WrongUri</ce:encoded>
+      <ce:encoded xmlns:ce="http://purl.org/rss/1.0/modules/content/">CHILD-DECL</ce:encoded>
+    </item>
+    XML
+    is get-text-by-ns($doc.root, 'encoded', CONTENT-NS), 'CHILD-DECL',
+        'B1: get-text-by-ns skips children bound to a wrong URI';
+}
+
+{
+    my $xml = q:to/XML/;
+    <item>
+      <title>t</title><link>l</link><description>d</description>
+      <ce:encoded xmlns:ce="http://purl.org/rss/1.0/modules/content/">CHILD-DECL</ce:encoded>
+    </item>
+    XML
+    is Syndicate::RSS::Item.new($xml).content, 'CHILD-DECL',
+        'B2: RSS item content:encoded picked up via child-declared prefix';
+}
+
+{
+    my $xml = q:to/XML/;
+    <item>
+      <title>t</title><link>l</link><description>d</description>
+      <ce:encoded xmlns:ce="http://wrong.example/">X</ce:encoded>
+    </item>
+    XML
+    ok !Syndicate::RSS::Item.new($xml).content.defined,
+        'B1: RSS item ignores content:encoded bound to a wrong URI';
+}
+
+# ===== Bug 1 end-to-end: RSS 1.0 channel dc:subject / dc:language =====
+
+{
+    my $xml = q:to/XML/;
+    <rdf:RDF xmlns="http://purl.org/rss/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+             xmlns:dc="http://www.w3.org/2000/svg">
+      <channel rdf:about="http://example.com">
+        <title>T</title><link>http://example.com</link><description>D</description>
+        <dc:subject>Foreign</dc:subject>
+        <dc:language>fr</dc:language>
+        <items><rdf:Seq/></items>
+      </channel>
+    </rdf:RDF>
+    XML
+    my $feed = Syndicate::RSS::V1_0.new($xml);
+    isa-ok $feed, Syndicate::RSS::V1_0, 'B1: RSS 1.0 parses with foreign-URI dc prefix';
+    is $feed.categories.elems, 0, 'B1: wrong-URI dc:subject is not a channel category';
+    nok $feed.language.defined, 'B1: wrong-URI dc:language is ignored';
+}
+
+{
+    my $xml = q:to/XML/;
+    <rdf:RDF xmlns="http://purl.org/rss/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+             xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <channel rdf:about="http://example.com">
+        <title>T</title><link>http://example.com</link><description>D</description>
+        <dc:subject>News</dc:subject>
+        <dc:language>fr</dc:language>
+        <items><rdf:Seq/></items>
+      </channel>
+    </rdf:RDF>
+    XML
+    my $feed = Syndicate::RSS::V1_0.new($xml);
+    is $feed.categories.elems, 1, 'B1 control: correct dc:subject becomes a category';
+    is $feed.categories[0], 'News', 'B1 control: category value';
+    is $feed.language, 'fr', 'B1 control: correct dc:language maps to language';
+}
+
+# ===== Bug 5: Atom leniency =====
+
+{
+    Syndicate::Stats.reset;
+    my $xml = q:to/XML/;
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <id>urn:feed</id><title>F</title><updated>2025-01-01T00:00:00Z</updated>
+      <entry><id>urn:1</id><title>good</title><updated>2025-01-02T00:00:00Z</updated></entry>
+      <entry><title>bad-no-id</title><updated>2025-01-03T00:00:00Z</updated></entry>
+    </feed>
+    XML
+    my $feed = Syndicate::Atom.new($xml);
+    isa-ok $feed, Syndicate::Atom, 'B5: Atom feed parses despite one invalid entry';
+    is $feed.items.elems, 1, 'B5: valid entries retained, invalid skipped';
+    is Syndicate::Stats.errors, 1, 'B5: exactly one error recorded for the skipped entry';
+}
+
+# ===== Bug 6: dc:date round-trip =====
+
+{
+    my $xml = q:to/XML/;
+    <rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <channel>
+        <title>T</title><link>http://example.com</link><description>D</description>
+        <item>
+          <title>Item</title><link>http://example.com/1</link><description>d</description>
+          <dc:date>2025-06-15T12:00:00Z</dc:date>
+        </item>
+      </channel>
+    </rss>
+    XML
+    my $feed = Syndicate::RSS.new($xml);
+    is $feed.items[0].has-dc-date, True, 'B6: has-dc-date flag set from parsed dc:date';
+    my $str = ~$feed;
+    like $str, /'<pubDate>'/, 'B6: regenerated RSS 2.0 emits pubDate';
+    like $str, /'<dc:date>'/, 'B6: regenerated RSS 2.0 keeps dc:date';
+    is ($str ~~ m:g/'<dc:date>'/).elems, 1, 'B6: single dc:date, no duplicate';
+    like $str, /'xmlns:dc'/, 'B6: dc namespace declared on regeneration';
+}
+
+{
+    my $fb = Syndicate::Builder::Feed.new;
+    $fb.title("T");
+    $fb.link("http://example.com");
+    $fb.description("D");
+    my $en = $fb.add-entry;
+    $en.title("Item");
+    $en.link("http://example.com/1");
+    $en.updated(DateTime.new("2025-06-15T12:00:00Z"));
+    my $str = $fb.rss-str;
+    like $str, /'<pubDate>'/, 'B6: builder RSS 2.0 emits pubDate';
+    unlike $str, /'<dc:date>'/, 'B6: builder RSS 2.0 emits no dc:date';
+    unlike $str, /'xmlns:dc'/, 'B6: builder RSS 2.0 emits no dc namespace';
+}
+
+{
+    my $xml = q:to/XML/;
+    <rdf:RDF xmlns="http://purl.org/rss/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+             xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <channel rdf:about="http://example.com">
+        <title>T</title><link>http://example.com</link><description>D</description>
+        <items><rdf:Seq/></items>
+      </channel>
+      <item rdf:about="http://example.com/1">
+        <title>Item</title><link>http://example.com/1</link><description>d</description>
+        <dc:date>2025-08-01T00:00:00Z</dc:date>
+      </item>
+    </rdf:RDF>
+    XML
+    my $str = ~Syndicate::RSS::V1_0.new($xml);
+    is ($str ~~ m:g/'<dc:date>'/).elems, 1, 'B6: RSS 1.0 dc:date regenerates exactly once';
+    unlike $str, /'<pubDate>'/, 'B6: RSS 1.0 emits no pubDate';
+    like $str, /'xmlns:dc'/, 'B6: RSS 1.0 dc namespace declared on regeneration';
+}
+
+# ===== Bug 3: to-hash returns deep clones =====
+
+{
+    my $xml = q:to/XML/;
+    <rss version="2.0"><channel>
+      <title>T</title><link>http://example.com</link><description>D</description>
+      <image><url>http://example.com/i.png</url><title>I</title><link>http://example.com</link></image>
+    </channel></rss>
+    XML
+    my $feed = Syndicate::RSS.new($xml);
+    my %h = $feed.to-hash;
+    %h<image><url> = 'MUTATED';
+    is $feed.image<url>, 'http://example.com/i.png', 'B3: mutating image in to-hash leaves the feed alone';
+    is $feed.to-hash<image><url>, 'http://example.com/i.png', 'B3: second to-hash is not corrupted';
+}
+
+{
+    my $xml = q:to/XML/;
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <id>urn:f</id><title>F</title><updated>2025-01-01T00:00:00Z</updated>
+      <link rel="self" href="http://example.com/self" type="application/atom+xml"/>
+      <link rel="alternate" href="http://example.com/alt"/>
+      <contributor><name>Bob</name></contributor>
+    </feed>
+    XML
+    my $feed = Syndicate::Atom.new($xml);
+    my %h = $feed.to-hash;
+    %h<link-self>[0]<href> = 'MUT';
+    %h<link-alternate>[0]<href> = 'MUT';
+    %h<contributors>[0]<name> = 'MUT';
+    is $feed.link-self[0]<href>, 'http://example.com/self', 'B3: Atom link-self not shared with to-hash';
+    is $feed.link-alternate[0]<href>, 'http://example.com/alt', 'B3: Atom link-alternate not shared with to-hash';
+    is $feed.contributors[0]<name>, 'Bob', 'B3: Atom contributors not shared with to-hash';
+    is $feed.to-hash<link-self>[0]<href>, 'http://example.com/self', 'B3: second Atom to-hash is clean';
+    is $feed.to-hash<contributors>[0]<name>, 'Bob', 'B3: second Atom to-hash keeps contributors';
+}
+
+{
+    my $xml = q:to/XML/;
+    <rdf:RDF xmlns="http://purl.org/rss/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <channel rdf:about="http://example.com">
+        <title>T</title><link>http://example.com</link><description>D</description>
+        <image rdf:resource="http://example.com/i"/>
+        <items><rdf:Seq/></items>
+      </channel>
+      <image rdf:about="http://example.com/i">
+        <url>http://example.com/i.png</url><title>I</title><link>http://example.com</link>
+      </image>
+    </rdf:RDF>
+    XML
+    my $feed = Syndicate::RSS::V1_0.new($xml);
+    my %h = $feed.to-hash;
+    %h<image><url> = 'MUTATED';
+    is $feed.image<url>, 'http://example.com/i.png', 'B3: RSS 1.0 image not shared with to-hash';
+}
+
+# ===== Bug 4: no undefined Str leaks into to-hash / to-json =====
+
+{
+    my $xml = q:to/XML/;
+    <rss version="2.0"><channel>
+      <title>T</title><link>http://example.com</link><description>D</description>
+      <item>
+        <title>Item</title><link>http://example.com/1</link><description>d</description>
+        <enclosure url="http://example.com/f.mp3" type="audio/mpeg"/>
+      </item>
+    </channel></rss>
+    XML
+    my %h = Syndicate::RSS.new($xml).to-hash;
+    my %enc = %h<items>[0]<enclosure>;
+    nok has-undefined(%h), 'B4: no undefined values anywhere in RSS 2.0 to-hash';
+    nok %enc<length>:exists, 'B4: absent enclosure length has no key (no null)';
+    is %enc<url>, 'http://example.com/f.mp3', 'B4: enclosure url preserved';
+    my $json = to-json(%h);
+    unlike $json, /null/, 'B4: RSS 2.0 to-json has no null';
+    like $json, /'f.mp3'/, 'B4: to-json keeps enclosure url';
+}
+
+{
+    my $xml = q:to/XML/;
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <id>urn:f</id><title>F</title><updated>2025-01-01T00:00:00Z</updated>
+      <author><name>Jane</name></author>
+    </feed>
+    XML
+    my %h = Syndicate::Atom.new($xml).to-hash;
+    nok has-undefined(%h), 'B4: no undefined values in Atom to-hash';
+    nok %h<author-detail><email>:exists, 'B4: absent author email has no key';
+    nok %h<author-detail><uri>:exists, 'B4: absent author uri has no key';
+    is %h<author-detail><name>, 'Jane', 'B4: author name preserved';
+    unlike to-json(%h), /null/, 'B4: Atom to-json has no null';
+}
+
+{
+    my $xml = q:to/XML/;
+    <rss version="2.0"><channel>
+      <title>T</title><link>http://example.com</link><description>D</description>
+      <image><url>http://example.com/i.png</url><title>I</title><link>http://example.com</link></image>
+    </channel></rss>
+    XML
+    my %h = Syndicate::RSS.new($xml).to-hash;
+    nok %h<image><description>:exists, 'B4: absent image description has no key';
+    nok has-undefined(%h), 'B4: image hash free of undefined values';
+    unlike to-json(%h), /null/, 'B4: image-less-description to-json has no null';
+}
+
+# ===== Bug 7: no dangling RSS 1.0 image reference =====
+
+{
+    my $xml = q:to/XML/;
+    <rdf:RDF xmlns="http://purl.org/rss/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <channel rdf:about="http://example.com">
+        <title>T</title><link>http://example.com</link><description>D</description>
+        <items><rdf:Seq/></items>
+      </channel>
+      <image rdf:about="http://example.com/i"/>
+    </rdf:RDF>
+    XML
+    my $feed = Syndicate::RSS::V1_0.new($xml);
+    is $feed.image<about>, 'http://example.com/i', 'B7: image about is parsed';
+    unlike ~$feed, /'<image'/, 'B7: degenerate image regenerates no dangling reference';
+}
+
+{
+    my $xml = q:to/XML/;
+    <rdf:RDF xmlns="http://purl.org/rss/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <channel rdf:about="http://example.com">
+        <title>T</title><link>http://example.com</link><description>D</description>
+        <image rdf:resource="http://example.com/i"/>
+        <items><rdf:Seq/></items>
+      </channel>
+      <image rdf:about="http://example.com/i">
+        <url>http://example.com/i.png</url><title>I</title><link>http://example.com</link>
+      </image>
+    </rdf:RDF>
+    XML
+    my $str = ~Syndicate::RSS::V1_0.new($xml);
+    is ($str ~~ m:g/'<image'/).elems, 2, 'B7 control: spec-correct image emits reference + element';
+}
+
+# ===== sanitize helper =====
+
+{
+    my %inner = (p => Str, q => 'z');
+    my %orig = (
+        a => Str,
+        b => 'x',
+        c => %(d => Str, e => 'y'),
+        list => [%inner.item],
+    );
+    my %clean = sanitize(%orig);
+    is %clean<b>, 'x', 'sanitize keeps defined scalars';
+    nok %clean<a>:exists, 'sanitize drops undefined scalars';
+    nok %clean<c><d>:exists, 'sanitize recurses into hashes';
+    is %clean<c><e>, 'y', 'sanitize keeps nested defined values';
+    is %clean<list>[0]<q>, 'z', 'sanitize recurses into arrays';
+    nok %clean<list>[0]<p>:exists, 'sanitize drops undefined array-element keys';
+    nok has-undefined(%clean), 'sanitize output has no undefined values';
+    %clean<c><e> = 'MUT';
+    is %orig<c><e>, 'y', 'sanitize returns a fresh clone';
+}
+
+done-testing;
