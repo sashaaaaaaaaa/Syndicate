@@ -37,9 +37,12 @@ multi method new(Str $json) {
 multi method new-from-hash(%h) {
     with-error-recording {
         my $version = %h<version> // JSONFEED-VERSION;
+        die "JSON Feed 'version' must be a string, got {$version.^name}"
+            unless $version ~~ Str;
         die "Invalid JSON Feed version: $version"
             unless $version.starts-with(JSONFEED-VERSION-PREFIX) && $version.chars > JSONFEED-VERSION-PREFIX.chars;
         my $title       = %h<title> // Str;
+        die "JSON Feed 'title' must be a string, got {$title.^name}" unless $title ~~ Str;
         die "JSON Feed requires title" unless $title.defined && $title.chars;
         my $link        = %h<home_page_url> // Str;
         my $desc        = %h<description> // Str;

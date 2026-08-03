@@ -1,0 +1,204 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Utils;
+use Syndicate::Stats;
+use Syndicate::Builder::Feed;
+use Syndicate::JSONFeed;
+
+plan 36;
+
+# ===== Bug 1: structurally-invalid dates never abort a feed parse =====
+
+{
+    my $rss = q:to/XML/;
+    <?xml version="1.0"?>
+    <rss version="2.0"><channel>
+    <title>T</title><link>L</link><description>D</description>
+    <item><title>good</title><link>1</link><description>d</description><pubDate>Tue, 03 Jun 2003 09:39:21 GMT</pubDate></item>
+    <item><title>bad</title><link>2</link><description>d</description><pubDate>Mon, 32 Jan 2024 00:00:00 GMT</pubDate></item>
+    <item><title>good2</title><link>3</link><description>d</description><pubDate>2024-02-30</pubDate></item>
+    </channel></rss>
+    XML
+    my $f = Syndicate::RSS.new($rss);
+    is $f.items.elems, 3, 'R1: RSS 2.0 keeps all items despite bad item dates';
+    is $f.items[0].updated.Str, '2003-06-03T09:39:21Z', 'R1: good item pubDate parsed';
+    nok $f.items[1].updated.defined, 'R1: bad pubDate item degrades to Nil';
+    nok $f.items[2].updated.defined, 'R1: structurally-invalid ISO date degrades to Nil';
+}
+
+{
+    my $rss = q:to/XML/;
+    <?xml version="1.0"?>
+    <rss version="2.0"><channel>
+    <title>T</title><link>L</link><description>D</description>
+    <pubDate>2024-01-15T25:00:00Z</pubDate>
+    <item><title>t</title><link>l</link><description>d</description></item>
+    </channel></rss>
+    XML
+    my $f = Syndicate::RSS.new($rss);
+    nok $f.pubDate.defined, 'R1: bad channel pubDate degrades to Nil';
+    is $f.items.elems, 1, 'R1: feed still parses with bad channel pubDate';
+}
+
+{
+    my $rss = q:to/XML/;
+    <?xml version="1.0"?>
+    <rss version="2.0"><channel>
+    <title>T</title><link>L</link><description>D</description>
+    <item><title>t</title><link>l</link><description>d</description><dc:date xmlns:dc="http://purl.org/dc/elements/1.1/">2024-02-30</dc:date></item>
+    </channel></rss>
+    XML
+    my $f = Syndicate::RSS.new($rss);
+    is $f.items.elems, 1, 'R1: RSS 2.0 item with bad dc:date still parses';
+    nok $f.items[0].updated.defined, 'R1: bad dc:date degrades to Nil';
+}
+
+{
+    my $rss = q:to/XML/;
+    <?xml version="1.0"?>
+    <rss version="0.91"><channel>
+    <title>T</title><link>L</link><description>D</description>
+    <item><title>t</title><link>l</link><description>d</description><dc:date xmlns:dc="http://purl.org/dc/elements/1.1/">Mon, 32 Jan 2024 00:00:00 GMT</dc:date></item>
+    </channel></rss>
+    XML
+    my $f = Syndicate::RSS::V0_91.new($rss);
+    is $f.items.elems, 1, 'R1: RSS 0.91 item with bad dc:date still parses';
+    nok $f.items[0].updated.defined, 'R1: 0.91 bad dc:date degrades to Nil';
+}
+
+{
+    my $rss = q:to/XML/;
+    <?xml version="1.0"?>
+    <rdf:RDF xmlns="http://purl.org/rss/1.0/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <channel rdf:about="http://x"><title>T</title><link>L</link><description>D</description>
+    <items><rdf:Seq><rdf:li rdf:resource="http://x/1"/></rdf:Seq></items></channel>
+    <item rdf:about="http://x/1"><title>t</title><link>l</link><dc:date xmlns:dc="http://purl.org/dc/elements/1.1/">2024-01-15T25:00:00Z</dc:date></item>
+    </rdf:RDF>
+    XML
+    my $f = Syndicate::RSS::V1_0.new($rss);
+    is $f.items.elems, 1, 'R1: RSS 1.0 item with bad dc:date still parses';
+    nok $f.items[0].updated.defined, 'R1: 1.0 bad dc:date degrades to Nil';
+}
+
+{
+    my $json = q:to/JSON/;
+    {"version":"https://jsonfeed.org/version/1.1","title":"T","home_page_url":"http://x",
+     "items":[{"id":"1","url":"http://x/1","title":"t","date_published":"2024-02-30","date_modified":"Mon, 32 Jan 2024 00:00:00 GMT"}]}
+    JSON
+    my $f = Syndicate::JSONFeed.new($json);
+    is $f.items.elems, 1, 'R1: JSON Feed with bad item dates still parses';
+    nok $f.items[0].date_published.defined, 'R1: bad date_published degrades to Nil';
+    nok $f.items[0].date_modified.defined, 'R1: bad date_modified degrades to Nil';
+}
+
+{
+    my $atom = q:to/XML/;
+    <?xml version="1.0"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+    <title>T</title><id>urn:1</id><updated>2024-05-01T12:00:00Z</updated>
+    <entry><title>bad</title><id>urn:b</id><updated>2024-02-30</updated></entry>
+    <entry><title>good</title><id>urn:g</id><updated>2024-05-02T12:00:00Z</updated></entry>
+    </feed>
+    XML
+    my $errors-before = Syndicate::Stats.errors;
+    my $f = Syndicate::Atom.new($atom);
+    is $f.items.elems, 1, 'R1: Atom skips entry with bad updated, keeps good one';
+    is $f.items[0].title, 'good', 'R1: surviving Atom entry is the good one';
+    is Syndicate::Stats.errors, $errors-before + 1, 'R1: one error recorded for skipped entry';
+}
+
+{
+    my $atom = q:to/XML/;
+    <?xml version="1.0"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+    <title>T</title><id>urn:1</id><updated>2024-02-30</updated>
+    </feed>
+    XML
+    my $f = try { Syndicate::Atom.new($atom) };
+    nok $f.defined, 'R1: Atom feed with bad feed-level updated fails';
+    is $!.^name, 'X::AdHoc', 'R1: failure is a graceful die, not X::Temporal::OutOfRange';
+    ok $!.message.contains('parse-date: cannot parse'),
+        'R1: graceful message names the bad date';
+}
+
+# ===== Bug 3: JSON Feed non-Str fields get graceful messages =====
+
+{
+    my %h = %( version => "https://jsonfeed.org/version/1.1", title => 42, home_page_url => "http://x", items => [] );
+    my $f = try { Syndicate::JSONFeed.new-from-hash(%h) };
+    nok $f.defined, 'R3: non-Str title rejected';
+    ok $!.message.contains('JSON Feed \'title\' must be a string'),
+        'R3: graceful type message for title';
+}
+
+{
+    my %h = %( version => %(a => 1), title => "T", home_page_url => "http://x", items => [] );
+    my $f = try { Syndicate::JSONFeed.new-from-hash(%h) };
+    nok $f.defined, 'R3: non-Str version rejected';
+    ok $!.message.contains('JSON Feed \'version\' must be a string'),
+        'R3: graceful type message for version';
+}
+
+{
+    my %h = %( id => 123, url => "http://y", title => "t" );
+    my $f = try { Syndicate::JSONFeed::Item.new-from-hash(%h) };
+    nok $f.defined, 'R3: non-Str item id rejected';
+    ok $!.message.contains('JSON Feed Item \'id\' must be a string'),
+        'R3: graceful type message for item id';
+}
+
+# ===== Bug 4: semicolon-less numeric character references =====
+
+{
+    is decode-entities('&#8217'), "\x[2019]", 'R4: decimal ref without ; decodes';
+    is decode-entities('&#8217;'), "\x[2019]", 'R4: decimal ref with ; still decodes';
+    is decode-entities('&#x2019'), "\x[2019]", 'R4: hex ref without ; decodes';
+    is decode-entities('&amp'), '&', 'R4: named ref without ; still decodes';
+    is decode-entities('plain text'), 'plain text', 'R4: entity-free text untouched';
+}
+
+# ===== Bug 5: RSS 0.91 builder requires description =====
+
+{
+    my $fb = Syndicate::Builder::Feed.new;
+    $fb.title('T'); $fb.link('http://x');
+    my $str = try { $fb.rss091-str };
+    nok $str.defined, 'R5: rss091-feed without description fails';
+    ok $!.message.contains('RSS 0.91 feed requires description'),
+        'R5: failure names the missing description';
+}
+
+{
+    my $fb = Syndicate::Builder::Feed.new;
+    $fb.title('T'); $fb.link('http://x'); $fb.description('D');
+    ok $fb.rss091-str.defined, 'R5: rss091-feed with description succeeds';
+}
+
+# ===== Bug 2: concurrent to-hash calls stay valid =====
+
+{
+    my $rss = q:to/XML/;
+    <?xml version="1.0"?>
+    <rss version="2.0"><channel>
+    <title>T</title><link>L</link><description>D</description>
+    <item><title>a</title><link>1</link><description>d</description></item>
+    <item><title>b</title><link>2</link><description>d</description></item>
+    </channel></rss>
+    XML
+    my $f = Syndicate::RSS.new($rss);
+    my @promises = (^8).map: {
+        start {
+            my @ok;
+            for ^50 {
+                my %h = $f.to-hash;
+                @ok.push: %h<items> == 2;
+            }
+            so @ok.all
+        }
+    };
+    is await(@promises).all, True, 'R2: concurrent to-hash calls all return valid hashes';
+}
+
+done-testing;

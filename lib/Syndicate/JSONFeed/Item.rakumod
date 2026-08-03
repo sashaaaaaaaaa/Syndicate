@@ -35,6 +35,8 @@ multi method new-from-hash(%h) {
     my $link    = %h<url> // Str;
     my $summary = %h<summary> // Str;
     my $id      = %h<id> // $link // Str;
+    die "JSON Feed Item 'title' must be a string, got {$title.^name}" unless $title ~~ Str;
+    die "JSON Feed Item 'id' must be a string, got {$id.^name}" unless $id ~~ Str;
     die "JSON Feed Item requires id or url" unless $id.defined && $id.chars;
 
     my $dp = parse-date-optional(%h<date_published>);

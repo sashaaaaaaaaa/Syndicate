@@ -32,7 +32,12 @@ method to-hash-common(:$clone = True) {
     %h<generator>   = $.generator   if $.generator.defined;
     %h<language>    = $.language    if $.language.defined;
     if @!items {
-        $!cached-item-hashes //= @!items.map(*.to-hash).Array;
+        # Guarded by the cache lock so concurrent to-hash calls never race
+        # the lazy build (the write is idempotent, but this matches the
+        # lock-discipline of Str/JSONFeed).
+        $!cache-lock.protect: {
+            $!cached-item-hashes //= @!items.map(*.to-hash).Array;
+        }
         # Cloned per call so callers can never mutate the cache (see
         # sanitize); :!clone opts out of the O(items) copy for hot paths.
         %h<items> = $clone

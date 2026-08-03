@@ -130,6 +130,9 @@ method atom-feed {
 method rss091-feed {
     die "RSS 0.91 feed requires title" unless $!title.defined;
     die "RSS 0.91 feed requires link"  unless $!link.defined;
+    # The RSS 0.91 DTD requires description in <channel>, mirroring the
+    # RSS 2.0 builder path. Language stays optional.
+    die "RSS 0.91 feed requires description" unless $!description.defined;
     my @items = @!entries.map(*.build-v0_91-item);
     my %bless;
     %bless<title>           = $!title        if $!title.defined;

@@ -97,20 +97,33 @@ my constant RFC2822-FORMAT is export = DateTime::Format::RFC2822.new;
 
 sub decode-entities(Str $text --> Str) is export {
     return $text unless $text.defined && $text.chars;
+    # Fast path: no '&' means no entity can be present, so skip the regex
+    # subst entirely (this runs on every text field during parsing).
+    return $text unless $text.contains('&');
     # Single-pass decoder: numeric character references (&#NN; / &#xHH;),
     # the five predefined XML entities, and the HTML 4.01 named character
     # references. Unknown named entities are left as literal text, and the
     # replacement is never rescanned, so a raw '&amp;#8217;' decodes to
     # '&#8217;' rather than to an apostrophe. The named reference's
     # semicolon is optional to tolerate lenient feeds ('&amp' == '&'), but
-    # the name is consumed greedily so '&ampx' stays literal.
+    # the name is consumed greedily so '&ampx' stays literal. Numeric
+    # references tolerate the missing semicolon too for the same reason
+    # ('&#8217' == '&#8217;').
     $text.subst(:g,
-        / '&' [ $<hex>   = ( '#x' <[0..9a..fA..F]>+ ';' )
-               | $<dec>  = ( '#' \d+ ';' )
+        / '&' [ $<hex>   = ( '#x' <[0..9a..fA..F]>+ ';'? )
+               | $<dec>  = ( '#' \d+ ';'? )
                | $<named> = ( <[a..zA..Z0..9]>+ ';'? ) ] /,
         {
-            with $<hex> { try { chr(:16(~$<hex>.substr(2, *-1))) } // ~$/ }
-            orwith $<dec> { try { chr(+~$<dec>.substr(1, *-1)) } // ~$/ }
+            with $<hex> {
+                my $digits = ~$<hex>.substr(2);
+                $digits = $digits.substr(0, *-1) if $digits.ends-with(';');
+                try { chr(:16($digits)) } // ~$/
+            }
+            orwith $<dec> {
+                my $digits = ~$<dec>.substr(1);
+                $digits = $digits.substr(0, *-1) if $digits.ends-with(';');
+                try { chr(+$digits) } // ~$/
+            }
             else {
                 # Named references: the XML predefined entities plus the
                 # HTML 4.01 set, matched case-sensitively.
@@ -315,15 +328,24 @@ sub normalize-date-str(Str $str --> Str) {
 sub parse-date(Str $str --> DateTime) is export {
     die "parse-date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
     my $normalized = normalize-date-str($str.trim);
-    my $dt = datetime-interpret($normalized) // die "parse-date: cannot parse '$str'";
+    # datetime-interpret throws X::Temporal::OutOfRange for
+    # structurally-valid-but-invalid dates (2024-02-30, 32 Jan, 25:00) rather
+    # than returning Nil; turn that into the graceful die below.
+    my $dt = try { datetime-interpret($normalized) };
+    die "parse-date: cannot parse '$str'" unless $dt.defined;
     apply-source-offset($dt, $normalized)
 }
 
 sub parse-date-optional(Any $str) is export {
     return Nil unless $str.defined && $str.Str.trim.chars > 0;
     my $normalized = normalize-date-str($str.Str.trim);
-    with datetime-interpret($normalized) -> $dt {
-        apply-source-offset($dt, $normalized)
+    # datetime-interpret throws X::Temporal::OutOfRange for
+    # structurally-valid-but-invalid dates instead of returning Nil; honor the
+    # documented "DateTime or Nil" contract so one bad date never aborts a
+    # whole feed parse.
+    my $dt = try { datetime-interpret($normalized) };
+    with $dt -> $parsed {
+        apply-source-offset($parsed, $normalized)
     }
 }
 
