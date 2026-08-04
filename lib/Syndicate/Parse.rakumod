@@ -87,7 +87,11 @@ our sub parse-feed-or-nil(Str $input --> Syndicate::Feed) is export {
     }
     my $parsed-json = try { from-json($clean) };
     if is-json-feed($parsed-json) {
-        return Syndicate::JSONFeed.new-from-hash(%$parsed-json);
+        my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed-json);
+        # Mirror the XML branch above (via parse-feed): count successful
+        # JSON Feed parses too.
+        Syndicate::Stats.record-feed;
+        return $feed;
     }
     Nil
 }

@@ -7,7 +7,7 @@ use Syndicate::Stats;
 use Syndicate::Builder::Feed;
 use Syndicate::JSONFeed;
 
-plan 36;
+plan 38;
 
 # ===== Bug 1: structurally-invalid dates never abort a feed parse =====
 
@@ -114,13 +114,28 @@ plan 36;
     <?xml version="1.0"?>
     <feed xmlns="http://www.w3.org/2005/Atom">
     <title>T</title><id>urn:1</id><updated>2024-02-30</updated>
+    <entry><title>e</title><id>urn:e</id><updated>2024-05-02T12:00:00Z</updated></entry>
     </feed>
     XML
     my $f = try { Syndicate::Atom.new($atom) };
-    nok $f.defined, 'R1: Atom feed with bad feed-level updated fails';
-    is $!.^name, 'X::AdHoc', 'R1: failure is a graceful die, not X::Temporal::OutOfRange';
-    ok $!.message.contains('parse-date: cannot parse'),
-        'R1: graceful message names the bad date';
+    ok $f.defined, 'R1: Atom feed with bad feed-level updated still parses';
+    is $f.to-hash<updated>, '2024-05-02T12:00:00Z',
+        'R1: bad feed-level updated falls back to the entry timestamp';
+}
+
+{
+    my $atom = q:to/XML/;
+    <?xml version="1.0"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+    <title>T</title><id>urn:1</id><updated>2024-02-30</updated>
+    </feed>
+    XML
+    my $f = try { Syndicate::Atom.new($atom) };
+    ok $f.defined, 'R1: timestamp-less Atom feed parses';
+    my $s = try { ~$f };
+    nok $s.defined, 'R1: rendering a timestamp-less feed fails gracefully';
+    ok $!.message.contains('Atom feed requires \'updated\''),
+        'R1: graceful message, not X::Temporal::OutOfRange';
 }
 
 # ===== Bug 3: JSON Feed non-Str fields get graceful messages =====

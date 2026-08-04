@@ -66,7 +66,11 @@ multi method new(XML::Document $doc) {
         my $icon     = get-text-optional($feed, "icon");
         my $logo     = get-text-optional($feed, "logo");
         my $lang     = $feed.attribs{'xml:lang'} // Str;
-        my $upd      = parse-date(get-text($feed, "updated"));
+        # Feed-level updated is optional on input: when absent (or invalid),
+        # !latest-updated computes it from the newest entry timestamp, and
+        # XML()/to-hash emit that. Fully timestamp-less feeds still die in
+        # !cache-updated.
+        my $upd      = parse-date-optional(get-text-optional($feed, "updated"));
 
         my %author-detail;
         with $feed.elements(:TAG<author>)[0] {

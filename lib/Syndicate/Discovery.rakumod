@@ -262,7 +262,7 @@ method fetch(Str $url --> Syndicate::Feed:D) {
     my $ct = header-value($resp<headers><content-type>) // '';
     die "Unexpected Content-Type: '$ct' — expected application/atom+xml, application/rss+xml, application/feed+json, application/json, or text/xml"
         unless !$ct.trim.chars
-            || $ct.lc ~~ /^ :i [ 'application/' [ atom\+xml | rss\+xml | feed\+json | xml | json ] | 'text/xml' ] [ ';' <-[;]>* ]* $/;
+            || $ct.lc ~~ /^ :i [ 'application/' [ atom\+xml | rss\+xml | feed\+json | xml | json ] | 'text/xml' ] [ \s* ';' <-[;]>* ]* $/;
     my $body = self!decode-response($resp);
     parse-feed($body)
 }

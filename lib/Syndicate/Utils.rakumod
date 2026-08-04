@@ -108,7 +108,9 @@ sub decode-entities(Str $text --> Str) is export {
     # semicolon is optional to tolerate lenient feeds ('&amp' == '&'), but
     # the name is consumed greedily so '&ampx' stays literal. Numeric
     # references tolerate the missing semicolon too for the same reason
-    # ('&#8217' == '&#8217;').
+    # ('&#8217' == '&#8217;'). Surrogate code points (U+D800-U+DFFF) and
+    # values past U+10FFFF are left as literal text: chr() accepts them but
+    # the result is not valid UTF-8 and crashes at any encode boundary.
     $text.subst(:g,
         / '&' [ $<hex>   = ( '#x' <[0..9a..fA..F]>+ ';'? )
                | $<dec>  = ( '#' \d+ ';'? )
@@ -117,12 +119,14 @@ sub decode-entities(Str $text --> Str) is export {
             with $<hex> {
                 my $digits = ~$<hex>.substr(2);
                 $digits = $digits.substr(0, *-1) if $digits.ends-with(';');
-                try { chr(:16($digits)) } // ~$/
+                my $cp = :16($digits);
+                0xD800 <= $cp <= 0xDFFF ?? ~$/ !! (try { chr($cp) } // ~$/)
             }
             orwith $<dec> {
                 my $digits = ~$<dec>.substr(1);
                 $digits = $digits.substr(0, *-1) if $digits.ends-with(';');
-                try { chr(+$digits) } // ~$/
+                my $cp = +$digits;
+                0xD800 <= $cp <= 0xDFFF ?? ~$/ !! (try { chr($cp) } // ~$/)
             }
             else {
                 # Named references: the XML predefined entities plus the
@@ -306,12 +310,19 @@ sub normalize-date-str(Str $str --> Str) {
     });
     # Space-separated ISO datetimes (e.g. '2024-01-15 08:30:00 -0500') are
     # rejected by datetime-interpret; convert them to the T-separated form.
+    # Seconds are optional for leniency ('2024-01-15 08:30' gains ':00').
     # The date prefix requires an ISO YYYY-MM-DD shape, so RFC 2822 dates
     # (month names) are never affected.
     $s .= subst(:g, /
-        (\d ** 4 '-' \d ** 2 '-' \d ** 2) ' ' (\d ** 2 ':' \d ** 2 ':' \d ** 2)
+        (\d ** 4 '-' \d ** 2 '-' \d ** 2) ' ' (\d ** 2 ':' \d ** 2) (':' \d ** 2)?
         ' '? (<[+-]> \d ** 2 ':'? \d ** 2)? $ /
-    , { "$0T$1" ~ ($2 // '') });
+    , { "$0T$1" ~ ($2 ?? $2 !! ':00') ~ ($3 // '') });
+    # RFC 2822 date-only values ('Mon, 15 Jan 2024') have no clock time and
+    # DateTime::Grammar cannot parse them; normalize to midnight UTC.
+    if $s ~~ / ( \d ** 1..2 ) ' ' ( <[a..zA..Z]> ** 3 ) ' ' ( \d ** 4 ) $ /
+        && $s !~~ / \d ** 1..2 ':' \d ** 2 / {
+        $s ~= ' 00:00:00 GMT';
+    }
     # Datetimes without any timezone designator are treated as UTC rather
     # than silently dropped. Only clock times qualify, so bare dates like
     # '2024-01-15' (which datetime-interpret already handles) are untouched.

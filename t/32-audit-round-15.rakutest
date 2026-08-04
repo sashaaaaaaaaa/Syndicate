@@ -1,0 +1,131 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Utils;
+use Syndicate::Parse;
+use Syndicate::Stats;
+use Syndicate::Discovery;
+
+plan 28;
+
+# ===== Bug 1: numeric character references never emit surrogates =====
+
+{
+    is decode-entities('&#xD800;'), '&#xD800;', 'R1: high surrogate stays literal';
+    is decode-entities('&#xDFFF;'), '&#xDFFF;', 'R1: low surrogate stays literal';
+    is decode-entities('&#55296;'), '&#55296;', 'R1: decimal surrogate stays literal';
+    is decode-entities('&#x10FFFF;'), "\x[10FFFF]", 'R1: max valid codepoint decodes';
+    is decode-entities('&#x110000;'), '&#x110000;', 'R1: out-of-range codepoint stays literal';
+    is decode-entities('&#x2019;'), "\x[2019]", 'R1: normal refs still decode';
+}
+
+{
+    my $rss = q:to/XML/;
+    <?xml version="1.0"?>
+    <rss version="2.0"><channel>
+    <title>T</title><link>L</link><description>D</description>
+    <item><title>evil</title><link>1</link><description>&#xD800;</description></item>
+    <item><title>ok</title><link>2</link><description>&#x2019;fine</description></item>
+    </channel></rss>
+    XML
+    my $f = Syndicate::RSS.new($rss);
+    is $f.items[0].summary, '&#xD800;',
+        'R1: feed with a surrogate ref keeps it as literal text';
+    ok try { $f.to-hash.encode('utf-8').defined }, 'R1: to-hash string is UTF-8-encodable';
+    ok try { $f.items[0].summary.encode('utf-8').defined },
+        'R1: item text is UTF-8-encodable';
+    is $f.items[1].summary, "\x[2019]fine", 'R1: sibling item decoded normally';
+}
+
+# ===== Bug 2: Atom feed-level updated falls back to entries on parse =====
+
+{
+    my $atom = q:to/XML/;
+    <?xml version="1.0"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+    <title>T</title><id>urn:1</id>
+    <entry><title>e1</title><id>urn:e1</id><updated>2024-05-02T12:00:00Z</updated></entry>
+    <entry><title>e2</title><id>urn:e2</id><updated>2024-05-01T12:00:00Z</updated></entry>
+    </feed>
+    XML
+    my $f = Syndicate::Atom.new($atom);
+    nok $f.updated.defined, 'R2: no feed-level updated stored';
+    is $f.to-hash<updated>, '2024-05-02T12:00:00Z',
+        'R2: to-hash computes the newest entry updated';
+    ok ~$f ~~ /'<updated>2024-05-02T12:00:00Z</updated>'/,
+        'R2: XML emits the computed updated';
+}
+
+{
+    my $atom = q:to/XML/;
+    <?xml version="1.0"?>
+    <feed xmlns="http://www.w3.org/2005/Atom">
+    <title>T</title><id>urn:1</id>
+    </feed>
+    XML
+    my $f = Syndicate::Atom.new($atom);
+    nok $f.to-hash<updated>.defined, 'R2: fully timestamp-less feed has no updated in to-hash';
+    my $s = try { ~$f };
+    nok $s.defined, 'R2: rendering a fully timestamp-less feed fails';
+    ok $!.message.contains('Atom feed requires \'updated\''),
+        'R2: failure is the documented graceful die';
+}
+
+# ===== Bug 3: Content-Type accepts whitespace before the parameter =====
+
+class FakeUA {
+    has Str $.ct = "application/rss+xml";
+    method get($url) {
+        %( :status(200), :success(True), :reason("OK"),
+           :headers(%(:content-type($!ct))),
+           :content('<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description></channel></rss>'.encode) )
+    }
+}
+
+sub ct-fetch(Str $ct) {
+    my $d = Syndicate::Discovery.new(:ua(FakeUA.new(:ct($ct))));
+    try { $d.fetch('http://example.com/feed').defined }
+}
+
+{
+    ok ct-fetch('application/rss+xml ; charset=utf-8'),
+        'R3: Content-Type with space before ; accepted';
+}
+
+{
+    nok ct-fetch('text/html ; x=y'), 'R3: text/html with parameters still rejected';
+}
+
+# ===== Bug 4: HH:MM-without-seconds and RFC 2822 date-only =====
+
+{
+    is parse-date-optional('2024-01-15 08:30').Str, '2024-01-15T08:30:00Z',
+        'R4: space-separated HH:MM parses as midnight-second';
+    is parse-date-optional('2024-01-15 08:30 -0500').Str, '2024-01-15T08:30:00-05:00',
+        'R4: space-separated HH:MM with offset parses';
+    is parse-date-optional('Mon, 15 Jan 2024').Str, '2024-01-15T00:00:00Z',
+        'R4: RFC 2822 date-only parses as midnight UTC';
+    is parse-date-optional('2024-01-15 08:30:00').Str, '2024-01-15T08:30:00Z',
+        'R4: HH:MM:SS form unchanged';
+    is parse-date-optional('Mon, 15 Jan 2024 08:30:00 GMT').Str, '2024-01-15T08:30:00Z',
+        'R4: full RFC 2822 unchanged';
+    is parse-date-optional('2024-01-15').Str, '2024-01-15T00:00:00Z',
+        'R4: bare ISO date unchanged';
+}
+
+# ===== Bug 5: parse-feed-or-nil counts JSON feeds too =====
+
+{
+    my $json = q:to/JSON/;
+    {"version":"https://jsonfeed.org/version/1.1","title":"T","home_page_url":"http://x","items":[]}
+    JSON
+    Syndicate::Stats.reset;
+    my $f = parse-feed-or-nil($json);
+    ok $f.defined, 'R5: parse-feed-or-nil parses JSON Feed';
+    is Syndicate::Stats.feeds-parsed, 1, 'R5: JSON Feed increments feeds-parsed';
+    nok parse-feed-or-nil('<html></html>').defined, 'R5: non-feed records nothing';
+    is Syndicate::Stats.feeds-parsed, 1, 'R5: non-feed did not increment feeds-parsed';
+}
+
+done-testing;
