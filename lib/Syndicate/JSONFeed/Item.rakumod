@@ -4,6 +4,12 @@ use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Stats;
 
+sub str-field(%h, Str $name --> Str) {
+    my $v = %h{$name}:exists ?? %h{$name} // Str !! Str;
+    die "JSON Feed Item '$name' must be a string, got {$v.^name}" unless $v ~~ Str;
+    $v
+}
+
 unit class Syndicate::JSONFeed::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::Item;
 
 multi method new(Str $json) {
@@ -31,12 +37,10 @@ has Lock $!cache-lock = Lock.new;
 has Lock $!hash-lock = Lock.new;
 
 multi method new-from-hash(%h) {
-    my $title   = %h<title> // Str;
-    my $link    = %h<url> // Str;
-    my $summary = %h<summary> // Str;
-    my $id      = %h<id> // $link // Str;
-    die "JSON Feed Item 'title' must be a string, got {$title.^name}" unless $title ~~ Str;
-    die "JSON Feed Item 'id' must be a string, got {$id.^name}" unless $id ~~ Str;
+    my $title   = str-field(%h, 'title');
+    my $link    = str-field(%h, 'url');
+    my $summary = str-field(%h, 'summary');
+    my $id      = %h<id>.defined ?? str-field(%h, 'id') !! $link;
     die "JSON Feed Item requires id or url" unless $id.defined && $id.chars;
 
     my $dp = parse-date-optional(%h<date_published>);
@@ -66,19 +70,24 @@ multi method new-from-hash(%h) {
         }
     }
 
-    my $content = %h<content_html>.defined && %h<content_html>.chars
-        ?? %h<content_html>
-        !! %h<content_text>.defined && %h<content_text>.chars
-            ?? %h<content_text>
+    my $externalUrl = str-field(%h, 'external_url');
+    my $contentHtml = str-field(%h, 'content_html');
+    my $contentText = str-field(%h, 'content_text');
+    my $image       = str-field(%h, 'image');
+    my $bannerImage = str-field(%h, 'banner_image');
+    my $content = $contentHtml.defined && $contentHtml.chars
+        ?? $contentHtml
+        !! $contentText.defined && $contentText.chars
+            ?? $contentText
             !! Str;
     my %bless = :$title, :$link, :summary($summary),
         :$id,
         :$content,
-        :external_url(%h<external_url> // Str),
-        :content_html(%h<content_html> // Str),
-        :content_text(%h<content_text> // Str),
-        :image(%h<image> // Str),
-        :banner_image(%h<banner_image> // Str),
+        :external_url($externalUrl),
+        :content_html($contentHtml),
+        :content_text($contentText),
+        :image($image),
+        :banner_image($bannerImage),
         :$author;
     %bless<date_published> = $dp if $dp ~~ DateTime;
     %bless<date_modified>  = $dm if $dm ~~ DateTime;
@@ -108,7 +117,6 @@ method to-hash {
             %h<banner_image>   = $.banner_image  if $.banner_image.defined;
             %h<date_published> = $.date_published.Str if $.date_published.defined;
             %h<date_modified>  = $.date_modified.Str  if $.date_modified.defined;
-            %h<date_modified> //= $.updated.Str       if $.updated.defined;
             if @.authors {
                 %h<authors> = @.authors.map({
                     my %a;

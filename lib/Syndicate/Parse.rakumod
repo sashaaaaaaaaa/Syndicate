@@ -72,12 +72,13 @@ multi sub feed-format(Str $name, Str $ver) {
     die "Unknown feed format: <{$name}>"
 }
 
-# Single-parse non-recording probe that also parses the feed, for code
-# paths (e.g. Discovery) that must not count a non-feed (e.g. an HTML page)
-# as an error. Detects format and builds the feed from one XML/JSON parse,
-# returning Nil when the input is not a feed — without recording an error.
-# Errors raised while parsing an actual feed (bad entries, etc.) still
-# propagate, matching parse-feed().
+# Single-parse probe that also parses the feed, for code paths (e.g.
+# Discovery) that must not count a non-feed (e.g. an HTML page) as an error.
+# Detects format and builds the feed from one XML/JSON parse, returning Nil
+# when the input is not a feed. The non-recording guarantee covers only
+# non-feed inputs: once the input is recognized as a feed, stats follow
+# parse-feed() — a successful parse records the feed, and errors raised while
+# parsing a feed (bad entries, etc.) record an error and propagate.
 our sub parse-feed-or-nil(Str $input --> Syndicate::Feed) is export {
     my $clean = sanitize-input-nonrecording($input);
     return Nil unless $clean.defined;

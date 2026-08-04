@@ -1,0 +1,137 @@
+use v6.d;
+use Test;
+use JSON::Fast;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Utils;
+use Syndicate::Parse;
+use Syndicate::Stats;
+use Syndicate::RSS::Item;
+use Syndicate::RSS::V0_91::Item;
+use Syndicate::JSONFeed::Item;
+
+plan 56;
+
+# ===== 1: RFC 2822 leniency in normalize-date-str (was silent date loss) =====
+
+{
+    my @cases = (
+        ('Wed, 1 Jan 2020 00:00:00 UT',            '2020-01-01T00:00:00Z'),
+        ('Tue, 2 Feb 2021 12:00:00 GMT',           '2021-02-02T12:00:00Z'),
+        ('Wed, 1 Jan 2020 00:00:00 GMT',           '2020-01-01T00:00:00Z'),
+        ('Wed, 01 Jan 2020 10:00 +0000',           '2020-01-01T10:00:00Z'),
+        ('Sun, 08 Jul 2026 10:00:00+0000',         '2026-07-08T10:00:00Z'),
+        ('15 Jan 2024',                            '2024-01-15T00:00:00Z'),
+        ('Mon, 15 Jan 2024 8:30:00 GMT',           '2024-01-15T08:30:00Z'),
+        ('Mon, 15 Jan 2024 8:30 AM EST',           '2024-01-15T08:30:00-05:00'),
+        ('Mon, 15 Jan 2024 10:00:00 +05:30',       '2024-01-15T10:00:00+05:30'),
+    );
+    for @cases -> ($raw, $want) {
+        my $d = parse-date-optional($raw);
+        is $d.defined ?? $d.Str !! 'NIL', $want, "1: «$raw» parses";
+    }
+    my $wd = parse-date-optional('15 Jan 2024');
+    is $wd.day-of-week, 1, '1: synthesized weekday is correct (15 Jan 2024 is a Monday)';
+    my $wd2 = parse-date-optional('29 Feb 2024');
+    is $wd2.day-of-week, 4, '1: synthesized weekday is correct (29 Feb 2024 is a Thursday)';
+}
+
+{
+    nok parse-date-optional('32 Jan 2024').defined, '1: bogus day still Nil';
+    nok parse-date-optional('Feb 30 2024').defined,  '1: bogus month-day still Nil';
+    is parse-date-optional('2024-01-15 08:30:00 -0500').Str, '2024-01-15T08:30:00-05:00',
+        '1: space-separated ISO unaffected';
+    is parse-date-optional('2024-01-15T08:30:00+05:30').Str, '2024-01-15T08:30:00+05:30',
+        '1: T-separated ISO with colon offset unaffected';
+}
+
+# ===== 2: JSON Feed item string fields are type-checked (was raw X::TypeCheck) =====
+
+{
+    for <url summary content_html content_text external_url image banner_image> -> $field {
+        my %h = :id('1'), :title('t'), $field => 123;
+        my $it = try { Syndicate::JSONFeed::Item.new-from-hash(%h) };
+        nok $it.defined, "2: non-string $field rejected";
+        ok $!.message.contains('must be a string') && $!.message.contains($field)
+            && !$!.message.contains('Type check failed'),
+            "2: $field error is graceful and names the field";
+    }
+    my %t = :id('1'), :title(123);
+    nok try { Syndicate::JSONFeed::Item.new-from-hash(%t) }.defined, '2: non-string title rejected';
+    ok $!.message.contains('title'), '2: title error names the field';
+    my %i = :url('http://x'), :title('t'), :id(123);
+    nok try { Syndicate::JSONFeed::Item.new-from-hash(%i) }.defined, '2: non-string id rejected';
+    my %fall = :url('http://x'), :title('t');
+    is Syndicate::JSONFeed::Item.new-from-hash(%fall).id, 'http://x', '2: id falls back to url';
+}
+
+{
+    Syndicate::Stats.reset;
+    my $json = q:to/END/;
+{"version":"https://jsonfeed.org/version/1.1","title":"t","items":[{"id":"1","title":"t","url":123}]}
+END
+    my $r = try { parse-feed($json) };
+    nok $r.defined, '2: parse-feed propagates the graceful die';
+    ok $!.message.contains('must be a string') && !$!.message.contains('Type check failed'),
+        '2: parse-feed surfaces the graceful message, not X::TypeCheck';
+    is Syndicate::Stats.errors, 1, '2: parse-feed records the error';
+}
+
+# ===== 5: active-ext no longer leaks into to-hash / JSON =====
+
+{
+    my $xml = q:to/END/;
+<item><title>a</title><link>http://x</link><dc:creator xmlns:dc="http://purl.org/dc/elements/1.1/">Jane</dc:creator></item>
+END
+    my $it = Syndicate::RSS::Item.new($xml);
+    nok $it.to-hash<active-ext>:exists, '5: RSS item to-hash has no active-ext key';
+    is ~$it.to-hash<dc-creators>, 'Jane', '5: extension data still present';
+    my $j = try { to-json($it.to-hash) };
+    ok $j.defined && !$j.contains('active-ext'), '5: item JSON is clean of active-ext';
+}
+
+# ===== 6: parse-feed-or-nil stats match the clarified contract =====
+
+{
+    my $good = q:to/END/;
+<rss version="2.0"><channel><title>t</title><link>http://x</link><description>d</description></channel></rss>
+END
+    my $nochan = '<rss version="2.0"><title>t</title></rss>';
+    my $html   = '<html><body>hi</body></html>';
+    for (good => [$good, True, 1, 0], nochan => [$nochan, False, 0, 1], html => [$html, False, 0, 0]) {
+        Syndicate::Stats.reset;
+        my $r = try { parse-feed-or-nil(.value[0]) };
+        is $r.defined, .value[1], "6: {.key} result";
+        is Syndicate::Stats.feeds-parsed, .value[2], "6: {.key} feeds-parsed delta";
+        is Syndicate::Stats.errors, .value[3], "6: {.key} errors delta";
+    }
+}
+
+# ===== V0_91: from-xml child index reads every field =====
+
+{
+    my $wide = q:to/END/;
+<item><title>w</title><link>http://w</link><description>d</description><guid>g1</guid><comments>c</comments><source>s</source></item>
+END
+    my $it = Syndicate::RSS::V0_91::Item.new($wide);
+    is $it.title, 'w',       'V0_91: title';
+    is $it.link, 'http://w', 'V0_91: link';
+    is $it.summary, 'd',     'V0_91: description';
+    is $it.id, 'g1',         'V0_91: guid -> id';
+    is $it.comments, 'c',    'V0_91: comments';
+    is $it.source, 's',      'V0_91: source';
+}
+
+# ===== date_modified: no longer synthesized from updated in to-hash =====
+
+{
+    my $p = Syndicate::JSONFeed::Item.new-from-hash(
+        %(id => '1', title => 't', date_modified => '2026-01-02T03:04:05Z'));
+    is $p.to-hash<date_modified>, '2026-01-02T03:04:05Z',
+        'date_modified: parse path round-trips date_modified';
+    my $b = Syndicate::JSONFeed::Item.new(
+        title => 'b', link => 'http://b', id => 'b1',
+        updated => DateTime.new('2026-01-02T03:04:05Z'));
+    nok $b.to-hash<date_modified>:exists,
+        'date_modified: builder item with only updated emits no date_modified';
+}

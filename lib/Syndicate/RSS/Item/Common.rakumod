@@ -61,7 +61,6 @@ method to-hash {
     %h<itunes-author>     = $.itunes-author     if $.itunes-author.defined;
     %h<itunes-summary>    = $.itunes-summary    if $.itunes-summary.defined;
     %h<itunes-duration>   = $.itunes-duration   if $.itunes-duration.defined;
-    %h<active-ext>        = $.active-ext        if $.active-ext.elems;
     %h
 }
 

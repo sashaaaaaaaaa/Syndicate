@@ -20,6 +20,14 @@ my constant %TZ-OFFSET = (
     'NZDT' => '+1300',
 );
 
+# Three-letter month abbreviations, for synthesizing the weekday of
+# weekday-less RFC 2822 dates in normalize-date-str.
+my constant %MONTH = (
+    'jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4,
+    'may' => 5, 'jun' => 6, 'jul' => 7, 'aug' => 8,
+    'sep' => 9, 'oct' => 10, 'nov' => 11, 'dec' => 12,
+);
+
 # Full HTML 4.01 named character reference set (case-sensitive), plus the
 # apostrophe and uppercase spellings of the XML predefined entities so that
 # e.g. &Aacute; and &amp; / &AMP; all decode as expected.
@@ -345,6 +353,42 @@ sub normalize-date-str(Str $str --> Str) {
     /, {
         %TZ-OFFSET{~$/}
     });
+    # RFC 2822 leniency. DateTime::Grammar rejects several real-world RFC 2822
+    # shapes: single-digit days/hours, seconds-less clock times, numeric
+    # offsets without a leading space or with a colon, and weekday-less dates.
+    # Normalize those here. The guard (3-letter month + 4-digit year) proves an
+    # RFC 2822 shape, so ISO datetimes are never affected.
+    if $s ~~ / <[a..zA..Z]> ** 3 ' ' \d ** 4 / {
+        # 1. Pad single-digit days ('Wed, 1 Jan 2020').
+        $s .= subst(:g, /
+            ( <[a..zA..Z]> ** 3 ','? \s* ) (\d) ' ' ( <[a..zA..Z]> ** 3 ' ' \d ** 4 )
+        /, -> $/ { "{$0.trim} {$1.fmt('%02d')} $2" });
+        # 2. Pad single-digit hours ('Mon, 15 Jan 2024 8:30:00 GMT').
+        $s .= subst(:g, /
+            ( \d ** 4 ' ' ) (\d) ':' (\d ** 2)
+        /, -> $/ { "{$0}{$1.fmt('%02d')}:$2" });
+        # 3. Seconds-less clock times gain ':00' ('10:00 +0000'). The
+        # lookbehind keeps an already-complete 'HH:MM:SS' from being re-read
+        # as 'MM:SS' and doubled.
+        $s .= subst(:g, /
+            <!after <[+0..9:]>> ( \d ** 2 ':' \d ** 2 ) <!before ':'>
+            ( \s* <[+-]> \d ** 2 ':'? \d ** 2 )? $
+        /, -> $/ { "$0:00" ~ ($1 // '') });
+        # 4. Numeric offsets need a leading space and a four-digit form
+        # ('+0530', not '+05:30'). Idempotent for already-valid offsets.
+        $s .= subst(:g, /
+            ( \d ** 2 ':' \d ** 2 ':' \d ** 2 ) \s* ( <[+-]> \d ** 2 ) ':'? ( \d ** 2 )
+        /, -> $/ { "$0 $1$2" });
+        # 5. Synthesize the weekday for weekday-less dates ('15 Jan 2024').
+        # Bogus dates keep today's Nil behavior via the try.
+        if $s !~~ / <[a..zA..Z]> ** 3 ',' / && $s ~~ / ( \d ** 1..2 ) ' ' ( <[a..zA..Z]> ** 3 ) ' ' ( \d ** 4 ) / {
+            my $wd = try {
+                my $month = %MONTH{ ~$1.lc };
+                $month.defined ?? Date.new(+$2, $month, +$0).day-of-week !! Nil;
+            };
+            $s = $wd.defined ?? (<Mon Tue Wed Thu Fri Sat Sun>)[$wd - 1] ~ ", $s" !! $s;
+        }
+    }
     # Space-separated ISO datetimes (e.g. '2024-01-15 08:30:00 -0500') are
     # rejected by datetime-interpret; convert them to the T-separated form.
     # Seconds are optional for leniency ('2024-01-15 08:30' gains ':00').

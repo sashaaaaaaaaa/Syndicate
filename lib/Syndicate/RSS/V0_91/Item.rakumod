@@ -17,15 +17,27 @@ submethod TWEAK {
 }
 
 method from-xml(XML::Element $item-elem, :$active?) {
-    my $title = get-text-optional($item-elem, "title");
-    my $link  = get-text-optional($item-elem, "link");
-    my $desc  = get-text-optional($item-elem, "description");
+    # Index the element's children once so the text reads below are O(1)
+    # lookups instead of scanning the children per field.
+    my @kids = $item-elem.elements;
+    my %child;
+    %child{$_.name}.push($_) for @kids;
+    my sub idx-text(Str $tag --> Str) {
+        my $e = %child{$tag}[0];
+        return Str unless $e.defined;
+        my $t = element-text($e).trim;
+        $t.chars ?? decode-entities($t) !! Str
+    }
+
+    my $title = idx-text("title");
+    my $link  = idx-text("link");
+    my $desc  = idx-text("description");
 
     my ($guid, $guid-is-permalink) = self!parse-guid($item-elem);
     my @categories = parse-categories($item-elem);
-    my $comment = get-text-optional($item-elem, "comments");
+    my $comment = idx-text("comments");
     my %enclosure = self!parse-enclosure($item-elem);
-    my $source  = get-text-optional($item-elem, "source");
+    my $source  = idx-text("source");
 
     my %extra;
     my $act = $active // set-active(active-extensions, $item-elem);
