@@ -201,10 +201,13 @@ multi sub parse-file(IO::Path $path --> Syndicate::Feed:D) is export {
     parse-file($path.Str)
 }
 
-# True when $parsed is a Hash whose version starts with the JSON Feed prefix.
+# True when $parsed is a Hash whose version is a string starting with the JSON
+# Feed prefix plus a non-empty suffix (mirrors JSONFeed.new-from-hash, which
+# rejects a bare prefix — so a feed that passes here never dies later).
 sub is-json-feed(Any $parsed --> Bool) {
     $parsed ~~ Hash
-        && $parsed<version>.defined
+        && $parsed<version> ~~ Str
+        && $parsed<version>.chars > JSONFEED-VERSION-PREFIX.chars
         && $parsed<version>.starts-with(JSONFEED-VERSION-PREFIX)
 }
 

@@ -1,0 +1,190 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use XML;
+use Syndicate::Utils;
+use Syndicate::Parse;
+use Syndicate::Stats;
+use Syndicate::Discovery;
+use Syndicate::RSS::V1_0::Item;
+
+plan 66;
+
+# ===== 2/base-url: valueless <base href> must not crash (was X::TypeCheck) =====
+
+{
+    my $d = Syndicate::Discovery.new;
+    my $bare = $d.base-url(q{<html><head><base href></head></html>});
+    nok $bare.defined, '2a: valueless <base href> yields no URL, no crash';
+    is $d.base-url(q{<html><head><base href="http://x/"></head></html>}), 'http://x/',
+        '2a: valued <base href> still returned';
+}
+
+# ===== 8: every JSON Feed string field is type-checked (was X::TypeCheck) =====
+
+{
+    my %base = :title('T'), :items([]);
+    for <home_page_url description generator feed_url user_comment next_url icon favicon locale> -> $field {
+        my %h = %base.clone;
+        %h{$field} = 123;
+        my $f = try { Syndicate::JSONFeed.new-from-hash(%h) };
+        nok $f.defined, "8: non-string $field rejected";
+        ok $!.message.contains('must be a string') && $!.message.contains($field),
+            "8: $field error names the field";
+    }
+    my %lang-bad = %base.clone;
+    %lang-bad<language> = 123;
+    my $lb = try { Syndicate::JSONFeed.new-from-hash(%lang-bad) };
+    nok $lb.defined, '8: non-string language rejected when no locale';
+    ok $!.message.contains('language'), '8: language error names the field';
+
+    my %good = %base.clone, :home_page_url('https://x'), :description('d'),
+        :generator('g'), :feed_url('https://x/feed'), :user_comment('u'),
+        :next_url('https://x/next'), :icon('https://x/i'), :favicon('https://x/f'),
+        :language('en');
+    my $g = Syndicate::JSONFeed.new-from-hash(%good);
+    is $g.language, 'en', '8: language used when locale absent';
+    is $g.feed_url, 'https://x/feed', '8: feed_url parsed';
+}
+
+# ===== 4: &#X hex refs decode (capital X), surrogates still literal =====
+
+{
+    is decode-entities('&#X41;'), 'A', '4: capital-X hex reference decodes';
+    is decode-entities('&#x42;'), 'B', '4: lowercase-x hex reference still decodes';
+    is decode-entities('&#XD800;'), '&#XD800;', '4: surrogate hex reference stays literal';
+    is decode-entities('&#65;'), 'A', '4: decimal reference still decodes';
+}
+
+# ===== 6: RSS 0.92/0.93/0.94 accepted as RSS 2.0, matching feed-format =====
+
+{
+    my $ver = 0;
+    for <0.92 0.93 0.94> -> $v {
+        my $xml = "<rss version=\"$v\"><channel><title>T</title><link>L</link><description>D</description><item><title>I</title><link>X</link></item></channel></rss>";
+        is feed-format($xml), RSS2, "6: feed-format(0.$v) is RSS2";
+        my $f = try { parse-feed($xml) };
+        ok $f.defined && $f.items.elems == 1, "6: parse-feed accepts $v";
+        $ver++;
+    }
+    ok $ver == 3, '6: all three legacy versions accepted';
+}
+
+# ===== 7: empty version suffix rejected consistently across the API =====
+
+{
+    my $bad = q:to/JSON/;
+    {"version":"https://jsonfeed.org/version/","title":"T","items":[]}
+    JSON
+    dies-ok { feed-format($bad) }, '7: feed-format rejects empty suffix';
+    nok parse-feed-or-nil($bad), '7: parse-feed-or-nil returns Nil for empty suffix';
+    my $good = q:to/JSON2/;
+    {"version":"https://jsonfeed.org/version/1.1","title":"T","items":[]}
+    JSON2
+    is feed-format($good), JSONFeedFmt, '7: proper version still detected';
+}
+
+# ===== 9: V1_0 item with only dc-creators declares the dc namespace =====
+
+{
+    my $item = Syndicate::RSS::V1_0::Item.new(
+        :title('T'), :link('http://x/1'), :about('http://x/1'),
+        :dc-creators(['A', 'B']),
+    );
+    ok ~$item ~~ /'xmlns:dc'/, '9: dc-creators alone triggers the xmlns:dc declaration';
+}
+
+# ===== 5: get-text-by-ns tolerates an undeclared canonical prefix =====
+
+{
+    my $doc = XML::Document.new(q{<rss><channel><content:encoded>U</content:encoded></channel></rss>});
+    my $ch = $doc.root.elements(:TAG<channel>)[0];
+    is get-text-by-ns($ch, 'encoded', 'http://x/', 'content'), 'U',
+        '5: undeclared canonical prefix still matches';
+    my $doc2 = XML::Document.new(q{<rss><channel><content:encoded xmlns:content="http://y/">N</content:encoded></channel></rss>});
+    nok get-text-by-ns($doc2.root.elements(:TAG<channel>)[0], 'encoded', 'http://x/', 'content').defined,
+        '5: no false positive when a different URI is actually bound';
+}
+
+# ===== 11: non-numeric ttl records no error and is not set =====
+
+{
+    my $before = Syndicate::Stats.errors;
+    my $f = Syndicate::RSS.new(q{<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description><ttl>soon</ttl></channel></rss>});
+    nok $f.ttl.defined, '11: invalid ttl not set on feed';
+    is Syndicate::Stats.errors - $before, 0, '11: invalid ttl records no Stats error';
+}
+
+# ===== 3: element-form content preserves markup and round-trips =====
+
+{
+    my $atom = q{<feed xmlns="http://www.w3.org/2005/Atom"><title>F</title><id>f</id><updated>2025-01-01T00:00:00Z</updated><entry><id>1</id><title>T</title><updated>2025-01-01T00:00:00Z</updated><content type="html"><p>Hello <em>world</em></p></content></entry></feed>};
+    my $fa = Syndicate::Atom.new($atom);
+    is $fa.items[0].content, '<p>Hello <em>world</em></p>', '3: Atom element-form markup preserved';
+    ok $fa.items[0].content-is-markup, '3: Atom content flagged as markup';
+    my $fa2 = Syndicate::Atom.new(~$fa);
+    is ~$fa2, ~$fa, '3: Atom markup round-trip is byte-stable';
+
+    my $rss = q{<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description><item><title>I</title><link>X</link><content:encoded xmlns:content="http://purl.org/rss/1.0/modules/content/"><p>Hello <em>world</em></p></content:encoded></item></channel></rss>};
+    my $fr = Syndicate::RSS.new($rss);
+    is $fr.items[0].content, '<p>Hello <em>world</em></p>', '3: RSS element-form markup preserved';
+    my $fr2 = Syndicate::RSS.new(~$fr);
+    is $fr2.items[0].content, $fr.items[0].content,
+        '3: RSS markup content stable across parse/regen/reparse';
+
+    my $rss-mixed = q{<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description><item><title>I</title><link>X</link><content:encoded xmlns:content="http://purl.org/rss/1.0/modules/content/">&lt;p&gt;enc&lt;/p&gt;<b>raw</b></content:encoded></item></channel></rss>};
+    my $fm = Syndicate::RSS.new($rss-mixed);
+    is $fm.items[0].content, '<p>enc</p><b>raw</b>',
+        '3: RSS entity+element content decoded to markup';
+    my $fm2 = Syndicate::RSS.new(~$fm);
+    is $fm2.items[0].content, $fm.items[0].content,
+        '3: RSS mixed content stable across parse/regen/reparse';
+
+    my $rss-space = q{<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description><item><title>I</title><link>X</link><content:encoded xmlns:content="http://purl.org/rss/1.0/modules/content/"><b>raw</b> <p>enc</p></content:encoded></item></channel></rss>};
+    my $fs = Syndicate::RSS.new($rss-space);
+    my $fs2 = Syndicate::RSS.new(~$fs);
+    is $fs2.items[0].content, $fs.items[0].content,
+        '3: RSS inter-element whitespace stable across parse/regen/reparse';
+
+    my $rss-entity = q{<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description><item><title>I</title><link>X</link><content:encoded xmlns:content="http://purl.org/rss/1.0/modules/content/">&lt;p&gt;hi&lt;/p&gt;</content:encoded></item></channel></rss>};
+    my $fe = Syndicate::RSS.new($rss-entity);
+    is $fe.items[0].content, '<p>hi</p>', '3: entity-encoded content still decoded to plain text';
+    my $fe2 = Syndicate::RSS.new(~$fe);
+    is $fe2.items[0].content, $fe.items[0].content,
+        '3: entity-encoded content stable (no double encoding)';
+
+    my $v1 = q{<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"><channel rdf:about="http://x"><title>t</title><link>l</link><description>d</description></channel><item rdf:about="http://x/i"><title>i</title><link>http://x/i</link><content:encoded xmlns:content="http://purl.org/rss/1.0/modules/content/"><p>Hello <em>world</em></p></content:encoded></item></rdf:RDF>};
+    my $vf = Syndicate::RSS::V1_0.new($v1);
+    is $vf.items[0].content, '<p>Hello <em>world</em></p>', '3: V1_0 element-form markup preserved';
+    my $vf2 = Syndicate::RSS::V1_0.new(~$vf);
+    is $vf2.items[0].content, $vf.items[0].content,
+        '3: V1_0 markup content stable across parse/regen/reparse';
+}
+
+# ===== 13: child-index parse reads every field of a wide item =====
+
+{
+    my $xml = q{<rss version="2.0"><channel><title>T</title><link>L</link><description>D</description>
+        <item><title>Wide</title><link>http://x/w</link><description>d</description>
+        <author>a@x</author><category>cat1</category><category>cat2</category>
+        <comments>http://x/c</comments><source>http://src</source>
+        <pubDate>Mon, 15 Jan 2024 08:30:00 GMT</pubDate>
+        <guid isPermaLink="false">g1</guid>
+        <enclosure url="http://x/e.mp3" length="1234" type="audio/mpeg"/>
+        <content:encoded xmlns:content="http://purl.org/rss/1.0/modules/content/">body</content:encoded>
+        </item></channel></rss>};
+    my $f = Syndicate::RSS.new($xml);
+    my $i = $f.items[0];
+    is $i.title, 'Wide', '13: title parsed';
+    is $i.link, 'http://x/w', '13: link parsed';
+    is $i.summary, 'd', '13: description parsed';
+    is $i.author, 'a@x', '13: author parsed';
+    is +$i.categories, 2, '13: both categories parsed';
+    is $i.comments, 'http://x/c', '13: comments parsed';
+    is $i.source, 'http://src', '13: source parsed';
+    is $i.updated.year, 2024, '13: pubDate parsed';
+    is $i.guid, 'g1', '13: guid parsed';
+    is $i.enclosure<url>, 'http://x/e.mp3', '13: enclosure parsed';
+    is $i.content, 'body', '13: content:encoded parsed';
+}

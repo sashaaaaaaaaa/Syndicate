@@ -101,7 +101,8 @@ my $bad-ttl = Syndicate::RSS.new(q:to/XML/);
 <item><title>I</title><link>IL</link></item></channel></rss>
 XML
 nok $bad-ttl.ttl.defined, 'invalid ttl not set on feed';
-is Syndicate::Stats.errors - $errors-before-ttl, 1, 'invalid ttl records exactly one Stats error';
+is Syndicate::Stats.errors - $errors-before-ttl, 0,
+    'invalid ttl records no Stats error (optional metadata, feed parses fine)';
 
 my $good-ttl = Syndicate::RSS.new(q:to/XML/);
 <rss version="2.0"><channel><title>T</title><link>L</link><description>D</description><ttl>60</ttl>

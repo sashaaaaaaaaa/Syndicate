@@ -8,6 +8,12 @@ use Syndicate::Stats;
 my constant JSONFEED-VERSION       is export = 'https://jsonfeed.org/version/1.1';
 our constant JSONFEED-VERSION-PREFIX is export = 'https://jsonfeed.org/version/';
 
+sub str-field(%h, Str $name --> Str) {
+    my $v = %h{$name}:exists ?? %h{$name} // Str !! Str;
+    die "JSON Feed '$name' must be a string, got {$v.^name}" unless $v ~~ Str;
+    $v
+}
+
 unit class Syndicate::JSONFeed:ver<0.0.1>:auth<zef:sasha> does Syndicate::Feed;
 
 has Str $.version = JSONFEED-VERSION;
@@ -41,12 +47,11 @@ multi method new-from-hash(%h) {
             unless $version ~~ Str;
         die "Invalid JSON Feed version: $version"
             unless $version.starts-with(JSONFEED-VERSION-PREFIX) && $version.chars > JSONFEED-VERSION-PREFIX.chars;
-        my $title       = %h<title> // Str;
-        die "JSON Feed 'title' must be a string, got {$title.^name}" unless $title ~~ Str;
+        my $title       = str-field(%h, 'title');
         die "JSON Feed requires title" unless $title.defined && $title.chars;
-        my $link        = %h<home_page_url> // Str;
-        my $desc        = %h<description> // Str;
-        my $gen         = %h<generator> // Str;
+        my $link        = str-field(%h, 'home_page_url');
+        my $desc        = str-field(%h, 'description');
+        my $gen         = str-field(%h, 'generator');
 
         my %author;
         if %h<author> ~~ Hash {
@@ -67,15 +72,17 @@ multi method new-from-hash(%h) {
             @items.push: Syndicate::JSONFeed::Item.new-from-hash(%$item-data);
         }
 
+        my $locale = str-field(%h, 'locale');
+        my $lang   = $locale.defined ?? $locale !! str-field(%h, 'language');
         my %bless = :$version, :$title, :$link, :description($desc),
             :generator($gen),
-            :feed_url(%h<feed_url> // Str),
-            :user_comment(%h<user_comment> // Str),
-            :next_url(%h<next_url> // Str),
-            :icon(%h<icon> // Str),
-            :favicon(%h<favicon> // Str),
+            :feed_url(str-field(%h, 'feed_url')),
+            :user_comment(str-field(%h, 'user_comment')),
+            :next_url(str-field(%h, 'next_url')),
+            :icon(str-field(%h, 'icon')),
+            :favicon(str-field(%h, 'favicon')),
             :author(%author),
-            :language(%h<locale> // %h<language> // Str);
+            :language($lang);
         if %h<expired>:exists {
             die "JSON Feed 'expired' must be a Bool, got {%h<expired>.^name}"
                 unless %h<expired> ~~ Bool;

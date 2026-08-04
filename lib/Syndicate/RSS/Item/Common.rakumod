@@ -34,6 +34,7 @@ has Set $.active-ext = Set.new;
 has Bool $!is-rdf is built = False;
 has Bool $!is-v091 is built = False;
 has Bool $!is-standalone is built = False;
+has Bool $!content-is-markup is built = False;
 
 method to-hash {
     my %h = self.to-hash-common;
@@ -143,7 +144,15 @@ method XML {
         }
         add-element($xml, "description", $.summary);
         if !$!is-v091 && $.content.defined && $.content.chars {
-            $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
+            if $!content-is-markup {
+                # Element-form content (parsed from real markup) regenerates
+                # as markup; unparseable bodies fall back to encoded text.
+                my @nodes = markup-nodes($.content);
+                my @cnodes = @nodes ?? @nodes !! [encode-entities($.content)];
+                $xml.append: XML::Element.new(:name<content:encoded>, :nodes(@cnodes));
+            } else {
+                $xml.append: XML::Element.new(:name<content:encoded>, :nodes([encode-entities($.content)]));
+            }
         }
         unless $!is-v091 {
             if $.updated.defined {

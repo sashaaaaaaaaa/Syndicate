@@ -1,6 +1,7 @@
 use v6.d;
 use XML;
 use Syndicate::RSS::Item::Common;
+use Syndicate::RSS::Common;
 use Syndicate::Utils;
 use Syndicate::Extensions;
 use Syndicate::Stats;
@@ -19,18 +20,34 @@ submethod TWEAK {
 
 method from-xml(XML::Element $item-elem, :$active?) {
     my $about   = decode-entities($item-elem.attribs{'rdf:about'} // $item-elem.attribs<about> // Str);
-    my $title   = get-text-optional($item-elem, "title");
-    my $link    = get-text-optional($item-elem, "link");
-    my $desc    = get-text-optional($item-elem, "description");
-    my $encoded = get-text-optional($item-elem, "content:encoded")
-    // get-text-by-ns($item-elem, "encoded", 'http://purl.org/rss/1.0/modules/content/');
+    # Index direct children once: per-field elements(:TAG<...>) calls each scan
+    # linearly, making a parse O(fields x children). Reads below use the index.
+    my @kids = $item-elem.elements;
+    my %child;
+    %child{$_.name}.push($_) for @kids;
+    my sub idx-text(Str $tag --> Str) {
+        my $e = %child{$tag}[0];
+        return Str unless $e.defined;
+        my $t = element-text($e).trim;
+        $t.chars ?? decode-entities($t) !! Str
+    }
 
-    my $author  = get-text-optional($item-elem, "author");
+    my $title   = idx-text("title");
+    my $link    = idx-text("link");
+    my $desc    = idx-text("description");
+    my ($encoded, $content-is-markup);
+    with %child{'content:encoded'}[0]
+        // elements-by-local-ns($item-elem, NS-CONTENT, "encoded", "content")[0]
+    {
+        ($encoded, $content-is-markup) = content-and-markup($_);
+    }
+
+    my $author  = idx-text("author");
     my ($guid, $guid-is-permalink) = self!parse-guid($item-elem);
     my @categories = parse-categories($item-elem);
-    my $comment = get-text-optional($item-elem, "comments");
+    my $comment = idx-text("comments");
     my %enclosure = self!parse-enclosure($item-elem);
-    my $source  = get-text-optional($item-elem, "source");
+    my $source  = idx-text("source");
 
     my %extra;
     my $act = $active // set-active(active-extensions, $item-elem);
@@ -55,6 +72,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
                 :$author,
                 :id($item-id),
                 :$content,
+                :content-is-markup($content-is-markup // False),
                 :has-dc-creator(%extra<has-dc-creator> // False),
                 :has-dc-date(%extra<has-dc-date> // False),
                 :$guid, :$guid-is-permalink,
@@ -72,7 +90,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
 
 method namespace-flags() {
     %(
-        :dc($!has-dc-creator || $!has-dc-date || $!updated.defined || ?(@!dc-subjects)),
+        :dc($!has-dc-creator || $!has-dc-date || $!updated.defined || ?(@!dc-creators) || ?(@!dc-subjects)),
         :media(?(@!media-contents) || ?(@!media-thumbnails) || ?(@!media-groups) || $!media-title.defined || $!media-description.defined),
         :itunes($!itunes-author.defined || $!itunes-summary.defined || $!itunes-duration.defined),
         :content(?($.content.defined && $.content.chars)),

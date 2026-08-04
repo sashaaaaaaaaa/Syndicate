@@ -338,7 +338,9 @@ method !parse-attrs(Str $tag --> Map) {
 method base-url(Str $html --> Str) {
     with $html.comb($base-tag)[0] -> $tag {
         my %attr = self!parse-attrs($tag);
-        return %attr<href> if %attr<href>.defined;
+        # A valueless <base href> parses to a Bool True; never return it as
+        # the base URL (guard with a type check to avoid an X::TypeCheck).
+        return %attr<href> if %attr<href> ~~ Str;
     }
     Str
 }

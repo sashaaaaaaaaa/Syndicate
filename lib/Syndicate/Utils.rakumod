@@ -100,8 +100,8 @@ sub decode-entities(Str $text --> Str) is export {
     # Fast path: no '&' means no entity can be present, so skip the regex
     # subst entirely (this runs on every text field during parsing).
     return $text unless $text.contains('&');
-    # Single-pass decoder: numeric character references (&#NN; / &#xHH;),
-    # the five predefined XML entities, and the HTML 4.01 named character
+    # Single-pass decoder: numeric character references (&#NN; / &#xHH; /
+    # &#XHH;), the five predefined XML entities, and the HTML 4.01 named character
     # references. Unknown named entities are left as literal text, and the
     # replacement is never rescanned, so a raw '&amp;#8217;' decodes to
     # '&#8217;' rather than to an apostrophe. The named reference's
@@ -112,7 +112,7 @@ sub decode-entities(Str $text --> Str) is export {
     # values past U+10FFFF are left as literal text: chr() accepts them but
     # the result is not valid UTF-8 and crashes at any encode boundary.
     $text.subst(:g,
-        / '&' [ $<hex>   = ( '#x' <[0..9a..fA..F]>+ ';'? )
+        / '&' [ $<hex>   = ( '#' <[xX]> <[0..9a..fA..F]>+ ';'? )
                | $<dec>  = ( '#' \d+ ';'? )
                | $<named> = ( <[a..zA..Z0..9]>+ ';'? ) ] /,
         {
@@ -217,6 +217,39 @@ sub text-of-optional($e --> Str) {
     $text.chars ?? decode-entities($text) !! Str
 }
 
+# Extract a <content>/<content:encoded> body, preserving inline markup.
+# Returns (Str content, Bool is-markup): when the element has element
+# children, their serialized markup (tags included) is kept and is-markup is
+# True; a text-only body (entity-encoded markup, CDATA, plain text) returns
+# the decoded text with is-markup False. This lets generators emit real
+# markup for element-form content while keeping entity-encoded bodies
+# byte-stable.
+sub content-and-markup(XML::Element $e) is export {
+    my @kids = $e.nodes;
+    if @kids.grep(XML::Element) {
+        # Text/CDATA children are stored entity-encoded by the XML module;
+        # decode them so the captured markup is the rendered HTML. Whitespace
+        # between elements is dropped (the xhtml branch already joins element
+        # children only) so round-trips stay byte-stable.
+        (@kids.grep({ !($_ ~~ XML::Text && $_ !~~ /\S/) })
+            .map({ $_ ~~ XML::Element ?? ~$_ !! decode-entities(node-text($_)) }).join, True)
+    } else {
+        my $text = decode-entities(element-text($e));
+        ($text.defined && $text.chars ?? $text !! Str, False)
+    }
+}
+
+# Serialize parsed markup back into child nodes for output; returns an empty
+# list when $content is plain text or not well-formed XML (so callers fall
+# back to entity-encoded text). Mixed text+element bodies keep both, since
+# element markup must not drop adjacent text.
+sub markup-nodes(Str $content --> List) is export {
+    my $frag = try { XML::Document.new("<wrap>{$content}</wrap>") };
+    return () unless $frag;
+    my @children = $frag.root.nodes.grep({ !($_ ~~ XML::Text && $_ !~~ /\S/) });
+    @children.grep(XML::Element) ?? @children !! ()
+}
+
 sub get-text-optional($parent, $tag --> Str) is export {
     # Note: Returns Str (type object) for both "element missing" and
     # "element empty". Use .defined to distinguish from a found value.
@@ -240,12 +273,13 @@ sub matches-ns(XML::Element $e, Str $ns-uri, Str $canonical-prefix --> Bool) is 
     }
 }
 
-sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
+sub get-text-by-ns($parent, $local-name, $ns-uri, Str $canonical-prefix = "" --> Str) is export {
     # XML::Element.elements() can only match literal element names, so a
     # namespaced element whose prefix differs from the canonical one (e.g.
     # <content-enc:encoded>) would be missed. Match children by local name
     # and namespace URI resolved in each child's own scope (which also sees
-    # xmlns declarations made on the child element itself).
+    # xmlns declarations made on the child element itself). An undeclared
+    # canonical prefix is tolerated, mirroring matches-ns/elements-by-local-ns.
     for $parent.elements -> $e {
         my $name = $e.name;
         my $idx  = $name.index(':');
@@ -254,6 +288,9 @@ sub get-text-by-ns($parent, $local-name, $ns-uri --> Str) is export {
         my $prefix = $idx.defined ?? $name.substr(0, $idx) !! '';
         with $e.nsURI($prefix) {
             return text-of-optional($e) if $_ eq $ns-uri;
+        } else {
+            return text-of-optional($e)
+                if $prefix.chars && $prefix eq $canonical-prefix;
         }
     }
     Str
@@ -409,7 +446,7 @@ Not typically needed by end users.
 =item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>
 =item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Nil>
 =item C<matches-ns(XML::Element, $ns-uri, $canonical-prefix)> - Namespace membership in the element's own scope
-=item C<get-text-by-ns($parent, $local-name, $ns-uri)> - Get optional text of the first child matching local name and namespace URI
+=item C<get-text-by-ns($parent, $local-name, $ns-uri, $canonical-prefix = "")> - Get optional text of the first child matching local name and namespace URI
 =item C<elements-by-local-ns($parent, $ns-uri, $local-name, $canonical-prefix)> - Namespace-aware child element lookup
 =item C<sanitize($value)> - Deep clone dropping undefined slots and empty containers for safe to-hash export
 

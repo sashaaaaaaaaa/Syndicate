@@ -92,6 +92,7 @@ The parser detects the format automatically:
 - `{` → JSON Feed
 - `<feed` → Atom 1.0
 - `<rss version="0.91"` → RSS 0.91
+- `<rss version="0.92|0.93|0.94"` → RSS 2.0 (legacy 0.9x flavors are structurally RSS 2.0-compatible)
 - `<rss` → RSS 2.0
 - `<rdf:RDF` → RSS 1.0
 

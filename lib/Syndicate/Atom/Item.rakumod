@@ -22,6 +22,7 @@ has %.author-detail of Str;
 has @.categories of Str;
 has DateTime $.published;
 has Str $.content-type;
+has Bool $.content-is-markup;
 has Str $.rights;
 has %.source-feed;
 has @.contributors of Hash;
@@ -64,12 +65,40 @@ multi method new(XML::Element $xml-elem) {
 }
 
 method from-xml(XML::Element $entry-elem) {
-    my $id       = get-text($entry-elem, "id");
-    my $title    = get-text($entry-elem, "title");
-    my $summary  = get-text-optional($entry-elem, "summary");
+    # Index direct children once: per-field elements(:TAG<...>) calls each scan
+    # linearly, making a parse O(fields x children). Reads below use the index.
+    my @kids = $entry-elem.elements;
+    my %child;
+    %child{$_.name}.push($_) for @kids;
+    my sub idx-text(Str $tag --> Str) {
+        my $e = %child{$tag}[0];
+        return Str unless $e.defined;
+        my $t = element-text($e).trim;
+        $t.chars ?? decode-entities($t) !! Str
+    }
+    my sub idx-required(Str $tag --> Str) {
+        my $e = %child{$tag}[0];
+        die "Missing required element <$tag> in <{$entry-elem.name}>" without $e;
+        my $t = element-text($e).trim;
+        die "Empty required element <$tag> in <{$entry-elem.name}>" unless $t.chars;
+        decode-entities($t)
+    }
+    # Optional text of a direct child of a sub-element (author, contributor,
+    # source): scans only that element's few children.
+    my sub idx-text-on(XML::Element $e, Str $tag --> Str) {
+        my $c = $e.elements(:TAG($tag))[0];
+        return Str unless $c.defined;
+        my $t = element-text($c).trim;
+        $t.chars ?? decode-entities($t) !! Str
+    }
+
+    my $id       = idx-required("id");
+    my $title    = idx-required("title");
+    my $summary  = idx-text("summary");
     my $content  = Str;
     my $content-type = Str;
-    with $entry-elem.elements(:TAG<content>)[0] -> $ce {
+    my $content-is-markup = False;
+    with %child<content>[0] -> $ce {
         $content-type = decode-entities($ce.attribs<type> // "text");
         if $content-type eq "xhtml" {
             my @xhtml-divs = $ce.elements;
@@ -93,18 +122,19 @@ method from-xml(XML::Element $entry-elem) {
             # No element child (e.g. <content type="xhtml"/>) is a benign empty
             # content — leave $content as Str rather than counting an error.
         } else {
-            my $text = decode-entities(element-text($ce));
-            $content = $text.defined && $text.chars ?? $text !! Str;
+            # Preserve inline markup for element-form bodies; text-only bodies
+            # (entity-encoded markup, CDATA) stay decoded plain text.
+            ($content, $content-is-markup) = content-and-markup($ce);
         }
     }
-    my $updated  = parse-date(get-text($entry-elem, "updated"));
-    my $pub      = parse-date-optional(get-text-optional($entry-elem, "published"));
-    my $rights   = get-text-optional($entry-elem, "rights");
+    my $updated  = parse-date(idx-required("updated"));
+    my $pub      = parse-date-optional(idx-text("published"));
+    my $rights   = idx-text("rights");
     my $lang     = $entry-elem.attribs{'xml:lang'} // Str;
 
     my @link-alternate;
     my $link = Str;
-    for $entry-elem.elements(:TAG<link>) {
+    for @(%child<link> // []) {
         my $rel = .attribs<rel> // "alternate";
         my $href = decode-entities(.attribs<href> // "");
         if $rel eq "alternate" {
@@ -114,35 +144,35 @@ method from-xml(XML::Element $entry-elem) {
     }
 
     my %author-detail;
-    with $entry-elem.elements(:TAG<author>)[0] {
-        %author-detail<name>  = get-text-optional($_, "name");
-        %author-detail<email> = get-text-optional($_, "email");
-        %author-detail<uri>   = get-text-optional($_, "uri");
+    with %child<author>[0] {
+        %author-detail<name>  = idx-text-on($_, "name");
+        %author-detail<email> = idx-text-on($_, "email");
+        %author-detail<uri>   = idx-text-on($_, "uri");
     }
 
     my @categories;
-    for $entry-elem.elements(:TAG<category>) {
+    for @(%child<category> // []) {
         my $term = decode-entities(.attribs<term> // "");
         @categories.push: $term if $term.chars;
     }
 
     my @contributors;
-    for $entry-elem.elements(:TAG<contributor>) -> $c {
+    for @(%child<contributor> // []) -> $c {
         my %c;
-        %c<name>  = get-text-optional($c, "name");
-        %c<email> = get-text-optional($c, "email");
-        %c<uri>   = get-text-optional($c, "uri");
+        %c<name>  = idx-text-on($c, "name");
+        %c<email> = idx-text-on($c, "email");
+        %c<uri>   = idx-text-on($c, "uri");
         @contributors.push: %c;
     }
 
     my %source-feed;
-    with $entry-elem.elements(:TAG<source>)[0] {
-        %source-feed<title> = get-text-optional($_, "title");
-        %source-feed<id>    = get-text-optional($_, "id");
+    with %child<source>[0] {
+        %source-feed<title> = idx-text-on($_, "title");
+        %source-feed<id>    = idx-text-on($_, "id");
         with .elements(:TAG<link>)[0] {
             %source-feed<link> = decode-entities(.attribs<href> // "");
         }
-        %source-feed<updated> = parse-date-optional(get-text-optional($_, "updated"));
+        %source-feed<updated> = parse-date-optional(idx-text-on($_, "updated"));
     }
 
     my $author = %author-detail<name> // %author-detail<email> // Str;
@@ -151,6 +181,7 @@ method from-xml(XML::Element $entry-elem) {
         :$author,
         :$content,
         :$content-type,
+        :content-is-markup($content-is-markup),
         :$rights, :xml-lang($lang),
         :author-detail(%author-detail),
         :source-feed(%source-feed);
@@ -209,6 +240,11 @@ method XML {
                         @nodes = [$div];
                     }
                 }
+            } elsif $.content-is-markup {
+                # Element-form content (parsed from real markup) regenerates as
+                # markup; unparseable bodies fall back to encoded text.
+                my @nodes2 = markup-nodes($.content);
+                @nodes = @nodes2 ?? @nodes2 !! [encode-entities($.content)];
             } else {
                 @nodes = [encode-entities($.content)];
             }
@@ -294,6 +330,9 @@ An Atom 1.0 entry. Does L<C<Syndicate::Item>|rakudoc:Syndicate::Item>.
 =item C<@.categories> - Category terms
 =item C<$.published> - Published timestamp
 =item C<$.content-type> - Content MIME type (e.g. "xhtml", "text")
+=item C<$.content-is-markup> - True when the body held raw element markup
+    (an html-typed C<content> element with element children); C<$.content>
+    then holds that markup, which round-trips on regeneration
 =item C<$.rights> - Rights text
 =item C<%.source-feed> - Source feed hash (title, id, link, updated)
 =item C<@.contributors> - Array of contributor hashes

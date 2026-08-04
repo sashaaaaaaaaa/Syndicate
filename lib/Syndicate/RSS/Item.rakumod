@@ -1,6 +1,7 @@
 use v6.d;
 use XML;
 use Syndicate::RSS::Item::Common;
+use Syndicate::RSS::Common;
 use Syndicate::Utils;
 use Syndicate::Extensions;
 use Syndicate::Stats;
@@ -8,16 +9,32 @@ use Syndicate::Stats;
 unit class Syndicate::RSS::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::RSS::Item::Common;
 
 method from-xml(XML::Element $item-elem, :$active?) {
-    my $title   = get-text-optional($item-elem, "title");
-    my $link    = get-text-optional($item-elem, "link");
-    my $desc    = get-text-optional($item-elem, "description");
-    my $encoded = get-text-optional($item-elem, "content:encoded")
-    // get-text-by-ns($item-elem, "encoded", 'http://purl.org/rss/1.0/modules/content/');
-    my $author  = get-text-optional($item-elem, "author");
+    # Index direct children once: per-field elements(:TAG<...>) calls each scan
+    # linearly, making a parse O(fields x children). Reads below use the index.
+    my @kids = $item-elem.elements;
+    my %child;
+    %child{$_.name}.push($_) for @kids;
+    my sub idx-text(Str $tag --> Str) {
+        my $e = %child{$tag}[0];
+        return Str unless $e.defined;
+        my $t = element-text($e).trim;
+        $t.chars ?? decode-entities($t) !! Str
+    }
+
+    my $title   = idx-text("title");
+    my $link    = idx-text("link");
+    my $desc    = idx-text("description");
+    my ($encoded, $content-is-markup);
+    with %child{'content:encoded'}[0]
+        // elements-by-local-ns($item-elem, NS-CONTENT, "encoded", "content")[0]
+    {
+        ($encoded, $content-is-markup) = content-and-markup($_);
+    }
+    my $author  = idx-text("author");
     my @categories = parse-categories($item-elem);
-    my $comment = get-text-optional($item-elem, "comments");
-    my $pubdate = parse-date-optional(get-text-optional($item-elem, "pubDate"));
-    my $source  = get-text-optional($item-elem, "source");
+    my $comment = idx-text("comments");
+    my $pubdate = parse-date-optional(idx-text("pubDate"));
+    my $source  = idx-text("source");
 
     my ($guid, $guid-is-permalink) = self!parse-guid($item-elem);
     my %enclosure = self!parse-enclosure($item-elem);
@@ -50,6 +67,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
         :$author,
         :id($item-id), :$guid,
         :$content,
+        :content-is-markup($content-is-markup // False),
         :has-dc-creator(%extra<has-dc-creator> // False),
         :has-dc-date(%extra<has-dc-date> // False),
         :comments($comment),

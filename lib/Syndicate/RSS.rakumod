@@ -49,7 +49,10 @@ multi method new(XML::Document $doc) {
         my $rss = $doc.root;
         die "Not an RSS feed" unless $rss.name eq "rss";
         my $ver = $rss.attribs<version> // "2.0";
-        die "Unsupported RSS version: $ver" unless $ver eq "2.0";
+        # RSS 0.92/0.93/0.94 are structurally RSS 2.0-compatible and feed-format
+        # already reports them as RSS2; parse them with this parser.
+        die "Unsupported RSS version: $ver"
+            unless $ver eq "2.0" || $ver eq "0.92" || $ver eq "0.93" || $ver eq "0.94";
         my $channel = $rss.elements(:TAG<channel>)[0];
         die "No channel element" unless $channel;
 
@@ -99,11 +102,10 @@ multi method new(XML::Document $doc) {
         %bless<lastBuildDate> = $lbd if $lbd ~~ DateTime;
         if $ttl-str.defined && $ttl-str.chars {
             my $ttl = try { $ttl-str.Int };
-            if $ttl.defined {
-                %bless<ttl> = $ttl;
-            } else {
-                Syndicate::Stats.record-error;
-            }
+            # A non-numeric ttl is optional metadata on an otherwise-valid
+            # feed: skip it without counting a Stats error (errors track
+            # actual parse failures).
+            %bless<ttl> = $ttl if $ttl.defined;
         }
         # with-error-recording records a Stats error and rethrows for any
         # exception raised anywhere in the constructor body above.
