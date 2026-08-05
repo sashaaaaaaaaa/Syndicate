@@ -7,7 +7,7 @@ use Syndicate::Extensions;
 use Syndicate::Stats;
 use Syndicate::Extension::DublinCore;
 
-unit class Syndicate::RSS::V1_0::Item:ver<0.0.1>:auth<zef:sasha> does Syndicate::RSS::Item::Common;
+unit class Syndicate::RSS::V1_0::Item:ver<0.0.2>:auth<zef:sasha> does Syndicate::RSS::Item::Common;
 
 method !item-type-name { "RSS 1.0 item" }
 

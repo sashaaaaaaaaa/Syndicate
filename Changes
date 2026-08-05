@@ -2,6 +2,8 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
+0.0.2  2026-08-05T08:02:21+03:00
+
     - Restore the hand-written README overwritten by the first mi6 release;
       ReadmeFromPod is now disabled in dist.ini.
 
