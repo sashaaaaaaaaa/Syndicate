@@ -4,6 +4,11 @@ use lib 'lib';
 use Syndicate;
 use Syndicate::Builder::Feed;
 
+sub suppress-warnings(&code) {
+    CONTROL { when CX::Warn { .resume } }
+    code
+}
+
 plan 187;
 
 my $RSS = q:to/END/;
@@ -237,10 +242,12 @@ END
     my @targets = <rss rss091 rss1 atom json>;
     for %src.kv -> $src, $src-str {
         for @targets -> $to {
-            my $reparsed = parse(convert($src-str, $to));
-            is $reparsed.title, %title{$src}, "$src -> $to: feed title survives";
-            ok $reparsed.items.elems >= 1, "$src -> $to: has items";
-            is $reparsed.items[0].title, %item-title{$src}, "$src -> $to: first item title";
+            suppress-warnings {
+                my $reparsed = parse(convert($src-str, $to));
+                is $reparsed.title, %title{$src}, "$src -> $to: feed title survives";
+                ok $reparsed.items.elems >= 1, "$src -> $to: has items";
+                is $reparsed.items[0].title, %item-title{$src}, "$src -> $to: first item title";
+            }
         }
     }
 }

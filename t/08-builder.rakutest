@@ -6,6 +6,11 @@ use Syndicate::Builder::Feed;
 use Syndicate::Builder::Entry;
 use JSON::Fast;
 
+sub suppress-warnings(&code) {
+    CONTROL { when CX::Warn { .resume } }
+    code
+}
+
 plan 137;
 
 # ===== Feed builder fields =====
@@ -175,31 +180,33 @@ like $atom-empty, /'<feed xmlns="http://www.w3.org/2005/Atom">'/, "empty Atom ha
 like $atom-empty, /"Empty Feed"/, "empty Atom has title";
 
 # ===== RSS 0.91 builder output =====
-my $rss091-str = $fb.rss091-str;
-ok $rss091-str.chars > 0, "rss091-str generates output";
-like $rss091-str, /version\=\"0.91\"/, "RSS 0.91 output has version 0.91";
-like $rss091-str, /'<channel>'/, "RSS 0.91 output has channel";
-like $rss091-str, /"Test Builder Feed"/, "RSS 0.91 output has feed title";
-like $rss091-str, /"en"/, "RSS 0.91 output has language";
-like $rss091-str, /"Copyright 2026"/, "RSS 0.91 output has copyright";
-like $rss091-str, /"jane\@example.com"/, "RSS 0.91 output has managingEditor";
-like $rss091-str, /'<item>'/, "RSS 0.91 output has items";
+suppress-warnings {
+    my $rss091-str = $fb.rss091-str;
+    ok $rss091-str.chars > 0, "rss091-str generates output";
+    like $rss091-str, /version\=\"0.91\"/, "RSS 0.91 output has version 0.91";
+    like $rss091-str, /'<channel>'/, "RSS 0.91 output has channel";
+    like $rss091-str, /"Test Builder Feed"/, "RSS 0.91 output has feed title";
+    like $rss091-str, /"en"/, "RSS 0.91 output has language";
+    like $rss091-str, /"Copyright 2026"/, "RSS 0.91 output has copyright";
+    like $rss091-str, /"jane\@example.com"/, "RSS 0.91 output has managingEditor";
+    like $rss091-str, /'<item>'/, "RSS 0.91 output has items";
 
-my $rss091-feed = $fb.rss091-feed;
-isa-ok $rss091-feed, Syndicate::RSS::V0_91, "rss091-feed returns V0_91";
+    my $rss091-feed = $fb.rss091-feed;
+    isa-ok $rss091-feed, Syndicate::RSS::V0_91, "rss091-feed returns V0_91";
 
-# RSS 0.91 roundtrip
-my $rss091-parsed = Syndicate::RSS::V0_91.new($rss091-str);
-isa-ok $rss091-parsed, Syndicate::RSS::V0_91, "RSS 0.91 roundtrip parsed";
-is $rss091-parsed.title, "Test Builder Feed", "RSS 0.91 roundtrip title";
-is $rss091-parsed.link, "http://example.com", "RSS 0.91 roundtrip link";
-is $rss091-parsed.description, "A feed built with the builder API", "RSS 0.91 roundtrip description";
-is $rss091-parsed.language, "en", "RSS 0.91 roundtrip language";
-is $rss091-parsed.copyright, "Copyright 2026", "RSS 0.91 roundtrip copyright";
-is $rss091-parsed.items.elems, 2, "RSS 0.91 roundtrip item count";
-is $rss091-parsed.items[0].title, "Entry One", "RSS 0.91 roundtrip first item title";
-is $rss091-parsed.items[0].link, "http://example.com/1", "RSS 0.91 roundtrip first item link";
-is $rss091-parsed.items[0].summary, "First entry summary", "RSS 0.91 roundtrip first item description";
+    # RSS 0.91 roundtrip
+    my $rss091-parsed = Syndicate::RSS::V0_91.new($rss091-str);
+    isa-ok $rss091-parsed, Syndicate::RSS::V0_91, "RSS 0.91 roundtrip parsed";
+    is $rss091-parsed.title, "Test Builder Feed", "RSS 0.91 roundtrip title";
+    is $rss091-parsed.link, "http://example.com", "RSS 0.91 roundtrip link";
+    is $rss091-parsed.description, "A feed built with the builder API", "RSS 0.91 roundtrip description";
+    is $rss091-parsed.language, "en", "RSS 0.91 roundtrip language";
+    is $rss091-parsed.copyright, "Copyright 2026", "RSS 0.91 roundtrip copyright";
+    is $rss091-parsed.items.elems, 2, "RSS 0.91 roundtrip item count";
+    is $rss091-parsed.items[0].title, "Entry One", "RSS 0.91 roundtrip first item title";
+    is $rss091-parsed.items[0].link, "http://example.com/1", "RSS 0.91 roundtrip first item link";
+    is $rss091-parsed.items[0].summary, "First entry summary", "RSS 0.91 roundtrip first item description";
+}
 
 # Empty RSS 0.91
 my $fb-rss091-empty = Syndicate::Builder::Feed.new;
