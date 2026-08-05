@@ -2,6 +2,8 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
+0.0.1  2026-08-05T07:55:17+03:00
+
     - Initial release. Feed parser and generator for RSS 2.0, RSS 0.91,
       RSS 1.0 (RDF), Atom 1.0, and JSON Feed 1.1.
     - Uniform API via the Syndicate::Feed and Syndicate::Item roles, a
