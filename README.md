@@ -440,4 +440,6 @@ Sasha Abbott <sashaa@disroot.org>
 
 # LICENSE
 
-This library is free software; you can redistribute it and/or modify it under CC0.
+This software is dedicated to the public domain under the CC0 1.0 Universal (CC0 1.0) Public Domain Dedication.
+
+To the extent possible under law, the author has waived all copyright and related or neighboring rights to this work.
