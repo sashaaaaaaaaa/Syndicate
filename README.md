@@ -1,74 +1,445 @@
-NAME
-====
+# Syndicate
 
-Syndicate - Syndication feed parser and generator
+Syndication feed parser and generator supporting **RSS 2.0**, **RSS
+0.91**, **RSS 1.0**, **Atom 1.0**, and **JSON Feed 1.1**.
 
-SYNOPSIS
-========
+## Dependencies
+
+- [XML](https://raku.land/zef:raku-community-modules/XML) - XML parsing and generation (RSS, Atom)
+- [JSON::Fast](https://raku.land/cpan:TIMOTIMO/JSON::Fast) - JSON parsing and generation
+- [DateTime::Grammar](https://raku.land/zef:antononcube/DateTime::Grammar) - W3C/ISO 8601 date parsing
+- [DateTime::Format](https://raku.land/zef:raku-community-modules/DateTime::Format) - RFC 2822 date formatting
+- [HTTP::Tiny](https://raku.land/zef:jjatria/HTTP::Tiny) - Feed fetching via HTTP/HTTPS
+- [IO::Socket::SSL](https://raku.land/zef:raku-community-modules/IO::Socket::SSL) - HTTPS support (required by HTTP::Tiny)
+- [URI](https://raku.land/zef:raku-community-modules/URI) - URL resolution
+
+## Installation
+
+```bash
+zef install Syndicate
+```
+
+### Installing from source
+
+To install from a local folder:
+
+```bash
+cd /path/to/Syndicate
+zef install .
+```
+
+Requires Raku 6.d or later.
+
+## Supported Formats
+
+| Format       | Parse | Generate | Class                          |
+|--------------|-------|----------|--------------------------------|
+| RSS 2.0      | ✓     | ✓        | `Syndicate::RSS`               |
+| RSS 0.91     | ✓     | ✓        | `Syndicate::RSS::V0_91`        |
+| RSS 1.0      | ✓     | ✓        | `Syndicate::RSS::V1_0`         |
+| Atom 1.0     | ✓     | ✓        | `Syndicate::Atom`              |
+| JSON Feed    | ✓     | ✓        | `Syndicate::JSONFeed`          |
+
+## Quick Start
 
 ```raku
 use Syndicate;
 
-# Parse any feed (auto-detected)
-my $feed = parse($xml-or-json);
+# --- Parse any feed format (auto-detected) ---
+my $feed = parse($xml-or-json-string);
+say $feed.title;
+say $feed.items[0].title;
 
-# Parse explicit formats
-my $rss   = parse-rss($xml);
-my $atom  = parse-atom($xml);
-
-# Export all format classes
+# --- Build a feed programmatically ---
 use Syndicate::Builder::Feed;
+
 my $fb = Syndicate::Builder::Feed.new;
-$fb.title("My Feed");
-$fb.add-entry.title("Article 1");
-say $fb.rss-str;
-say $fb.atom-str;
+$fb.title("My Podcast");
+$fb.link("https://example.com");
+$fb.description("A great podcast");
+$fb.language("en");
+$fb.generator("Syndicate");
+
+my $entry = $fb.add-entry;
+$entry.title("Episode 1");
+$entry.link("https://example.com/ep1");
+$entry.summary("First episode");
+$entry.id("urn:uuid:abc-123");
+$entry.updated(DateTime.now);
+
+# Generate any format from the same builder
+say $fb.rss-str;     # RSS 2.0 XML
+say $fb.atom-str;    # Atom 1.0 XML
+say $fb.rss091-str;  # RSS 0.91 XML
+say $fb.rss1-str;    # RSS 1.0 XML
+say $fb.json-str;    # JSON Feed
 ```
 
-DESCRIPTION
-===========
+## Parsing Feeds
 
-Syndicate supports parsing and generation of RSS 2.0, RSS 0.91, RSS 1.0, Atom 1.0, and JSON Feed 1.1. Provides a uniform API via [`Syndicate::Feed`](rakudoc:Syndicate::Feed) and [`Syndicate::Item`](rakudoc:Syndicate::Item) roles, a format-agnostic builder, feed discovery, and extension support (Dublin Core, Media RSS, iTunes).
+### Auto-detect format
 
-**Security note:** The `XML` module's behavior on entity expansion is version-dependent. In multi-tenant or untrusted-input scenarios, consider pre-scanning input or using an external XML parser with explicit XXE and billion-laughs protections. Feed URLs fetched via [`Syndicate::Discovery`](rakudoc:Syndicate::Discovery) are restricted to http/https schemes.
+```raku
+use Syndicate;
+use Syndicate::Parse;
 
-**Note:** The `parse-rss`, `parse-atom`, `parse-json`, `parse-rss1`, and `parse-rss091` subs each apply BOM stripping, size limits, and input trimming via the same `sanitize-input` routine used by `parse-feed`. Use the format- specific subs when you already know the feed format and want a dedicated return type.
+my $feed = parse-feed($xml-or-json-string);
+# or
+my $feed = parse($xml-or-json-string);  # exported by Syndicate
+```
 
-EXPORTED SUBS
-=============
+The parser detects the format automatically:
+- `{` → JSON Feed
+- `<feed` → Atom 1.0
+- `<rss version="0.91"` → RSS 0.91
+- `<rss version="0.92|0.93|0.94"` → RSS 2.0 (legacy 0.9x flavors are structurally RSS 2.0-compatible)
+- `<rss` → RSS 2.0
+- `<rdf:RDF` → RSS 1.0
 
-`parse(Str $input)`
--------------------
+### Parse from a file
 
-Auto-detect format and parse, returning a `Syndicate::Feed`-compatible object.
+```raku
+use Syndicate::Parse;
 
-`parse-rss(Str $xml)`
----------------------
+my $feed = parse-file("feed.xml");       # Str path
+my $feed = parse-file("feed.xml".IO);    # IO::Path also works
+```
 
-Parse RSS 2.0 XML, returning `Syndicate::RSS`.
+### Explicit format parsing
 
-`parse-atom(Str $xml)`
-----------------------
+```raku
+my $rss   = Syndicate::RSS.new($xml-string);
+my $atom  = Syndicate::Atom.new($xml-string);
+my $rss091 = Syndicate::RSS::V0_91.new($xml-string);
+my $rss1  = Syndicate::RSS::V1_0.new($xml-string);
+my $json  = Syndicate::JSONFeed.new($json-string);
+```
 
-Parse Atom 1.0 XML, returning `Syndicate::Atom`.
+Convenience subs are also exported by `Syndicate`:
 
-`parse-json(Str $json)`
------------------------
+```raku
+my $rss  = parse-rss($xml-string);
+my $atom = parse-atom($xml-string);
+```
 
-Parse JSON Feed, returning `Syndicate::JSONFeed`.
+## Building Feeds
 
-`parse-rss1(Str $xml)`
-----------------------
+### Using the Builder API (format-agnostic)
 
-Parse RSS 1.0 XML, returning `Syndicate::RSS::V1_0`.
+The builder lets you construct a feed once and output it in any format:
 
-`parse-rss091(Str $xml)`
-------------------------
+```raku
+use Syndicate::Builder::Feed;
 
-Parse RSS 0.91 XML, returning `Syndicate::RSS::V0_91`.
+my $fb = Syndicate::Builder::Feed.new;
+$fb.title("My Feed");
+$fb.link("https://example.com");
+$fb.description("A test feed");
+$fb.id("https://example.com/feed");
+$fb.language("en");
+$fb.rights("© 2026 Me");
+$fb.generator("MyApp");
+$fb.icon("https://example.com/icon.png");
+$fb.logo("https://example.com/logo.png");
+$fb.updated(DateTime.new("2026-06-15T12:00:00Z"));
 
-`convert(Str $input, Str $to)`
-------------------------------
+# Author (stored as name, email, uri)
+$fb.author(:name("Jane Doe"), :email("jane@example.com"));
 
-Parse `$input` (auto-detected) and emit it in the format named by `$to`: `rss` (2.0), `rss091`, `rss1`, `atom`, or `json`. Aliases `rss2`, `rss2.0`, `rss0.91`, and `rss1.0` are accepted. An unknown `$to` dies. The conversion goes through [`Syndicate::Builder::Feed`](rakudoc:Syndicate::Builder::Feed)'s `new-from-feed`, so only builder-supported fields are carried over, and emission may die if the target format requires a field the source lacks (e.g. converting an Atom feed with no description to RSS 2.0 dies with `RSS 2.0 feed requires description`).
+# Categories (multiple allowed)
+$fb.category("Tech");
+$fb.category("News");
 
+# Add entries
+my $e = $fb.add-entry;
+$e.title("Article 1");
+$e.link("https://example.com/1");
+$e.summary("First article");
+$e.id("urn:uuid:1111-1111");
+$e.updated(DateTime.new("2026-06-15T10:00:00Z"));
+$e.published(DateTime.new("2026-06-14T08:00:00Z"));
+$e.author(:name("Jane"), :email("jane@example.com"));
+$e.category("Raku");
+$e.content("<p>Hello <em>world</em></p>", :type("xhtml"));
+$e.rights("© Entry");
+
+# Output in any format
+say $fb.rss-str;     # RSS 2.0
+say $fb.atom-str;    # Atom 1.0
+say $fb.rss091-str;  # RSS 0.91
+say $fb.rss1-str;    # RSS 1.0
+say $fb.json-str;    # JSON Feed
+
+# Or get the feed object directly
+my $feed = $fb.atom-feed;
+say $feed.updated;
+```
+
+### Direct construction (format-specific)
+
+You can also construct feed objects directly with named arguments:
+
+```raku
+# RSS 2.0
+my $rss = Syndicate::RSS.new(
+    :title("My RSS Feed"),
+    :link("https://example.com"),
+    :description("RSS description"),
+    :language("en"),
+    :generator("MyApp"),
+    :copyright("© 2026"),
+    :items([
+        Syndicate::RSS::Item.new(
+            :title("Item 1"),
+            :link("https://example.com/1"),
+            :summary("Item description"),
+            :author("author@example.com"),
+            :updated(DateTime.new("2026-06-15T10:00:00Z")),
+            :guid("https://example.com/1"),
+        ),
+    ]),
+);
+
+# Atom 1.0
+my $atom = Syndicate::Atom.new(
+    :title("My Atom Feed"),
+    :id("https://example.com/atom"),
+    :link("https://example.com"),
+    :description("Atom subtitle"),
+    :updated(DateTime.now),
+    :rights("© 2026"),
+    :generator("MyApp"),
+    :items([
+        Syndicate::Atom::Item.new(
+            :title("Entry 1"),
+            :id("https://example.com/1"),
+            :link("https://example.com/1"),
+            :summary("Entry summary"),
+            :content("<p>Hello world</p>"),
+            :content-type("xhtml"),
+            :updated(DateTime.new("2026-06-15T10:00:00Z")),
+            :published(DateTime.new("2026-06-14T08:00:00Z")),
+        ),
+    ]),
+);
+
+# JSON Feed
+my $json = Syndicate::JSONFeed.new(
+    :title("My JSON Feed"),
+    :link("https://example.com"),
+    :description("JSON Feed description"),
+    :feed_url("https://example.com/feed.json"),
+    :language("en"),
+    :items([
+        Syndicate::JSONFeed::Item.new(
+            :title("Post 1"),
+            :id("https://example.com/1"),
+            :link("https://example.com/1"),
+            :summary("Post summary"),
+            :content_html("<p>Hello world</p>"),
+        ),
+    ]),
+);
+```
+
+### iTunes Podcast Extensions
+
+The builder supports iTunes podcast fields at the **channel level** for RSS 2.0:
+
+```raku
+$fb.itunes-author("John Doe");
+$fb.itunes-summary("A great podcast about Raku");
+```
+
+Per-item iTunes fields (`itunes-author`, `itunes-summary`, `itunes-duration`)
+are read-only: they are populated when an RSS 2.0 feed is parsed, not via the
+builder.
+
+## Generating Output
+
+Every feed and item can be stringified to its native format:
+
+```raku
+# RSS / Atom → XML string
+say ~$rss-feed;      # XML output via .Str
+say $rss-feed.Str;   # same
+say $rss-feed.XML;   # XML::Element object
+
+# JSON Feed → JSON string
+say $json-feed.Str;       # JSON output
+say $json-feed.to-json;   # same
+say $json-feed.to-hash;   # Perl Hash structure
+```
+
+## Converting Between Formats
+
+Parse any feed and re-emit it in another format with `convert`:
+
+```raku
+use Syndicate;
+
+my $rss-xml = convert($atom-string, 'rss');      # Atom → RSS 2.0
+my $atom-xml = convert($rss-string, 'atom');     # RSS 2.0 → Atom
+my $json = convert($rss-string, 'json');         # RSS 2.0 → JSON Feed
+```
+
+`$to` accepts `rss` (aliases `rss2`, `rss2.0`), `rss091` (`rss0.91`),
+`rss1` (`rss1.0`), `atom`, and `json`. Conversion goes through
+`Syndicate::Builder::Feed.new-from-feed`, which copies every field the builder
+models. Format-specific extras that the builder does not model (RSS
+`webMaster`/`docs`/`ttl`/`pubDate`, Atom contributors and extra/self links,
+media groups, item-level iTunes fields, JSON `external_url`/`image`/
+`banner_image`) are not carried over. Emission may die if the target format
+requires a field the source lacks — e.g. an Atom feed without a description
+cannot be emitted as RSS 2.0.
+
+For programmatic access, populate a builder directly:
+
+```raku
+use Syndicate;
+use Syndicate::Builder::Feed;
+
+my $fb = Syndicate::Builder::Feed.new-from-feed(parse($rss-string));
+say $fb.atom-str;   # RSS 2.0 → Atom, with a single builder
+say $fb.json-str;   # and JSON Feed from the same builder
+```
+
+## Feed Discovery
+
+Fetch and auto-detect feeds from URLs:
+
+```raku
+use Syndicate::Discovery;
+
+my $disc = Syndicate::Discovery.new;
+
+# Fetch a known feed URL
+my $feed = $disc.fetch("https://example.com/feed.xml");
+
+# Discover feed from a webpage (finds <link> tags)
+my $feed = $disc.discover("https://example.com");
+
+# Customize redirect handling (maximum of 10 redirects)
+my $disc = Syndicate::Discovery.new(:max-redirect(10));
+my $feed = $disc.fetch("https://example.com/feed.xml");
+
+# Find feed URLs without fetching
+my @urls = $disc.find-feeds($html-string, "https://example.com");
+```
+
+## Extensions
+
+Extensions are automatically applied during parsing and generation via the `Syndicate::Extensions` registry.
+
+### Dublin Core
+
+Adds `dc:creator`, `dc:date`, `dc:subject` elements to RSS items.
+
+```raku
+use Syndicate::Extension::DublinCore;
+# Automatically registered - parses and generates dc:* elements
+```
+
+### Media RSS
+
+Adds media content and thumbnails to RSS items.
+
+```raku
+use Syndicate::Extension::MediaRSS;
+
+# Access parsed media data
+.say for $rss-item.media-contents;   # Array of Hashes (url, type, medium, ...)
+.say for $rss-item.media-thumbnails; # Array of Hashes (url, width, height)
+say $rss-item.media-title;
+say $rss-item.media-description;
+```
+
+### iTunes Podcast
+
+Adds iTunes podcast elements to RSS feeds and items.
+
+```raku
+use Syndicate::Extension::ITunes;
+
+say $rss-feed.itunes-author;
+say $rss-feed.itunes-summary;
+say $rss-item.itunes-author;
+say $rss-item.itunes-summary;
+say $rss-item.itunes-duration;
+```
+
+## Common API
+
+All feed types do the `Syndicate::Feed` role. All item types do the `Syndicate::Item` role. This provides a uniform interface:
+
+### Feed Role Attributes
+
+| Attribute     | Type       | RSS 2.0 | RSS 0.91 | RSS 1.0 | Atom | JSON Feed |
+|---------------|------------|:-------:|:--------:|:-------:|:----:|:---------:|
+| `.title`      | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.link`       | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.description`| `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.generator`  | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.language`   | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.items`      | `@`        | ✓       | ✓        | ✓       | ✓    | ✓         |
+
+### Item Role Attributes
+
+| Attribute   | Type       | RSS 2.0 | RSS 0.91 | RSS 1.0 | Atom | JSON Feed |
+|-------------|------------|:-------:|:--------:|:-------:|:----:|:---------:|
+| `.title`    | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.link`     | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.summary`  | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.author`   | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.updated`  | `DateTime` | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.id`       | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.content`  | `Str`      | ✓       |          | ✓       | ✓    | ✓         |
+
+RSS 0.91 and RSS 1.0 populate `author` and `updated` from Dublin Core
+(`dc:creator`, `dc:date`); JSON Feed's `updated` derives from `date_modified`.
+RSS 0.91 items have no content module, so `.content` is never populated.
+
+### Format-Specific Attributes
+
+Each format also exposes its own attributes:
+
+**RSS 2.0 Feed:** `copyright`, `managingEditor`, `webMaster`, `pubDate`, `lastBuildDate`, `categories`, `docs`, `ttl`, `image`, `itunes-author`, `itunes-summary`
+
+**RSS 2.0 Item:** `guid`, `guid-is-permalink`, `categories`, `comments`, `enclosure`, `source`, `media-contents`, `media-thumbnails`, `media-title`, `media-description`, `itunes-author`, `itunes-summary`, `itunes-duration`
+
+**RSS 0.91 Feed:** `copyright`, `managingEditor`, `webMaster`, `rating`, `docs`, `pubDate`, `lastBuildDate`, `image`, `textInput`, `skipHours`, `skipDays`
+
+**RSS 1.0 Feed:** `about`, `image` (hash with url/title/link/about)
+
+**RSS 1.0 Item:** `about`, `dc-subjects`
+
+**Atom Feed:** `id`, `subtitle`, `author`, `author-detail`, `categories`, `updated`, `rights`, `icon`, `logo`, `contributors`, `link-self`, `link-alternate`
+
+**Atom Item:** `author-detail`, `categories`, `published`, `content-type`, `rights`, `source-feed`, `contributors`
+
+**JSON Feed:** `version`, `feed_url`, `user_comment`, `next_url`, `icon`, `favicon`, `author`, `expired`
+
+**JSON Feed Item:** `external_url`, `content_html`, `content_text`, `image`, `banner_image`, `date_published`, `date_modified`, `authors`, `tags`
+
+## Statistics
+
+```raku
+use Syndicate::Stats;
+
+say "Feeds parsed: {Syndicate::Stats.feeds-parsed}";
+say "Items parsed: {Syndicate::Stats.items-parsed}";
+
+Syndicate::Stats.record-feed;
+
+Syndicate::Stats.record-item;
+```
+
+# AUTHOR
+
+Sasha Abbott <sashaa@disroot.org>
+
+# LICENSE
+
+This software is dedicated to the public domain under the CC0 1.0 Universal (CC0 1.0) Public Domain Dedication.
+
+To the extent possible under law, the author has waived all copyright and related or neighboring rights to this work.
