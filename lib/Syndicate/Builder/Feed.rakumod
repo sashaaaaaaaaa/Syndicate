@@ -1,5 +1,7 @@
 use v6.d;
+use Syndicate::Feed;
 use Syndicate::RSS;
+use Syndicate::RSS::Item::Common;
 use Syndicate::RSS::V0_91;
 use Syndicate::RSS::V1_0;
 use Syndicate::Atom;
@@ -75,6 +77,158 @@ method add-entry {
 }
 
 method entries { @!entries }
+
+method new-from-feed(Syndicate::Feed $feed --> Syndicate::Builder::Feed) {
+    my $b = self.defined ?? self !! self.new;
+    $b.title($feed.title)             if $feed.title.defined;
+    $b.link($feed.link)               if $feed.link.defined;
+    $b.description($feed.description) if $feed.description.defined;
+    $b.generator($feed.generator)     if $feed.generator.defined;
+    $b.language($feed.language)       if $feed.language.defined;
+
+    given $feed {
+        when Syndicate::Atom {
+            $b.id($_.id)              if $_.id.defined;
+            $b.rights($_.rights)      if $_.rights.defined;
+            $b.icon($_.icon)          if $_.icon.defined;
+            $b.logo($_.logo)          if $_.logo.defined;
+            $b.updated($_.updated)    if $_.updated.defined;
+            $b.category($_) for @($_.categories);
+            my %ad = $_.author-detail;
+            $b.author(:name(%ad<name>), :email(%ad<email>), :uri(%ad<uri>))
+                if %ad<name>.defined || %ad<email>.defined || %ad<uri>.defined;
+            my @self-links = @($_.link-self);
+            $b.atom-self-link(@self-links[0]<href>) if @self-links[0].defined;
+        }
+        when Syndicate::RSS {
+            $b.rights($_.copyright)       if $_.copyright.defined;
+            $b.author(:email($_.managingEditor)) if $_.managingEditor.defined;
+            $b.updated($_.lastBuildDate)  if $_.lastBuildDate.defined;
+            $b.itunes-author($_.itunes-author)   if $_.itunes-author.defined;
+            $b.itunes-summary($_.itunes-summary) if $_.itunes-summary.defined;
+            $b.atom-self-link($_.atom-self-link) if $_.atom-self-link.defined;
+            $b.category($_) for @($_.categories);
+            $b!copy-image($_.image);
+        }
+        when Syndicate::RSS::V0_91 {
+            $b.rights($_.copyright)       if $_.copyright.defined;
+            $b.author(:email($_.managingEditor)) if $_.managingEditor.defined;
+            $b.updated($_.lastBuildDate)  if $_.lastBuildDate.defined;
+            $b.itunes-author($_.itunes-author)   if $_.itunes-author.defined;
+            $b.itunes-summary($_.itunes-summary) if $_.itunes-summary.defined;
+            $b!copy-image($_.image);
+        }
+        when Syndicate::RSS::V1_0 {
+            $b.id($_.about)               if $_.about.defined;
+            $b.itunes-author($_.itunes-author)   if $_.itunes-author.defined;
+            $b.itunes-summary($_.itunes-summary) if $_.itunes-summary.defined;
+            $b.category($_) for @($_.categories);
+            $b!copy-image($_.image);
+        }
+        when Syndicate::JSONFeed {
+            $b.feed-url($_.feed_url)  if $_.feed_url.defined;
+            $b.version($_.version)    if $_.version.defined;
+            $b.icon($_.icon)          if $_.icon.defined;
+            my %a = $_.author;
+            $b.author(:name(%a<name>), :uri(%a<url>))
+                if %a<name>.defined || %a<url>.defined;
+        }
+    }
+
+    for $feed.items -> $item {
+        my $e = $b.add-entry;
+        $e.title($item.title)         if $item.title.defined;
+        $e.link($item.link)           if $item.link.defined;
+        $e.summary($item.summary)     if $item.summary.defined;
+        $e.id($item.id)               if $item.id.defined;
+        $e.updated($item.updated)     if $item.updated.defined;
+        $e.content($item.content)     if $item.content.defined;
+
+        given $item {
+            when Syndicate::Atom::Item {
+                my %ad = $_.author-detail;
+                $e.author(:name(%ad<name>), :email(%ad<email>), :uri(%ad<uri>))
+                    if %ad<name>.defined || %ad<email>.defined || %ad<uri>.defined;
+                $e.published($_.published)  if $_.published.defined;
+                $e.rights($_.rights)        if $_.rights.defined;
+                if $_.content.defined {
+                    $_.content-type.defined
+                        ?? $e.content($_.content, :type($_.content-type))
+                        !! $e.content($_.content);
+                }
+                $e.category($_) for @($_.categories);
+                if $_.source-feed<link>.defined {
+                    $e.source($_.source-feed<link>);
+                }
+            }
+            when Syndicate::RSS::Item::Common {
+                $e.author(:name($_.author)) if $_.author.defined;
+                $e.category($_) for @($_.categories);
+                $e.comments($_.comments)    if $_.comments.defined;
+                $e.source($_.source)        if $_.source.defined;
+                # content:encoded is HTML by definition; typing it lets
+                # JSON output emit content_html instead of content_text.
+                $e.content($_.content, :type<html>) if $_.content.defined;
+                if $_.enclosure<url>.defined {
+                    my %en;
+                    %en<url>    = $_.enclosure<url>;
+                    %en<length> = $_.enclosure<length> if $_.enclosure<length>.defined;
+                    %en<type>   = $_.enclosure<type>   if $_.enclosure<type>.defined;
+                    $e.enclosure(|%en);
+                }
+                $e.media-title($_.media-title)         if $_.media-title.defined;
+                $e.media-description($_.media-description) if $_.media-description.defined;
+                for @($_.media-contents) -> %mc {
+                    next unless %mc<url>.defined;
+                    my %m;
+                    %m<url>      = %mc<url>;
+                    %m<type>     = %mc<type>     if %mc<type>.defined;
+                    %m<width>    = %mc<width>    if %mc<width>.defined;
+                    %m<height>   = %mc<height>   if %mc<height>.defined;
+                    %m<duration> = %mc<duration> if %mc<duration>.defined;
+                    $e.media-content(|%m);
+                }
+                for @($_.media-thumbnails) -> %mt {
+                    next unless %mt<url>.defined;
+                    my %t;
+                    %t<url>    = %mt<url>;
+                    %t<width>  = %mt<width>  if %mt<width>.defined;
+                    %t<height> = %mt<height> if %mt<height>.defined;
+                    %t<time>   = %mt<time>   if %mt<time>.defined;
+                    $e.media-thumbnail(|%t);
+                }
+            }
+            when Syndicate::JSONFeed::Item {
+                my @authors = @($_.authors);
+                if @authors {
+                    my %a = @authors[0];
+                    $e.author(:name(%a<name>), :uri(%a<url>))
+                        if %a<name>.defined || %a<url>.defined;
+                }
+                $e.published($_.date_published) if $_.date_published.defined;
+                $e.updated($_.date_modified)    if $_.date_modified.defined;
+                if $_.content_html.defined && $_.content_html.chars {
+                    $e.content($_.content_html, :type<html>);
+                } elsif $_.content_text.defined && $_.content_text.chars {
+                    $e.content($_.content_text);
+                }
+                $e.category($_) for @($_.tags);
+            }
+        }
+    }
+    $b
+}
+
+method !copy-image(%image) {
+    return unless %image<url>.defined || %image<title>.defined;
+    my %img;
+    %img<url>    = %image<url>    if %image<url>.defined;
+    %img<title>  = %image<title>  if %image<title>.defined;
+    %img<link>   = %image<link>   if %image<link>.defined;
+    %img<width>  = %image<width>  if %image<width>.defined;
+    %img<height> = %image<height> if %image<height>.defined;
+    self.image(|%img)
+}
 
 method rss-feed {
     die "RSS 2.0 feed requires title"   unless $!title.defined;
@@ -263,6 +417,19 @@ timestamps in Atom output.
 
 =item C<add-entry> - create and return a new L<C<Syndicate::Builder::Entry>|rakudoc:Syndicate::Builder::Entry>
 =item C<entries> - return all entries
+
+=head2 Feed construction
+
+=item C<new-from-feed(Syndicate::Feed $feed)> - populate this builder from an
+existing parsed feed (any C<Syndicate::Feed>-compatible object), copying every
+field the builder models. Lets you convert between formats: parse the source,
+call C<new-from-feed>, then emit the target format. Only builder-supported
+fields are copied; format-specific extras (RSS C<webMaster>/C<docs>/C<ttl>/
+C<pubDate>, Atom contributors and extra/self links, media groups, item-level
+iTunes fields, JSON C<external_url>/C<image>/C<banner_image>, and so on) are
+not carried over. Emission may still die if the target format requires a field
+the source does not have (e.g. an Atom feed without a description cannot be
+emitted as RSS 2.0).
 
 =head2 Output generation
 

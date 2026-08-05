@@ -47,6 +47,21 @@ sub parse-rss091(Str $xml --> Syndicate::RSS::V0_91) is export {
     Syndicate::RSS::V0_91.new(sanitize-input($xml))
 }
 
+sub convert(Str $input, Str $to --> Str) is export {
+    my $feed = parse-feed($input);
+    my $fb = Syndicate::Builder::Feed.new-from-feed($feed);
+    given $to.lc {
+        when 'rss' | 'rss2' | 'rss2.0' { ~$fb.rss-feed }
+        when 'rss091' | 'rss0.91'      { ~$fb.rss091-feed }
+        when 'rss1' | 'rss1.0'         { ~$fb.rss1-feed }
+        when 'atom'                    { ~$fb.atom-feed }
+        when 'json'                    { $fb.json-feed.to-json }
+        default {
+            die "Unknown target format: $to (expected rss, rss091, rss1, atom, json)"
+        }
+    }
+}
+
 =begin pod
 
 =head1 NAME
@@ -118,5 +133,16 @@ Parse RSS 1.0 XML, returning C<Syndicate::RSS::V1_0>.
 =head2 C<parse-rss091(Str $xml)>
 
 Parse RSS 0.91 XML, returning C<Syndicate::RSS::V0_91>.
+
+=head2 C<convert(Str $input, Str $to)>
+
+Parse C<$input> (auto-detected) and emit it in the format named by C<$to>:
+C<rss> (2.0), C<rss091>, C<rss1>, C<atom>, or C<json>. Aliases C<rss2>,
+C<rss2.0>, C<rss0.91>, and C<rss1.0> are accepted. An unknown C<$to> dies.
+The conversion goes through L<C<Syndicate::Builder::Feed>|rakudoc:Syndicate::Builder::Feed>'s
+C<new-from-feed>, so only builder-supported fields are carried over, and
+emission may die if the target format requires a field the source lacks
+(e.g. converting an Atom feed with no description to RSS 2.0 dies with
+C<RSS 2.0 feed requires description>).
 
 =end pod

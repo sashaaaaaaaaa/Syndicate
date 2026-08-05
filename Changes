@@ -2,33 +2,14 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
-    - Initial release. Syndication feed parser and generator for
-      RSS 2.0, RSS 0.91, RSS 1.0 (RDF), Atom 1.0, and JSON Feed 1.1.
-
-    [Formats]
-    - RSS 2.0 parsing, generation, and XML output
-    - RSS 0.91 parsing, generation, and XML output
-    - RSS 1.0 (RDF) parsing, generation, and XML output
-    - Atom 1.0 parsing, full XML output with all fields and entity handling
-    - JSON Feed 1.1 parsing and JSON generation
-
-    [API]
-    - Syndicate::Builder::Feed and Syndicate::Builder::Entry for
-      format-agnostic feed construction
-    - Unified Syndicate.parse, feed-format, and parse-feed entry points
-    - Syndicate::Feed role with $.title, $.link, $.description,
-      $.generator, $.language, @.items
-    - Syndicate::Item role with $.title, $.link, $.summary, $.author,
-      $.updated, $.id, $.content
-    - Syndicate::Discovery for feed URL discovery from HTML pages
-    - Syndicate::Stats for thread-safe parsing statistics
-
-    [Extensions]
-    - Dublin Core (dc:creator, dc:date, dc:subject)
-    - Media RSS (media:content, media:thumbnail, media:title,
-      media:description)
-    - iTunes podcast (itunes:author, itunes:summary, itunes:duration)
-
-    [Testing]
-    - 13 test files with 528 assertions covering parsing, generation,
-      roundtrip, builder API, feed discovery, extensions, and concurrency
+    - Initial release. Feed parser and generator for RSS 2.0, RSS 0.91,
+      RSS 1.0 (RDF), Atom 1.0, and JSON Feed 1.1.
+    - Uniform API via the Syndicate::Feed and Syndicate::Item roles, a
+      format-agnostic builder (Syndicate::Builder::Feed/Entry), and
+      auto-detecting parse/feed-format/parse-feed entry points.
+    - Feed discovery from HTML pages (Syndicate::Discovery) and
+      thread-safe parsing statistics (Syndicate::Stats).
+    - Extensions: Dublin Core, Media RSS, and iTunes podcast.
+    - Format conversion via Syndicate.convert and
+      Syndicate::Builder::Feed.new-from-feed.
+    - 36 test files with 1480 assertions.

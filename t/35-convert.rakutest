@@ -1,0 +1,366 @@
+use v6.d;
+use Test;
+use lib 'lib';
+use Syndicate;
+use Syndicate::Builder::Feed;
+
+plan 187;
+
+my $RSS = q:to/END/;
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel>
+<title>My RSS Feed</title>
+<link>https://e.com</link>
+<description>RSS desc</description>
+<language>en</language>
+<copyright>(c) Jane</copyright>
+<managingEditor>jane@example.com</managingEditor>
+<lastBuildDate>Fri, 05 Jan 2024 00:00:00 +0000</lastBuildDate>
+<item>
+<title>RSS item</title>
+<link>https://e.com/1</link>
+<description>RSS sum</description>
+<guid>g1</guid>
+<pubDate>Thu, 04 Jan 2024 00:00:00 +0000</pubDate>
+<author>Jane</author>
+<category>CatA</category>
+<enclosure url="https://e.com/pod.mp3" length="100" type="audio/mpeg"/>
+<content:encoded><![CDATA[<p>Body</p>]]></content:encoded>
+</item>
+</channel></rss>
+END
+
+my $RSS091 = q:to/END/;
+<?xml version="1.0"?>
+<rss version="0.91">
+<channel>
+<title>RSS091 Feed</title>
+<link>https://e.com</link>
+<description>RSS091 desc</description>
+<language>en</language>
+<copyright>(c) Jane</copyright>
+<managingEditor>jane@example.com</managingEditor>
+<lastBuildDate>Fri, 05 Jan 2024 00:00:00 +0000</lastBuildDate>
+<item>
+<title>RSS091 item</title>
+<link>https://e.com/1</link>
+<description>RSS091 sum</description>
+</item>
+</channel></rss>
+END
+
+my $RSS1 = q:to/END/;
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+ xmlns="http://purl.org/rss/1.0/"
+ xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel rdf:about="https://e.com/about">
+<title>RSS1 Feed</title>
+<link>https://e.com</link>
+<description>RSS1 desc</description>
+<dc:subject>Tech</dc:subject>
+<items><rdf:Seq><rdf:li resource="https://e.com/1"/></rdf:Seq></items>
+</channel>
+<item rdf:about="https://e.com/1">
+<title>RSS1 item</title>
+<link>https://e.com/1</link>
+<description>RSS1 sum</description>
+<dc:creator>Jane</dc:creator>
+<dc:date>2024-01-04T00:00:00Z</dc:date>
+</item>
+</rdf:RDF>
+END
+
+my $ATOM = q:to/END/;
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<id>urn:uuid:feed</id>
+<title>Atom Feed</title>
+<subtitle>Atom desc</subtitle>
+<updated>2024-01-06T00:00:00Z</updated>
+<link rel="alternate" href="https://e.com"/>
+<link rel="self" href="https://e.com/feed.atom"/>
+<author><name>Jane</name><email>jane@example.com</email><uri>https://e.com/about</uri></author>
+<category term="Tech"/>
+<rights>CC-BY</rights>
+<icon>https://e.com/icon.png</icon>
+<logo>https://e.com/logo.png</logo>
+<entry>
+<id>urn:uuid:1</id>
+<title>Atom item</title>
+<link rel="alternate" href="https://e.com/1"/>
+<summary>Atom sum</summary>
+<content type="html">&lt;p&gt;Body&lt;/p&gt;</content>
+<updated>2024-01-04T00:00:00Z</updated>
+<published>2024-01-03T00:00:00Z</published>
+<author><name>Jane</name><email>jane@example.com</email></author>
+<category term="CatA"/>
+</entry>
+</feed>
+END
+
+my $JSON = q:to/END/;
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Json Feed",
+  "home_page_url": "https://e.com",
+  "feed_url": "https://e.com/feed.json",
+  "description": "Json desc",
+  "language": "en",
+  "icon": "https://e.com/icon.png",
+  "author": {"name": "Jane", "url": "https://e.com/about"},
+  "items": [
+    {"id": "1", "title": "Json item", "url": "https://e.com/1", "summary": "Json sum",
+     "content_html": "<p>Body</p>",
+     "date_published": "2024-01-03T00:00:00Z",
+     "date_modified": "2024-01-04T00:00:00Z",
+     "tags": ["CatA"],
+     "authors": [{"name": "Jane", "url": "https://e.com/about"}]}
+  ]
+}
+END
+
+# ===== 1: new-from-feed field mapping per source format =====
+
+{
+    my $fb = Syndicate::Builder::Feed.new-from-feed(parse($RSS));
+    is $fb.title,          'My RSS Feed',        'rss: title mapped';
+    is $fb.link,           'https://e.com',      'rss: link mapped';
+    is $fb.description,    'RSS desc',           'rss: description mapped';
+    is $fb.rights,         '(c) Jane',           'rss: copyright -> rights';
+    is $fb.author<email>,  'jane@example.com',   'rss: managingEditor -> author email';
+    ok $fb.updated.defined,                     'rss: lastBuildDate -> updated';
+    is $fb.entries.elems, 1,                     'rss: one entry';
+    my $e = $fb.entries[0];
+    is $e.title,           'RSS item',           'rss item: title';
+    is $e.link,            'https://e.com/1',    'rss item: link';
+    is $e.summary,         'RSS sum',            'rss item: summary';
+    is $e.id,              'g1',                 'rss item: guid -> id';
+    is $e.author<name>,    'Jane',               'rss item: author';
+    is $e.category.join(','), 'CatA',            'rss item: categories';
+    is $e.enclosure<url>,  'https://e.com/pod.mp3', 'rss item: enclosure';
+    ok $e.content.defined && $e.content.contains('Body'), 'rss item: content';
+}
+
+{
+    my $fb = Syndicate::Builder::Feed.new-from-feed(parse($RSS091));
+    is $fb.title,          'RSS091 Feed',        'rss091: title mapped';
+    is $fb.link,           'https://e.com',      'rss091: link mapped';
+    is $fb.description,    'RSS091 desc',        'rss091: description mapped';
+    is $fb.rights,         '(c) Jane',           'rss091: copyright -> rights';
+    is $fb.author<email>,  'jane@example.com',   'rss091: managingEditor -> author email';
+    ok $fb.updated.defined,                     'rss091: lastBuildDate -> updated';
+    is $fb.entries.elems, 1,                     'rss091: one entry';
+    my $e = $fb.entries[0];
+    is $e.title,           'RSS091 item',        'rss091 item: title';
+    is $e.link,            'https://e.com/1',    'rss091 item: link';
+    is $e.summary,         'RSS091 sum',         'rss091 item: summary';
+    is $e.id,              'https://e.com/1',    'rss091 item: id falls back to link';
+}
+
+{
+    my $fb = Syndicate::Builder::Feed.new-from-feed(parse($RSS1));
+    is $fb.title,          'RSS1 Feed',          'rss1: title mapped';
+    is $fb.link,           'https://e.com',      'rss1: link mapped';
+    is $fb.description,    'RSS1 desc',          'rss1: description mapped';
+    is $fb.id,             'https://e.com/about', 'rss1: about -> id';
+    is $fb.category.join(','), 'Tech',           'rss1: dc:subject -> feed categories';
+    is $fb.entries.elems, 1,                     'rss1: one entry';
+    my $e = $fb.entries[0];
+    is $e.title,           'RSS1 item',          'rss1 item: title';
+    is $e.link,            'https://e.com/1',    'rss1 item: link';
+    is $e.summary,         'RSS1 sum',           'rss1 item: summary';
+    is $e.id,              'https://e.com/1',    'rss1 item: about -> id';
+    ok $e.updated.defined,                      'rss1 item: dc:date -> updated';
+    is $e.author<name>,    'Jane',               'rss1 item: dc:creator -> author';
+}
+
+{
+    my $fb = Syndicate::Builder::Feed.new-from-feed(parse($ATOM));
+    is $fb.title,          'Atom Feed',          'atom: title mapped';
+    is $fb.link,           'https://e.com',      'atom: primary alternate -> link';
+    is $fb.description,    'Atom desc',          'atom: subtitle -> description';
+    is $fb.id,             'urn:uuid:feed',      'atom: id mapped';
+    is $fb.rights,         'CC-BY',              'atom: rights mapped';
+    is $fb.icon,           'https://e.com/icon.png', 'atom: icon mapped';
+    is $fb.logo,           'https://e.com/logo.png', 'atom: logo mapped';
+    is $fb.updated.Str,    '2024-01-06T00:00:00Z', 'atom: updated mapped';
+    is $fb.author<name>,   'Jane',               'atom: author name';
+    is $fb.author<email>,  'jane@example.com',   'atom: author email';
+    is $fb.author<uri>,    'https://e.com/about', 'atom: author uri';
+    is $fb.category.join(','), 'Tech',           'atom: feed categories';
+    is $fb.atom-self-link, 'https://e.com/feed.atom', 'atom: link-self -> atom-self-link';
+    is $fb.entries.elems, 1,                     'atom: one entry';
+    my $e = $fb.entries[0];
+    is $e.title,           'Atom item',          'atom item: title';
+    is $e.link,            'https://e.com/1',    'atom item: link';
+    is $e.summary,         'Atom sum',           'atom item: summary';
+    is $e.id,              'urn:uuid:1',         'atom item: id';
+    ok $e.content.defined && $e.content.contains('Body'), 'atom item: content';
+    is $e.published.Str,   '2024-01-03T00:00:00Z', 'atom item: published';
+    is $e.author<name>,    'Jane',               'atom item: author name';
+    is $e.category.join(','), 'CatA',            'atom item: categories';
+}
+
+{
+    my $fb = Syndicate::Builder::Feed.new-from-feed(parse($JSON));
+    is $fb.title,          'Json Feed',          'json: title mapped';
+    is $fb.link,           'https://e.com',      'json: home_page_url -> link';
+    is $fb.description,    'Json desc',          'json: description mapped';
+    is $fb.feed-url,       'https://e.com/feed.json', 'json: feed_url mapped';
+    is $fb.version,        'https://jsonfeed.org/version/1.1', 'json: version mapped';
+    is $fb.icon,           'https://e.com/icon.png', 'json: icon mapped';
+    is $fb.author<name>,   'Jane',               'json: author name';
+    is $fb.author<uri>,    'https://e.com/about', 'json: author url -> uri';
+    is $fb.entries.elems, 1,                     'json: one entry';
+    my $e = $fb.entries[0];
+    is $e.title,           'Json item',          'json item: title';
+    is $e.link,            'https://e.com/1',    'json item: url -> link';
+    is $e.summary,         'Json sum',           'json item: summary';
+    is $e.id,              '1',                  'json item: id';
+    is $e.published.Str,   '2024-01-03T00:00:00Z', 'json item: date_published -> published';
+    is $e.updated.Str,     '2024-01-04T00:00:00Z', 'json item: date_modified -> updated';
+    ok $e.content.defined && $e.content.contains('Body'), 'json item: content_html -> content';
+    is $e.author<name>,    'Jane',               'json item: authors[0] -> author';
+    is $e.category.join(','), 'CatA',            'json item: tags -> categories';
+}
+
+# ===== 2: conversion matrix (every source format to every target) =====
+
+{
+    my %src = rss => $RSS, rss091 => $RSS091, rss1 => $RSS1, atom => $ATOM, json => $JSON;
+    my %title = rss => 'My RSS Feed', rss091 => 'RSS091 Feed',
+        rss1 => 'RSS1 Feed', atom => 'Atom Feed', json => 'Json Feed';
+    my %item-title = rss => 'RSS item', rss091 => 'RSS091 item',
+        rss1 => 'RSS1 item', atom => 'Atom item', json => 'Json item';
+    my @targets = <rss rss091 rss1 atom json>;
+    for %src.kv -> $src, $src-str {
+        for @targets -> $to {
+            my $reparsed = parse(convert($src-str, $to));
+            is $reparsed.title, %title{$src}, "$src -> $to: feed title survives";
+            ok $reparsed.items.elems >= 1, "$src -> $to: has items";
+            is $reparsed.items[0].title, %item-title{$src}, "$src -> $to: first item title";
+        }
+    }
+}
+
+# ===== 3: fidelity spot-checks =====
+
+{
+    my $atom = parse(convert($RSS, 'atom'));
+    is $atom.updated.Str, '2024-01-05T00:00:00Z', 'rss->atom: lastBuildDate -> feed updated';
+    is $atom.items[0].updated.Str, '2024-01-04T00:00:00Z', 'rss->atom: item pubDate -> entry updated';
+    is $atom.author-detail<email>, 'jane@example.com', 'rss->atom: managingEditor -> author email';
+}
+
+{
+    my $rss = parse(convert($ATOM, 'rss'));
+    is $rss.items[0].updated.Str, '2024-01-04T00:00:00Z', 'atom->rss: entry updated -> pubDate';
+    is $rss.lastBuildDate.Str, '2024-01-06T00:00:00Z', 'atom->rss: feed updated -> lastBuildDate';
+    is $rss.managingEditor, 'jane@example.com', 'atom->rss: author email -> managingEditor';
+    is $rss.categories.join(','), 'Tech', 'atom->rss: feed categories survive';
+}
+
+{
+    my $atom = parse(convert($JSON, 'atom'));
+    is $atom.items[0].content-type, 'html', 'json->atom: content_html -> type=html';
+    is $atom.items[0].categories.join(','), 'CatA', 'json->atom: tags -> category';
+    is $atom.items[0].updated.Str, '2024-01-04T00:00:00Z', 'json->atom: date_modified -> updated';
+    is $atom.items[0].published.Str, '2024-01-03T00:00:00Z', 'json->atom: date_published -> published';
+}
+
+{
+    my $rss = parse(convert($JSON, 'rss'));
+    is $rss.items[0].updated.Str, '2024-01-04T00:00:00Z', 'json->rss: date_modified -> pubDate';
+    is $rss.items[0].author, 'Jane', 'json->rss: authors[0] name -> author';
+    is $rss.items[0].categories.join(','), 'CatA', 'json->rss: tags -> category';
+    ok $rss.items[0].content.defined && $rss.items[0].content.contains('Body'),
+        'json->rss: content_html -> content:encoded';
+}
+
+{
+    my $j = parse(convert($RSS, 'json'));
+    is $j.items[0].content_html, '<p>Body</p>', 'rss->json: content:encoded -> content_html';
+    is $j.items[0].authors[0]<name>, 'Jane', 'rss->json: author -> authors[0]';
+    is $j.items[0].tags.join(','), 'CatA', 'rss->json: category -> tags';
+}
+
+{
+    my $rss = parse(convert($RSS1, 'rss'));
+    is $rss.categories.join(','), 'Tech', 'rss1->rss: dc:subject -> feed categories';
+    is $rss.items[0].author, 'Jane', 'rss1->rss: dc:creator -> item author';
+}
+
+# ===== 4: error paths =====
+
+{
+    my $r = try { convert($RSS, 'yaml') };
+    nok $r.defined, 'unknown target format dies';
+    ok $!.message.contains('Unknown target format'), 'unknown format message names the problem';
+}
+
+my $ATOM-NOLINK = q:to/END/;
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<id>urn:x</id><title>No Link</title><subtitle>D</subtitle>
+<updated>2024-01-01T00:00:00Z</updated>
+<entry><id>urn:y</id><title>E</title><updated>2024-01-01T00:00:00Z</updated></entry>
+</feed>
+END
+
+{
+    my $r = try { convert($ATOM-NOLINK, 'rss') };
+    nok $r.defined, 'atom without link -> rss dies';
+    ok $!.message.contains('RSS 2.0 feed requires link'), 'missing link error is clear';
+}
+
+my $ATOM-NODESC = q:to/END/;
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<id>urn:x</id><title>No Desc</title>
+<link rel="alternate" href="https://e.com"/>
+<updated>2024-01-01T00:00:00Z</updated>
+<entry><id>urn:y</id><title>E</title><updated>2024-01-01T00:00:00Z</updated></entry>
+</feed>
+END
+
+{
+    my $r = try { convert($ATOM-NODESC, 'rss') };
+    nok $r.defined, 'atom without subtitle -> rss dies';
+    ok $!.message.contains('RSS 2.0 feed requires description'), 'missing description error is clear';
+}
+
+my $RSS-NO-SUMMARY = q:to/END/;
+<?xml version="1.0"?>
+<rss version="2.0"><channel><title>T</title><link>https://e.com</link>
+<description>D</description>
+<item><title>I</title><link>https://e.com/1</link></item></channel></rss>
+END
+
+{
+    my $r = try { convert($RSS-NO-SUMMARY, 'rss091') };
+    nok $r.defined, 'item without summary -> rss091 dies';
+    ok $!.message.contains('RSS 0.91 item requires description'), 'missing item summary error is clear';
+}
+
+{
+    is parse(convert($RSS, 'rss2')).title, 'My RSS Feed', 'alias rss2 accepted';
+    ok convert($RSS, 'rss1.0').contains('rdf:RDF'),    'alias rss1.0 accepted';
+    is parse(convert($RSS091, 'rss0.91')).title, 'RSS091 Feed', 'alias rss0.91 accepted';
+}
+
+# ===== 5: new-from-feed call forms =====
+
+{
+    my $fb = Syndicate::Builder::Feed.new;
+    $fb.title('pre');
+    my $ret = $fb.new-from-feed(parse($RSS));
+    is $ret.title, 'My RSS Feed', 'instance call returns a populated builder';
+    is $fb.title,  'My RSS Feed', 'instance call populates the receiver';
+}
+
+{
+    my $fb = Syndicate::Builder::Feed.new-from-feed(parse($RSS));
+    is $fb.title, 'My RSS Feed', 'type-object call creates a populated builder';
+}

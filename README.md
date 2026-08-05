@@ -271,6 +271,39 @@ say $json-feed.to-json;   # same
 say $json-feed.to-hash;   # Perl Hash structure
 ```
 
+## Converting Between Formats
+
+Parse any feed and re-emit it in another format with `convert`:
+
+```raku
+use Syndicate;
+
+my $rss-xml = convert($atom-string, 'rss');      # Atom → RSS 2.0
+my $atom-xml = convert($rss-string, 'atom');     # RSS 2.0 → Atom
+my $json = convert($rss-string, 'json');         # RSS 2.0 → JSON Feed
+```
+
+`$to` accepts `rss` (aliases `rss2`, `rss2.0`), `rss091` (`rss0.91`),
+`rss1` (`rss1.0`), `atom`, and `json`. Conversion goes through
+`Syndicate::Builder::Feed.new-from-feed`, which copies every field the builder
+models. Format-specific extras that the builder does not model (RSS
+`webMaster`/`docs`/`ttl`/`pubDate`, Atom contributors and extra/self links,
+media groups, item-level iTunes fields, JSON `external_url`/`image`/
+`banner_image`) are not carried over. Emission may die if the target format
+requires a field the source lacks — e.g. an Atom feed without a description
+cannot be emitted as RSS 2.0.
+
+For programmatic access, populate a builder directly:
+
+```raku
+use Syndicate;
+use Syndicate::Builder::Feed;
+
+my $fb = Syndicate::Builder::Feed.new-from-feed(parse($rss-string));
+say $fb.atom-str;   # RSS 2.0 → Atom, with a single builder
+say $fb.json-str;   # and JSON Feed from the same builder
+```
+
 ## Feed Discovery
 
 Fetch and auto-detect feeds from URLs:
@@ -357,18 +390,22 @@ All feed types do the `Syndicate::Feed` role. All item types do the `Syndicate::
 | `.title`    | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
 | `.link`     | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
 | `.summary`  | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
-| `.author`   | `Str`      | ✓       |          | ✓       | ✓    | ✓         |
-| `.updated`  | `DateTime` | ✓       |          | ✓       | ✓    |           |
+| `.author`   | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.updated`  | `DateTime` | ✓       | ✓        | ✓       | ✓    | ✓         |
 | `.id`       | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
-| `.content`  | `Str`      | ✓       | ✓        | ✓       | ✓    | ✓         |
+| `.content`  | `Str`      | ✓       |          | ✓       | ✓    | ✓         |
+
+RSS 0.91 and RSS 1.0 populate `author` and `updated` from Dublin Core
+(`dc:creator`, `dc:date`); JSON Feed's `updated` derives from `date_modified`.
+RSS 0.91 items have no content module, so `.content` is never populated.
 
 ### Format-Specific Attributes
 
 Each format also exposes its own attributes:
 
-**RSS 2.0 Feed:** `copyright`, `managingEditor`, `webMaster`, `pubDate`, `lastBuildDate`, `category`, `docs`, `ttl`, `image`, `itunes-author`, `itunes-summary`
+**RSS 2.0 Feed:** `copyright`, `managingEditor`, `webMaster`, `pubDate`, `lastBuildDate`, `categories`, `docs`, `ttl`, `image`, `itunes-author`, `itunes-summary`
 
-**RSS 2.0 Item:** `guid`, `guid-is-permalink`, `category`, `comments`, `enclosure`, `source`, `media-contents`, `media-thumbnails`, `media-title`, `media-description`, `itunes-author`, `itunes-summary`, `itunes-duration`
+**RSS 2.0 Item:** `guid`, `guid-is-permalink`, `categories`, `comments`, `enclosure`, `source`, `media-contents`, `media-thumbnails`, `media-title`, `media-description`, `itunes-author`, `itunes-summary`, `itunes-duration`
 
 **RSS 0.91 Feed:** `copyright`, `managingEditor`, `webMaster`, `rating`, `docs`, `pubDate`, `lastBuildDate`, `image`, `textInput`, `skipHours`, `skipDays`
 

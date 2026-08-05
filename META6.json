@@ -41,7 +41,7 @@
         "Syndicate::Extension::ITunes": "lib/Syndicate/Extension/ITunes.rakumod",
         "Syndicate::Discovery": "lib/Syndicate/Discovery.rakumod"
     },
-    "source-url": "https://github.com/sashaaaaaaaaa/Syndicate.git",
+    "source-url": "https://git.disroot.org/sasha/Syndicate.git",
     "authors": [
         "Sasha Abbott"
     ],

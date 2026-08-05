@@ -114,12 +114,13 @@ An RSS 2.0 item. Does L<C<Syndicate::RSS::Item::Common>|rakudoc:Syndicate::RSS::
 =item C<$.id>, C<$.content> - from Item role
 =item C<$.guid> - Globally unique identifier (falls back to link)
 =item C<$.guid-is-permalink> - Whether guid is a permalink (default: True)
-=item C<$.category> - Item category
+=item C<@.categories> - Item categories
 =item C<$.comments> - Comments URL
 =item C<%.enclosure> - Enclosure hash (url, length, type)
 =item C<$.source> - Source feed URL
 =item C<@.media-contents> - Media RSS content entries
 =item C<@.media-thumbnails> - Media RSS thumbnails
+=item C<@.media-groups> - Media RSS groups
 =item C<$.media-title> - Media RSS title
 =item C<$.media-description> - Media RSS description
 =item C<$.itunes-author> - iTunes author
