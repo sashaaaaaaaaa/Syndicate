@@ -2,6 +2,9 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
+    - Restore the hand-written README overwritten by the first mi6 release;
+      ReadmeFromPod is now disabled in dist.ini.
+
 0.0.1  2026-08-05T07:55:17+03:00
 
     - Initial release. Feed parser and generator for RSS 2.0, RSS 0.91,
