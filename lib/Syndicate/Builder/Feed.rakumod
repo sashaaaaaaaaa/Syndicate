@@ -181,11 +181,14 @@ method new-from-feed(Syndicate::Feed $feed --> Syndicate::Builder::Feed) {
                 for @($_.media-contents) -> %mc {
                     next unless %mc<url>.defined;
                     my %m;
-                    %m<url>      = %mc<url>;
-                    %m<type>     = %mc<type>     if %mc<type>.defined;
-                    %m<width>    = %mc<width>    if %mc<width>.defined;
-                    %m<height>   = %mc<height>   if %mc<height>.defined;
-                    %m<duration> = %mc<duration> if %mc<duration>.defined;
+                    %m<url>        = %mc<url>;
+                    %m<type>       = %mc<type>       if %mc<type>.defined;
+                    %m<medium>     = %mc<medium>     if %mc<medium>.defined;
+                    %m<width>      = %mc<width>      if %mc<width>.defined;
+                    %m<height>     = %mc<height>     if %mc<height>.defined;
+                    %m<duration>   = %mc<duration>   if %mc<duration>.defined;
+                    %m<title>       = %mc<title>       if %mc<title>.defined;
+                    %m<description> = %mc<description> if %mc<description>.defined;
                     $e.media-content(|%m);
                 }
                 for @($_.media-thumbnails) -> %mt {

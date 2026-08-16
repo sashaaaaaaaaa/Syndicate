@@ -46,12 +46,15 @@ method media-title(Str $v?) { $!media-title = $v if $v.defined; $!media-title }
 
 method media-description(Str $v?) { $!media-description = $v if $v.defined; $!media-description }
 
-method media-content(Str :$url, Str :$type, :$width, :$height, :$duration) {
+method media-content(Str :$url, Str :$type, Str :$medium, :$width, :$height, :$duration, Str :$title, Str :$description) {
     die "media-content requires url" unless $url.defined;
     my %mc = :$url, :$type;
-    %mc<width>    = $width    if $width.defined;
-    %mc<height>   = $height   if $height.defined;
-    %mc<duration> = $duration if $duration.defined;
+    %mc<medium>     = $medium     if $medium.defined;
+    %mc<width>      = $width      if $width.defined;
+    %mc<height>     = $height     if $height.defined;
+    %mc<duration>   = $duration   if $duration.defined;
+    %mc<title>       = $title       if $title.defined;
+    %mc<description> = $description if $description.defined;
     @!media-contents.push: %mc;
     @!media-contents
 }
@@ -248,6 +251,8 @@ Accumulates entry-level data used by all output format generators.
 =item C<updated(DateTime $v?)> - get/set updated/modified date
 =item C<published(DateTime $v?)> - get/set published date
 =item C<content(Str $v?, :$type)> - get/set content body with optional MIME type
+=item C<media-content(Str :$url, Str :$type, Str :$medium, :$width, :$height, :$duration, Str :$title, Str :$description)> - add a media:content element; C<:medium> and content-level C<:title>/C<:description> are optional
+=item C<media-thumbnail(Str :$url, :$width, :$height, :$time)> - add a media:thumbnail element
 =item C<author(:$name, :$email, :$uri)> - get/set author details
 =item C<category(Str $v?)> - add/get categories
 =end pod

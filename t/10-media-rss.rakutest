@@ -3,7 +3,7 @@ use Test;
 use lib 'lib';
 use Syndicate;
 
-plan 50;
+plan 51;
 
 my $xml = slurp "t/data/rss2-media.xml";
 my $feed = Syndicate::RSS.new($xml);
@@ -89,5 +89,47 @@ isa-ok $rt2, Syndicate::RSS, "HH:MM:SS roundtrip parsed";
 is $rt2.items.elems, 3, "HH:MM:SS roundtrip item count";
 is $rt2.items[0].media-contents[0]<duration>, "1:02:15", "HH:MM:SS roundtrip duration";
 is $rt2.items[1].media-contents.elems, 3, "multi-content roundtrip count";
+
+# ===== Builder media-content with medium + content-level title/description =====
+subtest 'Builder media-content carries medium and nested title/description' => {
+    use Syndicate::Builder::Feed;
+    my $fb = Syndicate::Builder::Feed.new;
+    $fb.title("Media Feed");
+    $fb.link("https://example.com");
+    $fb.description("A media feed");
+    my $e = $fb.add-entry;
+    $e.title("Video Post");
+    $e.link("https://example.com/v1");
+    $e.media-content(
+        :url("https://example.com/v.mp4"), :type<video/mp4>, :medium<video>,
+        :duration(120), :title("Clip title"), :description("Clip desc"),
+    );
+    $e.media-thumbnail(:url("https://example.com/t.jpg"));
+
+    my $str = $fb.rss-str;
+    # Attribute serialization order is not guaranteed (Raku hash iteration is
+    # randomized per run), so check each attribute independently.
+    ok $str ~~ / '<media:content' /, 'media:content emitted';
+    ok $str ~~ / 'url="https://example.com/v.mp4"' /, 'media:content carries url';
+    ok $str ~~ / 'medium="video"' /, 'media:content carries medium';
+    ok $str ~~ / '<media:title>Clip title</media:title>' /, 'content-level media:title emitted';
+    ok $str ~~ / '<media:description>Clip desc</media:description>' /, 'content-level media:description emitted';
+
+    my $rt = Syndicate::RSS.new($str);
+    my %mc = $rt.items[0].media-contents[0];
+    is %mc<url>, "https://example.com/v.mp4", "roundtrip content url";
+    is %mc<medium>, "video", "roundtrip content medium";
+    is %mc<duration>, "120", "roundtrip content duration";
+    is %mc<title>, "Clip title", "roundtrip content title";
+    is %mc<description>, "Clip desc", "roundtrip content description";
+
+    # Convert back through the builder: medium/title/description survive
+    # parse -> build -> generate without item-level media-title involvement.
+    my $fb2 = Syndicate::Builder::Feed.new;
+    $fb2.new-from-feed($rt);
+    my $str2 = $fb2.rss-str;
+    ok $str2 ~~ / 'medium="video"' /, 'medium survives new-from-feed roundtrip';
+    ok $str2 ~~ / '<media:title>Clip title</media:title>' /, 'content title survives new-from-feed roundtrip';
+};
 
 done-testing;

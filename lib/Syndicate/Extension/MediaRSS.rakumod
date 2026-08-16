@@ -89,6 +89,12 @@ sub media-content-of(XML::Element $e --> Hash) {
     %c<fileSize> = media-numeric($e.attribs<fileSize> // Str) if $e.attribs<fileSize>.defined;
     %c<width>    = media-numeric($e.attribs<width>    // Str) if $e.attribs<width>.defined;
     %c<height>   = media-numeric($e.attribs<height>   // Str) if $e.attribs<height>.defined;
+    # Mirror the generate side: a nested media:title/media:description inside
+    # this content round-trips back to the content hash, not the item level.
+    my $title = get-media-text($e, "title");
+    my $desc  = get-media-text($e, "description");
+    %c<title>       = $title if $title.defined && $title.chars;
+    %c<description> = $desc  if $desc.defined && $desc.chars;
     %c
 }
 
@@ -154,6 +160,13 @@ sub add-media-content-element(XML::Element $parent, %content --> Nil) is export 
     $e.attribs<fileSize> = encode-entities(~%content<fileSize>) if %content<fileSize>.defined;
     $e.attribs<width>    = encode-entities(~%content<width>)    if %content<width>.defined;
     $e.attribs<height>   = encode-entities(~%content<height>)   if %content<height>.defined;
+    # MRSS allows media:title/media:description inside media:content (per
+    # content, not just per item); emit them nested so each content keeps its
+    # own metadata instead of collapsing everything to the item level.
+    $e.append: XML::Element.new(:name<media:title>, :nodes([encode-entities(~%content<title>)]))
+        if %content<title>.defined && %content<title>.chars;
+    $e.append: XML::Element.new(:name<media:description>, :nodes([encode-entities(~%content<description>)]))
+        if %content<description>.defined && %content<description>.chars;
     $parent.append: $e;
 }
 

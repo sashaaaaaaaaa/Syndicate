@@ -2,6 +2,14 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
+    - Syndicate::Builder::Entry.media-content() now accepts optional
+      :medium, :title, and :description, so a media:content can carry its
+      own medium attribute and nested media:title/media:description elements
+      (previously only item-level media-title/media-description were
+      supported). The MediaRSS extension emits and re-parses the nested
+      elements, and Builder::Feed.new-from-feed round-trips medium plus the
+      content-level title/description.
+
 0.0.2  2026-08-05T08:02:21+03:00
 
     - Restore the hand-written README overwritten by the first mi6 release;
