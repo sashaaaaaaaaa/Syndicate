@@ -8,7 +8,7 @@ use Syndicate::Atom;
 use Syndicate::JSONFeed;
 use Syndicate::Builder::Entry;
 
-unit class Syndicate::Builder::Feed:ver<0.0.2>:auth<zef:sasha>;
+unit class Syndicate::Builder::Feed:ver<0.0.3>:auth<zef:sasha>;
 
 has Str $.title;
 has Str $.link;

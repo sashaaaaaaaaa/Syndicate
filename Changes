@@ -2,6 +2,8 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
+0.0.3  2026-08-17T01:04:27+03:00
+
     - Syndicate::Builder::Entry.media-content() now accepts optional
       :medium, :title, and :description, so a media:content can carry its
       own medium attribute and nested media:title/media:description elements

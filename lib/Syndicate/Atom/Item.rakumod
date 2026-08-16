@@ -4,7 +4,7 @@ use Syndicate::Item;
 use Syndicate::Utils;
 use Syndicate::Stats;
 
-unit class Syndicate::Atom::Item:ver<0.0.2>:auth<zef:sasha> does Syndicate::Item;
+unit class Syndicate::Atom::Item:ver<0.0.3>:auth<zef:sasha> does Syndicate::Item;
 
 my constant XHTML-NS = 'http://www.w3.org/1999/xhtml';
 

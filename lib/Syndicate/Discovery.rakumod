@@ -10,7 +10,7 @@ use Syndicate::Utils;
 my constant $link-tag = rx:i/ '<link' <-[>]>* ['/>' | '>'] /;
 my constant $base-tag = rx:i/ '<base' <-[>]>* ['/>' | '>'] /;
 
-unit class Syndicate::Discovery:ver<0.0.2>:auth<zef:sasha>;
+unit class Syndicate::Discovery:ver<0.0.3>:auth<zef:sasha>;
 
 has $.ua is built(False);
 has Int $!max-redirect = 5;

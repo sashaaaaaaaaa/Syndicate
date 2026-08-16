@@ -10,7 +10,7 @@ use Syndicate::Extension::ITunes;
 use Syndicate::Stats;
 use Syndicate::Extensions;
 
-unit class Syndicate::RSS:ver<0.0.2>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
+unit class Syndicate::RSS:ver<0.0.3>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.copyright;
 has Str $.managingEditor;

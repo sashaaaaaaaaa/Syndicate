@@ -7,10 +7,10 @@
   ],
   "depends": [
     "XML",
-    "JSON::Fast",
+    "JSON::Fast:auth<zef:timo>",
     "DateTime::Grammar",
     "DateTime::Format",
-    "HTTP::Tiny",
+    "HTTP::Tiny:auth<zef:jjatria>",
     "IO::Socket::SSL",
     "URI"
   ],
@@ -57,5 +57,5 @@
   ],
   "test-depends": [
   ],
-  "version": "0.0.2"
+  "version": "0.0.3"
 }
