@@ -21,7 +21,7 @@ use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Discovery;
 
-unit class Syndicate:ver<0.0.3>:auth<zef:sasha>;
+unit class Syndicate:ver<0.0.4>:auth<zef:sasha>;
 
 sub parse(Str $input --> Syndicate::Feed:D) is export {
     parse-feed($input)

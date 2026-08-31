@@ -5,7 +5,7 @@ use Syndicate::Atom::Item;
 use Syndicate::RSS::V0_91::Item;
 use Syndicate::JSONFeed::Item;
 
-unit class Syndicate::Builder::Entry:ver<0.0.3>:auth<zef:sasha>;
+unit class Syndicate::Builder::Entry:ver<0.0.4>:auth<zef:sasha>;
 
 has Str $.title;
 has Str $.link;

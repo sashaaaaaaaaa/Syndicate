@@ -10,7 +10,7 @@ use JSON::Fast;
 my constant MAX-FEED-SIZE is export = 10 * 1024 * 1024;
 my constant RSS_VER_091      = "0.91";
 
-unit module Syndicate::Parse:ver<0.0.3>:auth<zef:sasha>;
+unit module Syndicate::Parse:ver<0.0.4>:auth<zef:sasha>;
 
 enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
 

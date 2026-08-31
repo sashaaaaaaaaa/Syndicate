@@ -98,7 +98,7 @@ my constant %HTML-ENTITIES is export = (
     'apos' => 39, 'AMP' => 38, 'LT' => 60, 'GT' => 62, 'QUOT' => 34, 'APOS' => 39,
 );
 
-unit module Syndicate::Utils:ver<0.0.3>:auth<zef:sasha>;
+unit module Syndicate::Utils:ver<0.0.4>:auth<zef:sasha>;
 
 my constant $XML-ENTITY = XML::Entity.new;
 my constant RFC2822-FORMAT is export = DateTime::Format::RFC2822.new;

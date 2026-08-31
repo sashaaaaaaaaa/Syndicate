@@ -6,7 +6,7 @@ use Syndicate::Utils;
 
 use Syndicate::Stats;
 
-unit class Syndicate::Atom:ver<0.0.3>:auth<zef:sasha> does Syndicate::Feed;
+unit class Syndicate::Atom:ver<0.0.4>:auth<zef:sasha> does Syndicate::Feed;
 
 has Str $.id;
 has Str $.subtitle;
