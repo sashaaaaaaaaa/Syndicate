@@ -57,17 +57,21 @@ method Str {
 # Stringify the feed, optionally with human-friendly indentation. The default
 # (C<Str> / C<str()> without C<:pretty>) is unchanged: one line, maximum
 # byte-compactness, matching the pre-existing behaviour. With C<:pretty> the
-# XML declaration is kept on its own line and each element is indented two
-# spaces per nesting level via L<C<indent-xml>|rakudoc:Syndicate::Utils>; the
-# concatenation of all whitespace equals the compact form, so pretty output is
-# semantically identical and parses the same.
+# XML is re-indented via L<C<indent-xml>|rakudoc:Syndicate::Utils>: the XML
+# declaration stays on its own line and each element is indented two spaces per
+# nesting level. Pretty output is derived from the cached compact C<Str>, so
+# removing all whitespace from it yields exactly the compact form: the two
+# differ only by inserted whitespace and parse identically.
 method str(:$pretty = False) {
     $pretty ?? self!pretty-str !! self.Str
 }
 
 method !pretty-str {
     $!cached-pretty-str // $!cache-lock.protect: {
-        $!cached-pretty-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ indent-xml(self.XML.Str)
+        # Derive from the cached compact Str (not a fresh XML serialization) so
+        # plain/pretty are guaranteed to differ only by inserted whitespace,
+        # even though XML::Element serializes attribute order non-deterministically.
+        $!cached-pretty-str //= indent-xml(self.Str)
     }
 }
 

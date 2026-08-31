@@ -11,7 +11,7 @@ sub suppress-warnings(&code) {
     code
 }
 
-plan 138;
+plan 140;
 
 # ===== Feed builder fields =====
 my $fb = Syndicate::Builder::Feed.new;
@@ -364,6 +364,66 @@ subtest 'str(:pretty) indents without changing content' => {
     is $back.items[0].title, "Item <em>one</em> & two", 'pretty output preserves entity-escaped leaf text on parse';
 
     ok $fbp.atom-str(:pretty).contains("\n  <entry>\n"), 'atom pretty output indents entries';
+};
+
+# ===== Pretty-print: same-Feed-object Str ≡ str(:pretty) modulo whitespace =====
+# XML::Element serializes attribute order non-deterministically, so comparing
+# two *independently built* feeds can differ beyond whitespace. The contract of
+# str(:pretty) is that it derives from the same cached Str, so on one feed
+# object the two must differ only by inserted whitespace.
+subtest 'str(:pretty) differs from Str only by whitespace on one object' => {
+    use Syndicate::Builder::Feed;
+
+    my $fbp = Syndicate::Builder::Feed.new;
+    $fbp.title("P2");
+    $fbp.link("https://example.com/");
+    $fbp.description("D2");
+    my $pe = $fbp.add-entry;
+    $pe.title("Item2");
+    $pe.link("https://example.com/2");
+    $pe.summary("Item2 desc");
+    $pe.id("2");
+    $pe.published(DateTime.new("2024-01-02T00:00:00Z"));
+
+    sub flat(Str $s) { $s.subst(/\s+/, '', :g) }
+    my $flat-eq = sub ($feed) { flat($feed.str(:pretty)) eq flat($feed.Str) };
+
+    ok $flat-eq($fbp.rss-feed),    'RSS 2.0 Str and str(:pretty) differ only by whitespace';
+    ok $flat-eq($fbp.rss1-feed),   'RSS 1.0 Str and str(:pretty) differ only by whitespace';
+    ok $flat-eq($fbp.rss091-feed), 'RSS 0.91 Str and str(:pretty) differ only by whitespace';
+    ok $flat-eq($fbp.atom-feed),   'Atom Str and str(:pretty) differ only by whitespace';
+};
+
+# ===== indent-xml: general correctness across element shapes =====
+subtest 'indent-xml handles arbitrary element shapes without changing content' => {
+    use Syndicate::Utils;
+    sub flat(Str $s) { $s.subst(/\s+/, '', :g) }
+
+    my @shapes = (
+        '<rss><channel><item>one</item><item2 id="x">two</item2></channel></rss>',
+        '<rss><channel><item-rss>text</item-rss></channel></rss>',
+        '<rss><channel><rdf.RDF>text</rdf.RDF></channel></rss>',
+        '<rss><a/><b>hi</b><c></c></rss>',
+        '<a>just text</a>',
+        '<a>lead<b>hi</b>tail</a>',
+        '<a>text <em>one</em> and <em>two</em> done</a>',
+        '<a>before<b>nested<c>deep</c>after</b>tail</a>',
+        '<rss><!--comment--><a>x</a></rss>',
+        '<rss><a><![CDATA[<b>raw & unparsed</b>]]></a></rss>',
+        '<rss xmlns:c="x"><c:item>v</c:item></rss>',
+    );
+    for @shapes.kv -> $i, $s {
+        my $out = indent-xml($s);
+        is flat($out), flat($s), "flat-preserving: $i ($s)";
+        ok !$out.contains("</>"), "no spurious empty close tag for: $i";
+    }
+
+    # Mixed-content text spans survive verbatim and in order on the same element.
+    my $mixed = indent-xml('<a>text <em>one</em> and <em>two</em> done</a>');
+    ok $mixed.contains('<em>one</em>') && $mixed.contains('<em>two</em>'),
+        'mixed content keeps child elements in order';
+    ok $mixed.contains('text ') && $mixed.contains(' done'),
+        'mixed content keeps inline text spans intact';
 };
 
 done-testing;
