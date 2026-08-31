@@ -15,6 +15,7 @@ method items() { @!items.List }
 # Any mutation to attributes after the first call to .Str or .to-hash
 # will not be reflected in the cached output.
 has Str $!cached-str;
+has Str $!cached-pretty-str;
 has Lock $!cache-lock = Lock.new;
 # Item hashes are built once and deep-cloned on every call so callers can
 # never mutate the cache (see sanitize), mirroring the JSONFeed cache.
@@ -53,6 +54,23 @@ method Str {
     }
 }
 
+# Stringify the feed, optionally with human-friendly indentation. The default
+# (C<Str> / C<str()> without C<:pretty>) is unchanged: one line, maximum
+# byte-compactness, matching the pre-existing behaviour. With C<:pretty> the
+# XML declaration is kept on its own line and each element is indented two
+# spaces per nesting level via L<C<indent-xml>|rakudoc:Syndicate::Utils>; the
+# concatenation of all whitespace equals the compact form, so pretty output is
+# semantically identical and parses the same.
+method str(:$pretty = False) {
+    $pretty ?? self!pretty-str !! self.Str
+}
+
+method !pretty-str {
+    $!cached-pretty-str // $!cache-lock.protect: {
+        $!cached-pretty-str //= '<?xml version="1.0" encoding="UTF-8"?>' ~ "\n" ~ indent-xml(self.XML.Str)
+    }
+}
+
 =begin pod
 
 =head1 NAME
@@ -72,5 +90,10 @@ interface for accessing common feed metadata.
 =item C<$.generator> - Generator name (e.g., "Syndicate")
 =item C<$.language> - Feed language code (e.g., "en")
 =item C<@.items> - Array of L<C<Syndicate::Item>|rakudoc:Syndicate::Item> objects
+
+=head1 METHODS
+
+=item C<Str> - Compact, single-line XML (declaration on its own line followed by the root element on one line). Back-compatible.
+=item C<str(:$pretty = False)> - C<Str> when C<:pretty> is falsy; otherwise the XML with two-space indentation per nesting level via C<indent-xml>. Whitespace-only differences, so both forms parse identically.
 
 =end pod

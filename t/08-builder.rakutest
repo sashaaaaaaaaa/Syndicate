@@ -11,7 +11,7 @@ sub suppress-warnings(&code) {
     code
 }
 
-plan 137;
+plan 138;
 
 # ===== Feed builder fields =====
 my $fb = Syndicate::Builder::Feed.new;
@@ -331,5 +331,39 @@ $en4.content("<p>should not appear</p>");
 my $rss091c-str = $fb091.rss091-str;
 unlike $rss091c-str, /'content:encoded'/, "RSS 0.91 builder output has no content:encoded";
 unlike $rss091c-str, /'xmlns:content'/, "RSS 0.91 builder output has no xmlns:content";
+
+# ===== Pretty-print (.str(:pretty)) =====
+subtest 'str(:pretty) indents without changing content' => {
+    use Syndicate::Builder::Feed;
+
+    my $fbp = Syndicate::Builder::Feed.new;
+    $fbp.title("Pretty Feed");
+    $fbp.link("https://example.com/");
+    $fbp.description("A & B < C");
+    my $pe = $fbp.add-entry;
+    $pe.title("Item <em>one</em> & two");
+    $pe.link("https://example.com/1");
+    $pe.id("1");
+    $pe.published(DateTime.new("2024-01-02T00:00:00Z"));
+
+    my $plain  = $fbp.rss-str;
+    my $pretty = $fbp.rss-str(:pretty);
+
+    is $fbp.rss-str, $plain, 'plain rss-str is stable/idempotent';
+    ok $pretty.contains("\n  <channel>\n    <title>"), 'pretty output puts <channel> on its own line';
+    ok $pretty.contains("    <title>Item &lt;em&gt;one&lt;/em&gt; &amp; two</title>"),
+        'pretty output indents a leaf element and keeps its escaped text intact';
+
+    # Byte-compactness is preserved: remove all whitespace and pretty equals plain.
+    sub flat(Str $s) { $s.subst(/\s+/, '', :g) }
+    is flat($pretty), flat($plain), 'pretty output is plain output with whitespace inserted only';
+
+    # The pretty feed still parses back to the same content.
+    my $back = Syndicate::RSS.new($pretty);
+    is $back.title, "Pretty Feed", 'pretty output parses back with the same title';
+    is $back.items[0].title, "Item <em>one</em> & two", 'pretty output preserves entity-escaped leaf text on parse';
+
+    ok $fbp.atom-str(:pretty).contains("\n  <entry>\n"), 'atom pretty output indents entries';
+};
 
 done-testing;

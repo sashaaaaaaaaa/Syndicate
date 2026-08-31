@@ -468,6 +468,111 @@ sub compute-needs(@items --> Hash) is export {
     %(:dc($needs-dc), :media($needs-media), :itunes($needs-itunes), :content($needs-content))
 }
 
+# Pretty-print the compact, single-line XML that XML::Element.Str produces.
+# The XML module entity-escapes < > & in text and attribute values, so every
+# literal '<...>' in the input marks a real tag boundary, and no whitespace is
+# emitted between sibling elements. That lets us re-indent safely by inserting
+# newlines and two-space indents only at element boundaries, never inside
+# text/CDATA content or attribute values. Leaf elements (text only, no element
+# children) stay on a single line; container elements place each child on its
+# own line. Concatenating all whitespace in the output yields the original
+# string, so the result is semantically identical and round-trips through any
+# XML parser unchanged.
+sub indent-xml(Str $xml, Str :$indent = '  ' --> Str) is export {
+    # Tokenize into alternating text runs and '<...>' tag strings.
+    my @tok;
+    my $pos  = 0;
+    my $len  = $xml.chars;
+    while $pos < $len {
+        my $lt = $xml.index('<', $pos);
+        if $lt.defined {
+            @tok.push: $xml.substr($pos, $lt - $pos) if $lt > $pos;
+            my $gt = $xml.index('>', $lt);
+            return $xml unless $gt.defined;
+            @tok.push: $xml.substr($lt, $gt - $lt + 1);
+            $pos = $gt + 1;
+        }
+        else {
+            @tok.push: $xml.substr($pos) if $pos < $len;
+            $pos = $len;
+        }
+    }
+
+    my $idx = 0;
+    my sub is-close(Str $t, Str $name) { so $t ~~ /^ '</' $name \s* '>' $/ }
+
+    # A node is [ kind, payload ... ] where kind is 'tok'/'empty' (a literal
+    # declaration/comment/PI or self-closing tag), 'leaf' (open-tag + text +
+    # close-tag) or 'elem' (open-tag + element children + close-tag).
+    my sub parse-node() {
+        my $t = @tok[$idx];
+        if $t.starts-with('<?') || $t.starts-with('<!') {
+            $idx++;
+            return ['tok', $t];
+        }
+        if $t.ends-with('/>') {
+            $idx++;
+            return ['empty', $t];
+        }
+        my $m    = $t ~~ /^ '<' ( \w+ ( ':' \w+ )? )/;
+        my $name = $m ?? ~$m[0] !! '';
+        my $k    = $idx + 1;
+        my $buf  = '';
+        while $k < @tok {
+            my $tk = @tok[$k];
+            if $tk.starts-with('<') {
+                if is-close($tk, $name) {
+                    $idx = $k + 1;
+                    return ['leaf', $name, $t, $buf];
+                }
+                last;
+            }
+            $buf ~= $tk;
+            $k++;
+        }
+        my @kids;
+        $idx++;
+        while $idx < @tok {
+            my $tk = @tok[$idx];
+            if $tk.starts-with('<') && is-close($tk, $name) {
+                $idx++;
+                return ['elem', $name, $t, @kids];
+            }
+            if !$tk.starts-with('<') && $tk !~~ /\S/ {
+                $idx++;
+                next;
+            }
+            @kids.push: parse-node();
+        }
+        return ['elem', $name, $t, @kids];
+    }
+
+    my sub render($node, $depth, @out) {
+        my $pad = $indent x $depth;
+        given $node[0] {
+            when 'tok' | 'empty' { @out.push: $pad ~ $node[1] }
+            when 'leaf' { @out.push: $pad ~ $node[2] ~ $node[3] ~ "</{$node[1]}>" }
+            when 'elem' {
+                @out.push: $pad ~ $node[2];
+                render($_, $depth + 1, @out) for $node[3].list;
+                @out.push: $pad ~ "</{$node[1]}>";
+            }
+        }
+    }
+
+    my @out;
+    while $idx < @tok {
+        my $tk = @tok[$idx];
+        if !$tk.starts-with('<') {
+            @out.push: $tk if $tk ~~ /\S/;
+            $idx++;
+            next;
+        }
+        render(parse-node(), 0, @out);
+    }
+    @out.join("\n");
+}
+
 =begin pod
 
 =head1 NAME
@@ -493,5 +598,6 @@ Not typically needed by end users.
 =item C<get-text-by-ns($parent, $local-name, $ns-uri, $canonical-prefix = "")> - Get optional text of the first child matching local name and namespace URI
 =item C<elements-by-local-ns($parent, $ns-uri, $local-name, $canonical-prefix)> - Namespace-aware child element lookup
 =item C<sanitize($value)> - Deep clone dropping undefined slots and empty containers for safe to-hash export
+=item C<indent-xml($xml, :$indent = "  ")> - Pretty-print a compact single-line XML feed string by indenting elements without altering text, CDATA, or attribute values
 
 =end pod

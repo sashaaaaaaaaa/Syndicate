@@ -348,13 +348,13 @@ method rss1-feed {
     Syndicate::RSS::V1_0.new(|%bless, :categories(@cats), :@items)
 }
 
-method rss-str     { ~$.rss-feed     }
+method rss-str(:$pretty = False)     { $.rss-feed.str(:$pretty)     }
 
-method rss1-str    { ~$.rss1-feed    }
+method rss1-str(:$pretty = False)    { $.rss1-feed.str(:$pretty)    }
 
-method rss091-str  { ~$.rss091-feed  }
+method rss091-str(:$pretty = False)  { $.rss091-feed.str(:$pretty)  }
 
-method atom-str    { ~$.atom-feed    }
+method atom-str(:$pretty = False)    { $.atom-feed.str(:$pretty)    }
 
 method json-str    { $.json-feed.to-json }
 
