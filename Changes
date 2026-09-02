@@ -2,6 +2,10 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
+    - README updated for the v0.0.5 API revision: convert()/convert-to-*
+      enum examples, add-category()/categories(), and a new .to-builder
+      example; fixed the raku.land JSON::Fast link.
+
 0.0.5  2026-09-02T19:52:31+03:00
 
     - API revision for v0.0.5 (breaking changes):

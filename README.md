@@ -147,8 +147,10 @@ $fb.updated(DateTime.new("2026-06-15T12:00:00Z"));
 $fb.author(:name("Jane Doe"), :email("jane@example.com"));
 
 # Categories (multiple allowed)
-$fb.category("Tech");
-$fb.category("News");
+$fb.add-category("Tech");
+$fb.add-category("News");
+# or read them back
+say $fb.categories;
 
 # Add entries
 my $e = $fb.add-entry;
@@ -273,25 +275,33 @@ say $json-feed.to-hash;   # Perl Hash structure
 
 ## Converting Between Formats
 
-Parse any feed and re-emit it in another format with `convert`:
+Parse any feed and re-emit it in another format with `convert`, passing a
+`FeedFormat` enum value (`RSS2`, `RSS091`, `RSS1`, `Atom`, `JSONFeedFmt`):
 
 ```raku
 use Syndicate;
 
-my $rss-xml = convert($atom-string, 'rss');      # Atom → RSS 2.0
-my $atom-xml = convert($rss-string, 'atom');     # RSS 2.0 → Atom
-my $json = convert($rss-string, 'json');         # RSS 2.0 → JSON Feed
+my $rss-xml = convert($atom-string, RSS2);      # Atom → RSS 2.0
+my $atom-xml = convert($rss-string, Atom);      # RSS 2.0 → Atom
+my $json = convert($rss-string, JSONFeedFmt);   # RSS 2.0 → JSON Feed
 ```
 
-`$to` accepts `rss` (aliases `rss2`, `rss2.0`), `rss091` (`rss0.91`),
-`rss1` (`rss1.0`), `atom`, and `json`. Conversion goes through
-`Syndicate::Builder::Feed.new-from-feed`, which copies every field the builder
-models. Format-specific extras that the builder does not model (RSS
-`webMaster`/`docs`/`ttl`/`pubDate`, Atom contributors and extra/self links,
-media groups, item-level iTunes fields, JSON `external_url`/`image`/
-`banner_image`) are not carried over. Emission may die if the target format
-requires a field the source lacks — e.g. an Atom feed without a description
-cannot be emitted as RSS 2.0.
+Convenience wrappers fix the target format:
+
+```raku
+my $rss  = convert-to-rss($atom-string);        # Atom → RSS 2.0
+my $atom = convert-to-atom($rss-string);        # RSS 2.0 → Atom
+my $json = convert-to-json($rss-string);        # RSS 2.0 → JSON Feed
+my $rss1 = convert-to-rss1($atom-string);       # Atom → RSS 1.0
+```
+
+Conversion goes through `Syndicate::Builder::Feed.new-from-feed`, which copies
+every field the builder models. Format-specific extras that the builder does
+not model (RSS `webMaster`/`docs`/`ttl`/`pubDate`, Atom contributors and
+extra/self links, media groups, item-level iTunes fields, JSON
+`external_url`/`image`/`banner_image`) are not carried over. Emission may die
+if the target format requires a field the source lacks — e.g. an Atom feed
+without a description cannot be emitted as RSS 2.0.
 
 For programmatic access, populate a builder directly:
 
@@ -302,6 +312,13 @@ use Syndicate::Builder::Feed;
 my $fb = Syndicate::Builder::Feed.new-from-feed(parse($rss-string));
 say $fb.atom-str;   # RSS 2.0 → Atom, with a single builder
 say $fb.json-str;   # and JSON Feed from the same builder
+```
+
+Any parsed feed can be turned into a builder for re-emission:
+
+```raku
+my $fb = $feed.to-builder;   # equivalent to Syndicate::Builder::Feed.new-from-feed($feed)
+say $fb.rss-str;
 ```
 
 ## Feed Discovery
