@@ -52,8 +52,8 @@ method parse-channel-common($channel --> Hash) {
     %h<copyright>         = get-text-optional($channel, "copyright");
     %h<managing-editor>   = get-text-optional($channel, "managingEditor");
     %h<web-master>        = get-text-optional($channel, "webMaster");
-    %h<pub-date>          = parse-date-optional(get-text-optional($channel, "pubDate"));
-    %h<last-build-date>   = parse-date-optional(get-text-optional($channel, "lastBuildDate"));
+    %h<pub-date>          = parse-date(:optional, get-text-optional($channel, "pubDate"));
+    %h<last-build-date>   = parse-date(:optional, get-text-optional($channel, "lastBuildDate"));
     %h<generator>         = get-text-optional($channel, "generator");
     %h<docs>              = get-text-optional($channel, "docs");
     %h<itunes-author>     = get-itunes-text($channel, "author");

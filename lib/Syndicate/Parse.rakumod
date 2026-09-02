@@ -1,18 +1,31 @@
 use v6.d;
 use XML;
+use Syndicate::Format;
 use Syndicate::RSS;
 use Syndicate::RSS::V0_91;
 use Syndicate::RSS::V1_0;
 use Syndicate::Atom;
 use Syndicate::JSONFeed;
 use Syndicate::Stats;
+use Syndicate::FeedResult;
 use JSON::Fast;
 my constant MAX-FEED-SIZE is export = 10 * 1024 * 1024;
 my constant RSS_VER_091      = "0.91";
 
 unit module Syndicate::Parse:ver<0.0.4>:auth<zef:sasha>;
 
-enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;
+# Re-export FeedFormat (and its enum members) from Syndicate::Format so that
+# `use Syndicate::Parse` keeps exposing the enum exactly as before, while the
+# enum itself lives in the loader-friendly Syndicate::Format module (which
+# avoids a compile-time cycle between Parse and FeedResult). `our` (not `my`)
+# keeps the symbols package-scoped so qualified access like
+# Syndicate::Parse::RSS2 keeps working.
+our constant FeedFormat is export = Syndicate::Format::FeedFormat;
+our constant Atom  is export = Syndicate::Format::FeedFormat::Atom;
+our constant RSS2  is export = Syndicate::Format::FeedFormat::RSS2;
+our constant RSS091 is export = Syndicate::Format::FeedFormat::RSS091;
+our constant RSS1  is export = Syndicate::Format::FeedFormat::RSS1;
+our constant JSONFeedFmt is export = Syndicate::Format::FeedFormat::JSONFeedFmt;
 
 sub sanitize-raw(Str $input --> Str) {
     my $clean = $input.trim;
@@ -162,20 +175,20 @@ multi sub parse-feed(XML::Document $doc --> Syndicate::Feed:D) is export {
 
 our proto sub parse-feed-with-format(|) is export {*}
 
-multi sub parse-feed-with-format(Str $input --> List) is export {
+multi sub parse-feed-with-format(Str $input --> Syndicate::FeedResult:D) is export {
     my $clean = sanitize-input($input);
 
     with try-xml-parse($clean) -> $root-info {
         my $format = feed-format($root-info<name>, $root-info<ver>);
         my $feed   = parse-feed($root-info<doc>);
-        return ($format, $feed);
+        return Syndicate::FeedResult.new(:$format, :$feed);
     }
 
     my $parsed-json = try { from-json($clean) };
     if is-json-feed($parsed-json) {
         my $feed = Syndicate::JSONFeed.new-from-hash(%$parsed-json);
         Syndicate::Stats.record-feed;
-        return (JSONFeedFmt, $feed);
+        return Syndicate::FeedResult.new(:format(JSONFeedFmt), :$feed);
     }
     Syndicate::Stats.record-error;
     die $parsed-json.defined
@@ -243,7 +256,9 @@ my $format = feed-format($input);       # Detect format
 my $feed   = parse-feed($input);        # Parse any format (from string)
 my $feed   = parse-file("feed.xml");    # Parse from file path (Str or IO::Path)
 
-my ($format, $feed) = parse-feed-with-format($input); # Both, one XML parse
+my $result = parse-feed-with-format($input); # Both, one XML parse
+my $format = $result.format;
+my $feed   = $result.feed;
 =end code
 
 =head1 DESCRIPTION
@@ -283,16 +298,19 @@ Detects format and returns an object of the appropriate class
 (C<Syndicate::Atom>, C<Syndicate::RSS>, C<Syndicate::RSS::V0_91>,
 C<Syndicate::RSS::V1_0>, or C<Syndicate::JSONFeed>).
 
-=head2 C<parse-feed-with-format(Str $input --> List)>
+=head2 C<parse-feed-with-format(Str $input --> Syndicate::FeedResult:D)>
 
 Detects the format and parses the feed in a single pass, returning a
-C<(FeedFormat, Syndicate::Feed)> List. Use this instead of calling
+L<C<Syndicate::FeedResult>|rakudoc:Syndicate::FeedResult> holding the
+C<format> and the C<feed>. Use this instead of calling
 C<feed-format($input)> followed by C<parse-feed($input)> — that
 sequence parses the XML twice, once per call. This sub calls the
 underlying XML parser only once.
 
 =for code :lang<raku>
-my ($format, $feed) = parse-feed-with-format($input);
+my $result = parse-feed-with-format($input);
+my $format = $result.format;
+my $feed   = $result.feed;
 
 =head2 C<parse-file(Str $path)> / C<parse-file(IO::Path $path)>
 

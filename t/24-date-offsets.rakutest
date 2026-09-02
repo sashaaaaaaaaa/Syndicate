@@ -13,40 +13,40 @@ my constant ATOM = 'http://www.w3.org/2005/Atom';
 
 # ===== Bug A: non-UTC / non-zero-minute timezone offsets =====
 
-my $iso-colon = parse-date-optional('2024-01-15T08:30:00+05:30');
+my $iso-colon = parse-date(:optional, '2024-01-15T08:30:00+05:30');
 ok $iso-colon.defined, 'ISO +05:30 parses';
 is $iso-colon.utc, DateTime.new('2024-01-15T03:00:00Z'), 'ISO +05:30 offset applied';
 is $iso-colon.timezone, 19800, 'ISO +05:30 stored as +05:30';
 
-my $iso-numeric = parse-date-optional('2024-01-15T08:30:00+0530');
+my $iso-numeric = parse-date(:optional, '2024-01-15T08:30:00+0530');
 ok $iso-numeric.defined, 'ISO +0530 parses';
 is $iso-numeric.utc, DateTime.new('2024-01-15T03:00:00Z'), 'ISO +0530 offset applied';
 
-my $space-colon = parse-date-optional('2024-01-15 08:30:00 +05:30');
+my $space-colon = parse-date(:optional, '2024-01-15 08:30:00 +05:30');
 ok $space-colon.defined, 'space-separated ISO +05:30 parses';
 is $space-colon.utc, DateTime.new('2024-01-15T03:00:00Z'), 'space-separated ISO +05:30 offset applied';
 
-my $rfc-plus = parse-date-optional('Mon, 15 Jan 2024 08:30:00 +0530');
+my $rfc-plus = parse-date(:optional, 'Mon, 15 Jan 2024 08:30:00 +0530');
 ok $rfc-plus.defined, 'RFC 2822 +0530 parses';
 is $rfc-plus.utc, DateTime.new('2024-01-15T03:00:00Z'), 'RFC 2822 +0530 not mangled (was +05:18)';
 is $rfc-plus.timezone, 19800, 'RFC 2822 +0530 stored as +05:30';
 
-my $rfc-minus = parse-date-optional('Mon, 15 Jan 2024 08:30:00 -0330');
+my $rfc-minus = parse-date(:optional, 'Mon, 15 Jan 2024 08:30:00 -0330');
 ok $rfc-minus.defined, 'RFC 2822 -0330 parses';
 is $rfc-minus.utc, DateTime.new('2024-01-15T12:00:00Z'), 'RFC 2822 -0330 not mangled (was -03:18)';
 is $rfc-minus.timezone, -12600, 'RFC 2822 -0330 stored as -03:30';
 
-my $ist = parse-date-optional('2024-01-15 08:30:00 IST');
+my $ist = parse-date(:optional, '2024-01-15 08:30:00 IST');
 ok $ist.defined, 'IST abbreviation parses';
 is $ist.utc, DateTime.new('2024-01-15T03:00:00Z'), 'half-hour abbreviation IST offset applied';
 
-my $est = parse-date-optional('2024-01-15 08:30:00 EST');
+my $est = parse-date(:optional, '2024-01-15 08:30:00 EST');
 is $est.utc, DateTime.new('2024-01-15T13:30:00Z'), 'whole-hour EST still correct';
 
-my $minus5 = parse-date-optional('2024-01-15T08:30:00-0500');
+my $minus5 = parse-date(:optional, '2024-01-15T08:30:00-0500');
 is $minus5.utc, DateTime.new('2024-01-15T13:30:00Z'), 'whole-hour -0500 still correct';
 
-my $z = parse-date-optional('2024-01-15T08:30:00Z');
+my $z = parse-date(:optional, '2024-01-15T08:30:00Z');
 is $z.utc, DateTime.new('2024-01-15T08:30:00Z'), 'explicit Z unaffected';
 
 # ===== Bug A end-to-end: Atom, RSS, JSON Feed =====
@@ -81,15 +81,15 @@ is $json.items[0].date_modified.utc, DateTime.new('2024-01-16T12:00:00Z'), 'JSON
 
 # ===== Bug B: datetimes without a timezone are treated as UTC =====
 
-my $b-t = parse-date-optional('2024-01-15T08:30:00');
+my $b-t = parse-date(:optional, '2024-01-15T08:30:00');
 ok $b-t.defined, 'tz-less T-form parses';
 is $b-t.utc, DateTime.new('2024-01-15T08:30:00Z'), 'tz-less T-form treated as UTC';
 
-my $b-space = parse-date-optional('2024-01-15 08:30:00');
+my $b-space = parse-date(:optional, '2024-01-15 08:30:00');
 ok $b-space.defined, 'tz-less space-separated form parses';
 is $b-space.utc, DateTime.new('2024-01-15T08:30:00Z'), 'tz-less space-separated form treated as UTC';
 
-my $b-date-only = parse-date-optional('2024-01-15');
+my $b-date-only = parse-date(:optional, '2024-01-15');
 ok $b-date-only.defined, 'date-only still parses';
 is $b-date-only.utc, DateTime.new('2024-01-15T00:00:00Z'), 'date-only is midnight UTC';
 

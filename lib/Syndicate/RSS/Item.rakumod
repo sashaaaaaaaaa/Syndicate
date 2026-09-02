@@ -33,7 +33,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
     my $author  = idx-text("author");
     my @categories = parse-categories($item-elem);
     my $comment = idx-text("comments");
-    my $pubdate = parse-date-optional(idx-text("pubDate"));
+    my $pubdate = parse-date(:optional, idx-text("pubDate"));
     my $source  = idx-text("source");
 
     my ($guid, $guid-is-permalink) = self!parse-guid($item-elem);
@@ -52,7 +52,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
     my @dc-creators = @(%extra<dc-creators> // []);
     my @dc-subjects = @(%extra<dc-subjects> // []);
     my $dc-updated = %extra<updated>:exists
-        ?? parse-date-optional(%extra<updated>)
+        ?? parse-date(:optional, %extra<updated>)
         !! Nil;
 
     my @media-contents    = @(%extra<media-contents>    // []);

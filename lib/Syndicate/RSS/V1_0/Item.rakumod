@@ -55,7 +55,7 @@ method from-xml(XML::Element $item-elem, :$active?) {
     $author = $author.defined && $author.chars ?? $author !! %extra<author> // Str;
 
     my $updated = %extra<updated>:exists
-        ?? parse-date-optional(%extra<updated>)
+        ?? parse-date(:optional, %extra<updated>)
         !! Nil;
     my @dc-subjects = @(%extra<dc-subjects> // []);
     my @dc-creators = @(%extra<dc-creators> // []);

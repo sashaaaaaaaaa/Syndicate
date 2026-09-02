@@ -417,28 +417,19 @@ sub normalize-date-str(Str $str --> Str) {
     $s
 }
 
-sub parse-date(Str $str --> DateTime) is export {
-    die "parse-date: empty or unset string" unless $str.defined && $str.trim.chars > 0;
-    my $normalized = normalize-date-str($str.trim);
-    # datetime-interpret throws X::Temporal::OutOfRange for
-    # structurally-valid-but-invalid dates (2024-02-30, 32 Jan, 25:00) rather
-    # than returning Nil; turn that into the graceful die below.
-    my $dt = try { datetime-interpret($normalized) };
-    die "parse-date: cannot parse '$str'" unless $dt.defined;
-    apply-source-offset($dt, $normalized)
-}
-
-sub parse-date-optional(Any $str) is export {
-    return Nil unless $str.defined && $str.Str.trim.chars > 0;
+sub parse-date(Any $str, Bool :$optional = False) is export {
+    return Nil if $optional && (!$str.defined || !$str.Str.trim.chars);
+    die "parse-date: empty or unset string" unless $str.defined && $str.Str.trim.chars > 0;
     my $normalized = normalize-date-str($str.Str.trim);
     # datetime-interpret throws X::Temporal::OutOfRange for
-    # structurally-valid-but-invalid dates instead of returning Nil; honor the
-    # documented "DateTime or Nil" contract so one bad date never aborts a
-    # whole feed parse.
+    # structurally-valid-but-invalid dates (2024-02-30, 32 Jan, 25:00) rather
+    # than returning Nil; turn that into the graceful die/Nil below.
     my $dt = try { datetime-interpret($normalized) };
-    with $dt -> $parsed {
-        apply-source-offset($parsed, $normalized)
+    without $dt {
+        return Nil if $optional;
+        die "parse-date: cannot parse '$str'";
     }
+    apply-source-offset($dt, $normalized)
 }
 
 # DateTime::Actions::Raku mis-handles numeric offsets: ISO +HH:MM/+HHMM
@@ -685,8 +676,7 @@ Not typically needed by end users.
 =item C<parse-categories($parent)> - Extract category tags text content
 =item C<with-error-recording(&fn)> - Run block, recording a Stats error on throw
 =item C<has-nonempty-text($elem, $tag)> - Whether element has non-empty text content
-=item C<parse-date(Str)> - Parse date string, dies on bad input, returns C<DateTime>
-=item C<parse-date-optional(Str)> - Parse date string returning C<DateTime> or C<Nil>
+=item C<parse-date(Str, :$optional = False)> - Parse date string, dies on bad input and returns C<DateTime>; with C<:optional> returns C<DateTime> or C<Nil> for empty or unparseable input
 =item C<matches-ns(XML::Element, $ns-uri, $canonical-prefix)> - Namespace membership in the element's own scope
 =item C<get-text-by-ns($parent, $local-name, $ns-uri, $canonical-prefix = "")> - Get optional text of the first child matching local name and namespace URI
 =item C<elements-by-local-ns($parent, $ns-uri, $local-name, $canonical-prefix)> - Namespace-aware child element lookup

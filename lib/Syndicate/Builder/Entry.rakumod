@@ -76,10 +76,12 @@ method author(Str :$name, Str :$email, Str :$uri) {
     %(:name($!author-name), :email($!author-email), :uri($!author-uri))
 }
 
-method category(Str $v?) {
-    @!categories.push: $v if $v.defined;
-    @!categories.List
+method add-category(Str $v) {
+    @!categories.push: $v;
+    self
 }
+
+method categories() { @!categories.List }
 
 method comments(Str $v?) { $!comments = $v if $v.defined; $!comments }
 
@@ -232,7 +234,7 @@ $e.id("urn:uuid:abc-123");
 $e.author(:name("Jane"), :email("jane@example.com"));
 $e.updated(DateTime.now);
 $e.published(DateTime.now);
-$e.category("Tech");
+$e.add-category("Tech");
 $e.content("<p>Hello</p>", :type("xhtml"));
 =end code
 
@@ -254,5 +256,6 @@ Accumulates entry-level data used by all output format generators.
 =item C<media-content(Str :$url, Str :$type, Str :$medium, :$width, :$height, :$duration, Str :$title, Str :$description)> - add a media:content element; C<:medium> and content-level C<:title>/C<:description> are optional
 =item C<media-thumbnail(Str :$url, :$width, :$height, :$time)> - add a media:thumbnail element
 =item C<author(:$name, :$email, :$uri)> - get/set author details
-=item C<category(Str $v?)> - add/get categories
+=item C<add-category(Str $v)> - add a category (returns C<self> for chaining)
+=item C<categories()> - get the list of categories
 =end pod

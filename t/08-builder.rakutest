@@ -44,9 +44,9 @@ is %author<name>, "Jane Doe", "feed author name";
 is %author<email>, "jane@example.com", "feed author email";
 
 # Categories
-$fb.category("Tech");
-$fb.category("News");
-is $fb.category.elems, 2, "feed has 2 categories";
+$fb.add-category("Tech");
+$fb.add-category("News");
+is $fb.categories.elems, 2, "feed has 2 categories";
 
 # Default generator
 my $fb-default = Syndicate::Builder::Feed.new;
@@ -62,7 +62,7 @@ $e1.id("urn:uuid:1111-1111");
 $e1.author(:name("Jane"), :email("jane@example.com"));
 $e1.updated(DateTime.new("2026-01-15T10:00:00Z"));
 $e1.published(DateTime.new("2026-01-14T08:00:00Z"));
-$e1.category("atom");
+$e1.add-category("atom");
 $e1.rights("Copyright Entry");
 
 is $e1.title, "Entry One", "entry title get/set";

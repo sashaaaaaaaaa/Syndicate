@@ -70,7 +70,7 @@ multi method new(XML::Document $doc) {
         # !latest-updated computes it from the newest entry timestamp, and
         # XML()/to-hash emit that. Fully timestamp-less feeds still die in
         # !cache-updated.
-        my $upd      = parse-date-optional(get-text-optional($feed, "updated"));
+        my $upd      = parse-date(:optional, get-text-optional($feed, "updated"));
 
         my %author-detail;
         with $feed.elements(:TAG<author>)[0] {

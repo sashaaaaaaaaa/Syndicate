@@ -100,17 +100,17 @@ sub ct-fetch(Str $ct) {
 # ===== Bug 4: HH:MM-without-seconds and RFC 2822 date-only =====
 
 {
-    is parse-date-optional('2024-01-15 08:30').Str, '2024-01-15T08:30:00Z',
+    is parse-date(:optional, '2024-01-15 08:30').Str, '2024-01-15T08:30:00Z',
         'R4: space-separated HH:MM parses as midnight-second';
-    is parse-date-optional('2024-01-15 08:30 -0500').Str, '2024-01-15T08:30:00-05:00',
+    is parse-date(:optional, '2024-01-15 08:30 -0500').Str, '2024-01-15T08:30:00-05:00',
         'R4: space-separated HH:MM with offset parses';
-    is parse-date-optional('Mon, 15 Jan 2024').Str, '2024-01-15T00:00:00Z',
+    is parse-date(:optional, 'Mon, 15 Jan 2024').Str, '2024-01-15T00:00:00Z',
         'R4: RFC 2822 date-only parses as midnight UTC';
-    is parse-date-optional('2024-01-15 08:30:00').Str, '2024-01-15T08:30:00Z',
+    is parse-date(:optional, '2024-01-15 08:30:00').Str, '2024-01-15T08:30:00Z',
         'R4: HH:MM:SS form unchanged';
-    is parse-date-optional('Mon, 15 Jan 2024 08:30:00 GMT').Str, '2024-01-15T08:30:00Z',
+    is parse-date(:optional, 'Mon, 15 Jan 2024 08:30:00 GMT').Str, '2024-01-15T08:30:00Z',
         'R4: full RFC 2822 unchanged';
-    is parse-date-optional('2024-01-15').Str, '2024-01-15T00:00:00Z',
+    is parse-date(:optional, '2024-01-15').Str, '2024-01-15T00:00:00Z',
         'R4: bare ISO date unchanged';
 }
 

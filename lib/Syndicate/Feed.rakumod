@@ -75,6 +75,15 @@ method !pretty-str {
     }
 }
 
+# Convert this parsed feed into a Syndicate::Builder::Feed for re-emission in
+# any format. Loaded at runtime (require) to avoid a compile-time cycle: the
+# builder imports Syndicate::Feed, so a compile-time reference here would be
+# circular.
+method to-builder() {
+    require Syndicate::Builder::Feed;
+    Syndicate::Builder::Feed.new-from-feed(self)
+}
+
 =begin pod
 
 =head1 NAME
@@ -99,5 +108,10 @@ interface for accessing common feed metadata.
 
 =item C<Str> - Compact, single-line XML (declaration on its own line followed by the root element on one line). Back-compatible.
 =item C<str(:$pretty = False)> - C<Str> when C<:pretty> is falsy; otherwise the XML with two-space indentation per nesting level via C<indent-xml>. Whitespace-only differences, so both forms parse identically.
+=item C<to-builder> - Returns a L<C<Syndicate::Builder::Feed>|rakudoc:Syndicate::Builder::Feed>
+populated from this parsed feed (via C<new-from-feed>), so it can be re-emitted in any format.
+
+=for code :lang<raku>
+$feed.to-builder.atom-str;   # re-emit as Atom
 
 =end pod

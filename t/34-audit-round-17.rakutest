@@ -27,21 +27,21 @@ plan 56;
         ('Mon, 15 Jan 2024 10:00:00 +05:30',       '2024-01-15T10:00:00+05:30'),
     );
     for @cases -> ($raw, $want) {
-        my $d = parse-date-optional($raw);
+        my $d = parse-date(:optional, $raw);
         is $d.defined ?? $d.Str !! 'NIL', $want, "1: «$raw» parses";
     }
-    my $wd = parse-date-optional('15 Jan 2024');
+    my $wd = parse-date(:optional, '15 Jan 2024');
     is $wd.day-of-week, 1, '1: synthesized weekday is correct (15 Jan 2024 is a Monday)';
-    my $wd2 = parse-date-optional('29 Feb 2024');
+    my $wd2 = parse-date(:optional, '29 Feb 2024');
     is $wd2.day-of-week, 4, '1: synthesized weekday is correct (29 Feb 2024 is a Thursday)';
 }
 
 {
-    nok parse-date-optional('32 Jan 2024').defined, '1: bogus day still Nil';
-    nok parse-date-optional('Feb 30 2024').defined,  '1: bogus month-day still Nil';
-    is parse-date-optional('2024-01-15 08:30:00 -0500').Str, '2024-01-15T08:30:00-05:00',
+    nok parse-date(:optional, '32 Jan 2024').defined, '1: bogus day still Nil';
+    nok parse-date(:optional, 'Feb 30 2024').defined,  '1: bogus month-day still Nil';
+    is parse-date(:optional, '2024-01-15 08:30:00 -0500').Str, '2024-01-15T08:30:00-05:00',
         '1: space-separated ISO unaffected';
-    is parse-date-optional('2024-01-15T08:30:00+05:30').Str, '2024-01-15T08:30:00+05:30',
+    is parse-date(:optional, '2024-01-15T08:30:00+05:30').Str, '2024-01-15T08:30:00+05:30',
         '1: T-separated ISO with colon offset unaffected';
 }
 

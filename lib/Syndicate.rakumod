@@ -16,12 +16,23 @@ use Syndicate::Utils;
 use Syndicate::Builder::Feed;
 use Syndicate::Builder::Entry;
 use Syndicate::Parse;
+use Syndicate::FeedResult;
+use Syndicate::Format;
 use Syndicate::Extension::DublinCore;
 use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Discovery;
 
 unit class Syndicate:ver<0.0.4>:auth<zef:sasha>;
+
+# Re-export the FeedFormat enum (and its members) so `use Syndicate` exposes
+# Atom / RSS2 / RSS091 / RSS1 / JSONFeedFmt for use with convert() and friends.
+constant FeedFormat is export = Syndicate::Format::FeedFormat;
+my constant Atom  is export = Syndicate::Format::FeedFormat::Atom;
+my constant RSS2  is export = Syndicate::Format::FeedFormat::RSS2;
+my constant RSS091 is export = Syndicate::Format::FeedFormat::RSS091;
+my constant RSS1  is export = Syndicate::Format::FeedFormat::RSS1;
+my constant JSONFeedFmt is export = Syndicate::Format::FeedFormat::JSONFeedFmt;
 
 sub parse(Str $input --> Syndicate::Feed:D) is export {
     parse-feed($input)
@@ -47,20 +58,23 @@ sub parse-rss091(Str $xml --> Syndicate::RSS::V0_91) is export {
     Syndicate::RSS::V0_91.new(sanitize-input($xml))
 }
 
-sub convert(Str $input, Str $to --> Str) is export {
+sub convert(Str $input, FeedFormat $to --> Str) is export {
     my $feed = parse-feed($input);
     my $fb = Syndicate::Builder::Feed.new-from-feed($feed);
-    given $to.lc {
-        when 'rss' | 'rss2' | 'rss2.0' { ~$fb.rss-feed }
-        when 'rss091' | 'rss0.91'      { ~$fb.rss091-feed }
-        when 'rss1' | 'rss1.0'         { ~$fb.rss1-feed }
-        when 'atom'                    { ~$fb.atom-feed }
-        when 'json'                    { $fb.json-feed.to-json }
-        default {
-            die "Unknown target format: $to (expected rss, rss091, rss1, atom, json)"
-        }
+    given $to {
+        when RSS2      { ~$fb.rss-feed }
+        when RSS091    { ~$fb.rss091-feed }
+        when RSS1      { ~$fb.rss1-feed }
+        when Atom      { ~$fb.atom-feed }
+        when JSONFeedFmt { $fb.json-feed.to-json }
     }
 }
+
+sub convert-to-rss(Str $input --> Str) is export    { convert($input, RSS2) }
+sub convert-to-rss091(Str $input --> Str) is export { convert($input, RSS091) }
+sub convert-to-rss1(Str $input --> Str) is export   { convert($input, RSS1) }
+sub convert-to-atom(Str $input --> Str) is export   { convert($input, Atom) }
+sub convert-to-json(Str $input --> Str) is export   { convert($input, JSONFeedFmt) }
 
 =begin pod
 
@@ -134,15 +148,26 @@ Parse RSS 1.0 XML, returning C<Syndicate::RSS::V1_0>.
 
 Parse RSS 0.91 XML, returning C<Syndicate::RSS::V0_91>.
 
-=head2 C<convert(Str $input, Str $to)>
+=head2 C<convert(Str $input, FeedFormat $to)>
 
-Parse C<$input> (auto-detected) and emit it in the format named by C<$to>:
-C<rss> (2.0), C<rss091>, C<rss1>, C<atom>, or C<json>. Aliases C<rss2>,
-C<rss2.0>, C<rss0.91>, and C<rss1.0> are accepted. An unknown C<$to> dies.
-The conversion goes through L<C<Syndicate::Builder::Feed>|rakudoc:Syndicate::Builder::Feed>'s
+Parse C<$input> (auto-detected) and emit it in the format named by the
+L<C<FeedFormat>|rakudoc:Syndicate::Format> enum value C<$to>: C<RSS2>, C<RSS091>,
+C<RSS1>, C<Atom>, or C<JSONFeedFmt>. The previous string form C<convert($input,
+'rss')> is replaced; the enum value is now typed and self-validating (no
+string aliases or "unknown format" die path). The conversion goes through
+L<C<Syndicate::Builder::Feed>|rakudoc:Syndicate::Builder::Feed>'s
 C<new-from-feed>, so only builder-supported fields are carried over, and
 emission may die if the target format requires a field the source lacks
 (e.g. converting an Atom feed with no description to RSS 2.0 dies with
 C<RSS 2.0 feed requires description>).
+
+=for code :lang<raku>
+my $xml = convert($input, RSS2);
+my $json = convert($input, JSONFeedFmt);
+
+=head2 C<convert-to-rss / convert-to-rss091 / convert-to-rss1 / convert-to-atom / convert-to-json>
+
+Convenience wrappers around C<convert> that fix the target format, e.g.
+C<convert-to-atom($input)> is equivalent to C<convert($input, Atom)>.
 
 =end pod

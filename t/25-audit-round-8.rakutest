@@ -188,9 +188,9 @@ R
 
 {
     my $fb = Syndicate::Builder::Feed.new;
-    $fb.category("x");
-    my $cats = $fb.category;
-    ok $cats ~~ List, 'Q4: builder feed category returns a List';
+    $fb.add-category("x");
+    my $cats = $fb.categories;
+    ok $cats ~~ List, 'Q4: builder feed categories returns a List';
     is $cats[0], 'x', 'Q4: builder feed category value present';
 }
 

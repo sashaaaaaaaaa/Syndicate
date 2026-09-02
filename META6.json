@@ -29,6 +29,8 @@
     "Syndicate::Extension::MediaRSS": "lib/Syndicate/Extension/MediaRSS.rakumod",
     "Syndicate::Extensions": "lib/Syndicate/Extensions.rakumod",
     "Syndicate::Feed": "lib/Syndicate/Feed.rakumod",
+    "Syndicate::FeedResult": "lib/Syndicate/FeedResult.rakumod",
+    "Syndicate::Format": "lib/Syndicate/Format.rakumod",
     "Syndicate::Item": "lib/Syndicate/Item.rakumod",
     "Syndicate::JSONFeed": "lib/Syndicate/JSONFeed.rakumod",
     "Syndicate::JSONFeed::Item": "lib/Syndicate/JSONFeed/Item.rakumod",

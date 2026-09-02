@@ -65,10 +65,12 @@ method image(Str :$url, Str :$title, Str :$link, Int :$width, Int :$height) {
     %!image
 }
 
-method category(Str $v?) {
-    @!categories.push: $v if $v.defined;
-    @!categories.List
+method add-category(Str $v) {
+    @!categories.push: $v;
+    self
 }
+
+method categories() { @!categories.List }
 
 method add-entry {
     my $entry = Syndicate::Builder::Entry.new;
@@ -93,7 +95,7 @@ method new-from-feed(Syndicate::Feed $feed --> Syndicate::Builder::Feed) {
             $b.icon($_.icon)          if $_.icon.defined;
             $b.logo($_.logo)          if $_.logo.defined;
             $b.updated($_.updated)    if $_.updated.defined;
-            $b.category($_) for @($_.categories);
+            $b.add-category($_) for @($_.categories);
             my %ad = $_.author-detail;
             $b.author(:name(%ad<name>), :email(%ad<email>), :uri(%ad<uri>))
                 if %ad<name>.defined || %ad<email>.defined || %ad<uri>.defined;
@@ -107,7 +109,7 @@ method new-from-feed(Syndicate::Feed $feed --> Syndicate::Builder::Feed) {
             $b.itunes-author($_.itunes-author)   if $_.itunes-author.defined;
             $b.itunes-summary($_.itunes-summary) if $_.itunes-summary.defined;
             $b.atom-self-link($_.atom-self-link) if $_.atom-self-link.defined;
-            $b.category($_) for @($_.categories);
+            $b.add-category($_) for @($_.categories);
             $b!copy-image($_.image);
         }
         when Syndicate::RSS::V0_91 {
@@ -122,7 +124,7 @@ method new-from-feed(Syndicate::Feed $feed --> Syndicate::Builder::Feed) {
             $b.id($_.about)               if $_.about.defined;
             $b.itunes-author($_.itunes-author)   if $_.itunes-author.defined;
             $b.itunes-summary($_.itunes-summary) if $_.itunes-summary.defined;
-            $b.category($_) for @($_.categories);
+            $b.add-category($_) for @($_.categories);
             $b!copy-image($_.image);
         }
         when Syndicate::JSONFeed {
@@ -156,14 +158,14 @@ method new-from-feed(Syndicate::Feed $feed --> Syndicate::Builder::Feed) {
                         ?? $e.content($_.content, :type($_.content-type))
                         !! $e.content($_.content);
                 }
-                $e.category($_) for @($_.categories);
+                $e.add-category($_) for @($_.categories);
                 if $_.source-feed<link>.defined {
                     $e.source($_.source-feed<link>);
                 }
             }
             when Syndicate::RSS::Item::Common {
                 $e.author(:name($_.author)) if $_.author.defined;
-                $e.category($_) for @($_.categories);
+                $e.add-category($_) for @($_.categories);
                 $e.comments($_.comments)    if $_.comments.defined;
                 $e.source($_.source)        if $_.source.defined;
                 # content:encoded is HTML by definition; typing it lets
@@ -215,7 +217,7 @@ method new-from-feed(Syndicate::Feed $feed --> Syndicate::Builder::Feed) {
                 } elsif $_.content_text.defined && $_.content_text.chars {
                     $e.content($_.content_text);
                 }
-                $e.category($_) for @($_.tags);
+                $e.add-category($_) for @($_.tags);
             }
         }
     }
@@ -412,7 +414,8 @@ timestamps in Atom output.
 =item C<icon(Str $v?)> - get/set feed icon URL
 =item C<logo(Str $v?)> - get/set feed logo URL
 =item C<author(:$name, :$email, :$uri)> - get/set author details. In RSS output, C<:$email> maps to C<managingEditor>.
-=item C<category(Str $v?)> - add/get categories
+=item C<add-category(Str $v)> - add a category (returns C<self> for chaining)
+=item C<categories()> - get the list of categories
 =item C<itunes-author(Str $v?)> - get/set iTunes author
 =item C<itunes-summary(Str $v?)> - get/set iTunes summary
 

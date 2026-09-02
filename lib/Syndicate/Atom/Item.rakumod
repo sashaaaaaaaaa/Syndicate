@@ -128,7 +128,7 @@ method from-xml(XML::Element $entry-elem) {
         }
     }
     my $updated  = parse-date(idx-required("updated"));
-    my $pub      = parse-date-optional(idx-text("published"));
+    my $pub      = parse-date(:optional, idx-text("published"));
     my $rights   = idx-text("rights");
     my $lang     = $entry-elem.attribs{'xml:lang'} // Str;
 
@@ -172,7 +172,7 @@ method from-xml(XML::Element $entry-elem) {
         with .elements(:TAG<link>)[0] {
             %source-feed<link> = decode-entities(.attribs<href> // "");
         }
-        %source-feed<updated> = parse-date-optional(idx-text-on($_, "updated"));
+        %source-feed<updated> = parse-date(:optional, idx-text-on($_, "updated"));
     }
 
     my $author = %author-detail<name> // %author-detail<email> // Str;
