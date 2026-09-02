@@ -12,7 +12,7 @@ use Syndicate::Extensions;
 
 my constant NS-RSS1    = 'http://purl.org/rss/1.0/';
 
-unit class Syndicate::RSS::V1_0:ver<0.0.4>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
+unit class Syndicate::RSS::V1_0:ver<0.0.5>:auth<zef:sasha> does Syndicate::Feed does Syndicate::RSS::Common;
 
 has Str $.about;
 has %.image;

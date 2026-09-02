@@ -12,7 +12,7 @@ use JSON::Fast;
 my constant MAX-FEED-SIZE is export = 10 * 1024 * 1024;
 my constant RSS_VER_091      = "0.91";
 
-unit module Syndicate::Parse:ver<0.0.4>:auth<zef:sasha>;
+unit module Syndicate::Parse:ver<0.0.5>:auth<zef:sasha>;
 
 # Re-export FeedFormat (and its enum members) from Syndicate::Format so that
 # `use Syndicate::Parse` keeps exposing the enum exactly as before, while the

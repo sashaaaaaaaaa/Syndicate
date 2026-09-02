@@ -1,6 +1,6 @@
 use v6.d;
 
-unit class Syndicate::Stats:ver<0.0.4>:auth<zef:sasha>;
+unit class Syndicate::Stats:ver<0.0.5>:auth<zef:sasha>;
 
 my atomicint $feeds-parsed = 0;
 my atomicint $items-parsed = 0;

@@ -23,7 +23,7 @@ use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::Discovery;
 
-unit class Syndicate:ver<0.0.4>:auth<zef:sasha>;
+unit class Syndicate:ver<0.0.5>:auth<zef:sasha>;
 
 # Re-export the FeedFormat enum (and its members) so `use Syndicate` exposes
 # Atom / RSS2 / RSS091 / RSS1 / JSONFeedFmt for use with convert() and friends.

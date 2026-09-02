@@ -2,7 +2,7 @@ use v6.d;
 use XML;
 use Syndicate::Stats;
 
-unit module Syndicate::Extensions:ver<0.0.4>:auth<zef:sasha>;
+unit module Syndicate::Extensions:ver<0.0.5>:auth<zef:sasha>;
 
 # Populated at compile-time by use-statements in parser modules.
 # Runtime calls to register-ext are supported but must not race

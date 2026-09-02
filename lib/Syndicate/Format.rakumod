@@ -1,6 +1,6 @@
 use v6.d;
 
-unit module Syndicate::Format:ver<0.0.4>:auth<zef:sasha>;
+unit module Syndicate::Format:ver<0.0.5>:auth<zef:sasha>;
 
 # The set of feed formats Syndicate can detect, parse, and generate.
 enum FeedFormat is export <Atom RSS2 RSS091 RSS1 JSONFeedFmt>;

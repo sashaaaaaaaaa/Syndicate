@@ -1,6 +1,6 @@
 use v6.d;
 
-unit role Syndicate::Item:ver<0.0.4>:auth<zef:sasha>;
+unit role Syndicate::Item:ver<0.0.5>:auth<zef:sasha>;
 
 has Str $.title;
 has Str $.link;
