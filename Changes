@@ -2,6 +2,20 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
+    - API revision for v0.0.5 (breaking changes):
+    - parse-feed-with-format now returns a Syndicate::FeedResult (:format, :feed)
+      instead of a positional list; parse-feed returns a Feed class instance.
+    - convert() takes a typed FeedFormat enum (RSS2/RSS091/RSS1/Atom/JSONFeedFmt)
+      instead of a string alias, and convenience convert-to-rss/atom/json/rss1/rss091
+      subs are added. The string form convert($str, 'rss') is removed.
+    - FeedFormat enum moved to a new Syndicate::Format module (breaks a compile
+      cycle); re-exported from Syndicate::Parse and Syndicate.
+    - parse-date and parse-date-optional unified into parse-date(..., :optional);
+      parse-date-optional is removed.
+    - Syndicate::Builder category() split into add-category() (chainable) and
+      categories().
+    - New Syndicate::Feed.to-builder() convenience.
+
 0.0.4  2026-08-31T21:51:31+03:00
 
     - Pretty-print feed XML via str(:pretty).
