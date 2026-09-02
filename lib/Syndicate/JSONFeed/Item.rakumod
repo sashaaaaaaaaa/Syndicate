@@ -10,7 +10,7 @@ sub str-field(%h, Str $name --> Str) {
     $v
 }
 
-unit class Syndicate::JSONFeed::Item:ver<0.0.5>:auth<zef:sasha> does Syndicate::Item;
+unit class Syndicate::JSONFeed::Item:ver<0.0.6>:auth<zef:sasha> does Syndicate::Item;
 
 multi method new(Str $json) {
     my %h;

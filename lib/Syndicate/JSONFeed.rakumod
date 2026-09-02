@@ -14,7 +14,7 @@ sub str-field(%h, Str $name --> Str) {
     $v
 }
 
-unit class Syndicate::JSONFeed:ver<0.0.5>:auth<zef:sasha> does Syndicate::Feed;
+unit class Syndicate::JSONFeed:ver<0.0.6>:auth<zef:sasha> does Syndicate::Feed;
 
 has Str $.version = JSONFEED-VERSION;
 has Str $.feed_url;

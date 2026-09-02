@@ -2,6 +2,8 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
+0.0.6  2026-09-02T20:03:49+03:00
+
     - README updated for the v0.0.5 API revision: convert()/convert-to-*
       enum examples, add-category()/categories(), and a new .to-builder
       example.

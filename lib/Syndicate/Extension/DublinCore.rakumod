@@ -5,7 +5,7 @@ use Syndicate::Utils;
 
 my constant NS-DC is export = 'http://purl.org/dc/elements/1.1/';
 
-unit module Syndicate::Extension::DublinCore:ver<0.0.5>:auth<zef:sasha>;
+unit module Syndicate::Extension::DublinCore:ver<0.0.6>:auth<zef:sasha>;
 
 register-ext(:namespace<dc>, :namespace-uri(NS-DC),
     parse => sub ($elem, %attrs) {

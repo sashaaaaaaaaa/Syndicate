@@ -9,7 +9,7 @@ use Syndicate::Extension::MediaRSS;
 use Syndicate::Extension::ITunes;
 use Syndicate::RSS::Common;
 
-unit role Syndicate::RSS::Item::Common:ver<0.0.5>:auth<zef:sasha> does Syndicate::Item;
+unit role Syndicate::RSS::Item::Common:ver<0.0.6>:auth<zef:sasha> does Syndicate::Item;
 
 has Str $.guid;
 has Bool $.guid-is-permalink = True;

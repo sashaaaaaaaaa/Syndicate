@@ -2,7 +2,7 @@ use v6.d;
 use Syndicate::Item;
 use Syndicate::Utils;
 
-unit role Syndicate::Feed:ver<0.0.5>:auth<zef:sasha>;
+unit role Syndicate::Feed:ver<0.0.6>:auth<zef:sasha>;
 
 has Str $.title;
 has Str $.link;

@@ -2,7 +2,7 @@ use v6.d;
 use Syndicate::Format;
 use Syndicate::Feed;
 
-unit class Syndicate::FeedResult:ver<0.0.5>:auth<zef:sasha>;
+unit class Syndicate::FeedResult:ver<0.0.6>:auth<zef:sasha>;
 
 has FeedFormat $.format;
 has Syndicate::Feed $.feed;

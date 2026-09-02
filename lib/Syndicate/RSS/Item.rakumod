@@ -6,7 +6,7 @@ use Syndicate::Utils;
 use Syndicate::Extensions;
 use Syndicate::Stats;
 
-unit class Syndicate::RSS::Item:ver<0.0.5>:auth<zef:sasha> does Syndicate::RSS::Item::Common;
+unit class Syndicate::RSS::Item:ver<0.0.6>:auth<zef:sasha> does Syndicate::RSS::Item::Common;
 
 method from-xml(XML::Element $item-elem, :$active?) {
     # Index direct children once: per-field elements(:TAG<...>) calls each scan

@@ -7,7 +7,7 @@ use Syndicate::Stats;
 my constant NS-CONTENT is export = 'http://purl.org/rss/1.0/modules/content/';
 my constant NS-RDF     is export = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 
-unit role Syndicate::RSS::Common:ver<0.0.5>:auth<zef:sasha>;
+unit role Syndicate::RSS::Common:ver<0.0.6>:auth<zef:sasha>;
 
 has XML::Element $!cached-xml;
 has Lock $!xml-lock = Lock.new;
