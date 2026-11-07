@@ -500,7 +500,7 @@ sub indent-xml(Str $xml, Str :$indent = '  ' --> Str) is export {
             $idx++;
             return ['empty', $t];
         }
-        my $m    = $t ~~ /^ '<' ( <?[$A..Za..z_]> [ <?[$A..Za..z0..9_.-]> | ':' <?[$A..Za..z0..9_.-]> ]* )/;
+        my $m    = $t ~~ /^ '<' ( <[$A..Za..z_]> [ <[$A..Za..z0..9_.-]> | ':' <[$A..Za..z0..9_.-]> ]* )/;
         my $name = $m ?? ~$m[0] !! '';
         if !$name {
             $partial = True;

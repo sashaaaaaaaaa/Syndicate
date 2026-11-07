@@ -2,6 +2,11 @@ Revision history for Syndicate
 
 {{$NEXT}}
 
+    - Fixed indent-xml hanging forever while parsing element names: the tag
+      name pattern used a zero-width lookahead inside a `*` quantifier, so
+      tokenization finished but parsing never advanced. The character class
+      now consumes input, so str(:pretty) no longer hangs.
+
 0.0.6  2026-09-02T20:03:49+03:00
 
     - README updated for the v0.0.5 API revision: convert()/convert-to-*
